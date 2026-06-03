@@ -4,7 +4,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -57,102 +56,50 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
             onPress={handleNext}
             style={[styles.slide, { width }]}
           >
-            <Image contentFit="cover" source={item.image} style={styles.image} />
-            <View style={styles.scrim} />
-            <View style={styles.copyPanel}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.subtitle}>{item.subtitle}</Text>
+            <View style={styles.imageContainer}>
+              <Image contentFit="contain" source={item.image} style={styles.image} />
             </View>
           </Pressable>
         )}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
       />
-      <View style={styles.controls}>
-        <View style={styles.dots}>
-          {onboardingSlides.map((slide, slideIndex) => (
-            <View
-              key={slide.id}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor:
-                    slideIndex === index ? theme.colors.primary : "rgba(255,255,255,0.62)",
-                  width: slideIndex === index ? 24 : 8
-                }
-              ]}
-            />
-          ))}
+      {isLast && (
+        <View style={styles.controls}>
+          <AppButton
+            icon="heart"
+            onPress={handleNext}
+            title="Start Rescuing"
+            variant="primary"
+          />
         </View>
-        <AppButton
-          icon={isLast ? "heart" : "arrow-forward"}
-          onPress={handleNext}
-          title={isLast ? "Start Rescuing" : "Next"}
-          variant="primary"
-        />
-      </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  imageContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl
+  },
   image: {
-    height: "100%",
+    height: "80%",
     width: "100%"
   },
   controls: {
     bottom: spacing.xl,
-    gap: spacing.md,
     left: spacing.lg,
     position: "absolute",
     right: spacing.lg
-  },
-  copyPanel: {
-    bottom: 150,
-    gap: spacing.sm,
-    left: spacing.lg,
-    position: "absolute",
-    right: spacing.lg
-  },
-  dot: {
-    borderRadius: 8,
-    height: 8
-  },
-  dots: {
-    alignSelf: "center",
-    flexDirection: "row",
-    gap: spacing.sm
   },
   root: {
     flex: 1
   },
   slide: {
     flex: 1
-  },
-  scrim: {
-    backgroundColor: "rgba(34,48,71,0.28)",
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0
-  },
-  subtitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-    lineHeight: 23,
-    textShadowColor: "rgba(0,0,0,0.24)",
-    textShadowOffset: { height: 1, width: 0 },
-    textShadowRadius: 5
-  },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 34,
-    fontWeight: "900",
-    lineHeight: 39,
-    textShadowColor: "rgba(0,0,0,0.28)",
-    textShadowOffset: { height: 1, width: 0 },
-    textShadowRadius: 6
   }
 });
