@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useEffect } from "react";
-import { StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
+import { StyleSheet, View, type ImageSourcePropType } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -12,7 +12,6 @@ import Animated, {
 import { jailSprites } from "../data/assets";
 import type { AnimalCareState } from "../data/types";
 import { type AppColors, useAppTheme } from "../theme/colors";
-import { spacing } from "../theme/spacing";
 
 type AnimalCageProps = {
   animalImage: ImageSourcePropType;
@@ -21,18 +20,9 @@ type AnimalCageProps = {
   isRescued?: boolean;
 };
 
-const careBadges: Record<AnimalCareState, string[]> = {
-  hungry: ["Water"],
-  fed: ["Water", "Food"],
-  healing: ["Water", "Food", "Care"],
-  hopeful: ["Water", "Food", "Care"],
-  ready_to_rescue: ["Safe"]
-};
-
 export function AnimalCage({
   animalImage,
   progress,
-  careState,
   isRescued
 }: AnimalCageProps) {
   const theme = useAppTheme();
@@ -67,20 +57,16 @@ export function AnimalCage({
         styles.root,
         {
           backgroundColor:
-            warmth > 0.7 ? theme.colors.surfaceWarm : theme.colors.surfaceSoft
+            isRescued
+              ? theme.colors.surfaceSoft
+              : warmth > 0.7
+                ? theme.colors.surfaceWarm
+                : theme.isDark
+                  ? "#102821"
+                  : "#BFEFFF"
         }
       ]}
     >
-      <View
-        style={[
-          styles.stageFloor,
-          {
-            backgroundColor: theme.isDark
-              ? "rgba(69,209,143,0.10)"
-              : "rgba(255,191,63,0.20)"
-          }
-        ]}
-      />
       {!isRescued ? (
         <Animated.View pointerEvents="none" style={[styles.openJailLayer, cageStyle]}>
           <Image
@@ -108,13 +94,6 @@ export function AnimalCage({
           </Animated.View>
         </>
       ) : null}
-      <View style={styles.badgeRow}>
-        {careBadges[careState].map((badge) => (
-          <Text key={badge} style={styles.badge}>
-            {badge}
-          </Text>
-        ))}
-      </View>
     </View>
   );
 }
@@ -122,40 +101,18 @@ export function AnimalCage({
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
   animal: {
-    bottom: "21%",
+    bottom: "24%",
     height: "48%",
     position: "absolute",
-    width: "58%",
+    width: "48%",
     zIndex: 3
   },
-  badge: {
-    backgroundColor: isDark ? "rgba(31,42,39,0.88)" : "rgba(255,255,255,0.9)",
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
-  },
-  badgeRow: {
-    bottom: spacing.sm,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    justifyContent: "center",
-    left: spacing.sm,
-    position: "absolute",
-    right: spacing.sm
-  },
   gateLayer: {
-    height: "57%",
-    left: "18%",
+    height: "43%",
+    left: "22%",
     position: "absolute",
-    top: "27%",
-    width: "64%",
+    top: "31%",
+    width: "56%",
     zIndex: 6
   },
   layerImage: {
@@ -163,44 +120,36 @@ function createStyles(colors: AppColors, isDark: boolean) {
     width: "100%"
   },
   openJailLayer: {
-    bottom: "8%",
-    height: "84%",
-    left: "3%",
+    height: "72%",
+    left: "5%",
     position: "absolute",
-    width: "94%",
+    top: "14%",
+    width: "90%",
     zIndex: 2
   },
   platformLayer: {
-    bottom: "3%",
-    height: "35%",
+    bottom: "0%",
+    height: "26%",
     position: "absolute",
-    width: "94%",
+    width: "90%",
     zIndex: 7
   },
   root: {
     alignItems: "center",
     aspectRatio: 1,
-    borderColor: colors.border,
+    borderColor: isDark ? colors.border : "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",
     overflow: "hidden",
     width: "100%"
   },
-  stageFloor: {
-    bottom: 0,
-    height: "36%",
-    left: 0,
-    position: "absolute",
-    right: 0,
-    zIndex: 1
-  },
   topLayer: {
-    height: "35%",
-    left: "3%",
+    height: "31%",
+    left: "5%",
     position: "absolute",
-    top: "1%",
-    width: "94%",
+    top: "2%",
+    width: "90%",
     zIndex: 8
   }
   });

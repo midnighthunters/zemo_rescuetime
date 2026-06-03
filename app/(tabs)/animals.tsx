@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
@@ -39,7 +40,17 @@ function AnimalSection({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleWrap}>
+          <Ionicons
+            color={theme.colors.primary}
+            name={title === "Waiting" ? "time" : "heart"}
+            size={24}
+          />
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        <View style={styles.sectionLine} />
+      </View>
       {animals.length === 0 ? (
         <EmptyState title={emptyTitle} message={emptyMessage} spriteKey={emptySpriteKey} />
       ) : (
@@ -89,32 +100,35 @@ export default function AnimalsScreen() {
     <ScreenContainer>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.kicker}>Collection</Text>
+          <View style={styles.kickerPill}>
+            <Ionicons color={theme.colors.primaryDark} name="paw" size={18} />
+            <Text style={styles.kicker}>Collection</Text>
+          </View>
           <Text style={styles.title}>Rescue Album</Text>
           <Text style={styles.subtitle}>
             Tap a card to see its gate, mood, and step target.
           </Text>
         </View>
-        <UiSprite spriteKey="collectionAnimalAlbum" size={96} />
+        <UiSprite spriteKey="collectionAnimalAlbum" size={142} />
       </View>
 
       <View style={styles.summaryRow}>
         <View style={styles.summaryItem}>
-          <UiSprite spriteKey="microHeartBubble" size={36} />
+          <UiSprite spriteKey="microHeartBubble" size={58} />
           <View>
             <Text style={styles.summaryValue}>{formatNumber(unlockedAnimals.length)}</Text>
             <Text style={styles.summaryLabel}>Safe</Text>
           </View>
         </View>
         <View style={styles.summaryItem}>
-          <UiSprite spriteKey="collectionMysteryCrate" size={36} />
+          <UiSprite spriteKey="progressPawTrophy" size={58} />
           <View>
             <Text style={styles.summaryValue}>{formatNumber(lockedAnimals.length)}</Text>
             <Text style={styles.summaryLabel}>Waiting</Text>
           </View>
         </View>
         <View style={styles.summaryItem}>
-          <UiSprite spriteKey="microRescueRibbon" size={36} />
+          <UiSprite spriteKey="microPawConfetti" size={58} />
           <View>
             <Text style={styles.summaryValue}>{formatNumber(totalAnimals)}</Text>
             <Text style={styles.summaryLabel}>Total</Text>
@@ -159,17 +173,44 @@ function createStyles(colors: AppColors) {
   },
   kicker: {
     color: colors.primaryDark,
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "900",
     textTransform: "uppercase"
+  },
+  kickerPill: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.surfaceSoft,
+    borderColor: "#CBEED8",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
   },
   section: {
     gap: spacing.md
   },
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  sectionLine: {
+    backgroundColor: colors.border,
+    flex: 1,
+    height: 1
+  },
   sectionTitle: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 27,
     fontWeight: "900"
+  },
+  sectionTitleWrap: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm
   },
   subtitle: {
     color: colors.muted,
@@ -186,12 +227,12 @@ function createStyles(colors: AppColors) {
     flex: 1,
     flexDirection: "row",
     gap: spacing.sm,
-    minHeight: 62,
+    minHeight: 86,
     padding: spacing.sm
   },
   summaryLabel: {
     color: colors.muted,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "900",
     textTransform: "uppercase"
   },
@@ -201,12 +242,12 @@ function createStyles(colors: AppColors) {
   },
   summaryValue: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: "900"
   },
   title: {
     color: colors.text,
-    fontSize: 32,
+    fontSize: 48,
     fontWeight: "900"
   }
   });

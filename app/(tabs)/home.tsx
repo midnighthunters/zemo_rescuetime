@@ -73,28 +73,30 @@ export default function HomeScreen() {
           <Text style={styles.kicker}>{getGreeting()}</Text>
           <Text style={styles.greeting}>Rescue Steps</Text>
           <Text style={styles.subtitle}>
-            Count today. Open gates. Build your safe home.
+            Walk today. Open gates. Give them a better tomorrow.
           </Text>
         </View>
-        <UiSprite
-          spriteKey="homeSanctuaryIsland"
-          size={100}
-          style={styles.headerSprite}
-        />
+        <View style={styles.heroBadgePanel}>
+          <UiSprite
+            spriteKey="progressPawTrophy"
+            size={118}
+            style={styles.headerSprite}
+          />
+        </View>
       </View>
 
       {steps.error || steps.permissionStatus === "denied" ? (
         <View style={styles.permissionCard}>
           <View style={styles.permissionTop}>
-            <UiSprite spriteKey="emptyPermissionPhone" size={58} />
+            <UiSprite spriteKey="emptyAnimalWave" size={118} />
             <View style={styles.permissionCopyWrap}>
-              <Text style={styles.permissionTitle}>Pedometer needs access</Text>
+              <Text style={styles.permissionTitle}>Pedometer access needed</Text>
               <Text style={styles.permissionCopy}>
                 Allow motion access so rescue progress uses real device steps.
               </Text>
+              {steps.error ? <Text style={styles.errorText}>{steps.error}</Text> : null}
             </View>
           </View>
-          {steps.error ? <Text style={styles.errorText}>{steps.error}</Text> : null}
           <View style={styles.permissionActions}>
             <AppButton
               icon="refresh"
@@ -115,7 +117,7 @@ export default function HomeScreen() {
         <View style={styles.statusStrip}>
           <UiSprite spriteKey="microWalkingShoe" size={34} />
           <View style={styles.statusCopy}>
-            <Text style={styles.statusLabel}>Tracking</Text>
+            <Text style={styles.statusLabel}>Real Step Tracking</Text>
             <Text style={styles.statusValue}>{steps.sourceLabel}</Text>
           </View>
           <Text style={styles.statusSteps}>{steps.permissionStatus}</Text>
@@ -139,6 +141,11 @@ export default function HomeScreen() {
         metrics={metrics}
         onOpenPaywall={() => router.push("/paywall")}
         onRefreshSteps={steps.refreshSteps}
+        onViewAnimal={() => {
+          if (currentAnimal) {
+            router.push(`/animal/${currentAnimal.id}`);
+          }
+        }}
         sourceLabel={steps.sourceLabel}
         stepsToday={stepsToday}
       />
@@ -192,7 +199,7 @@ function createStyles(colors: AppColors, isDark: boolean) {
   },
   greeting: {
     color: colors.text,
-    fontSize: 34,
+    fontSize: 44,
     fontWeight: "900"
   },
   header: {
@@ -206,13 +213,18 @@ function createStyles(colors: AppColors, isDark: boolean) {
     gap: spacing.xs
   },
   headerSprite: {
-    marginRight: -8
+    marginRight: -6
+  },
+  heroBadgePanel: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 118
   },
   kicker: {
     color: colors.primaryDark,
-    fontSize: 13,
+    fontSize: 20,
     fontWeight: "900",
-    textTransform: "uppercase"
+    lineHeight: 26
   },
   permissionActions: {
     flexDirection: "row",
@@ -265,8 +277,8 @@ function createStyles(colors: AppColors, isDark: boolean) {
   },
   statusStrip: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceSoft,
+    borderColor: isDark ? colors.border : "#CBEED8",
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
@@ -281,9 +293,9 @@ function createStyles(colors: AppColors, isDark: boolean) {
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "700",
-    lineHeight: 21
+    lineHeight: 27
   }
   });
 }
