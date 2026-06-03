@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import type { AnimalMood } from "../data/types";
 import { getMoodMeta } from "../data/milestones";
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { formatPercent } from "../utils/format";
 
@@ -18,6 +18,8 @@ export function AnimalMoodMeter({
   progress,
   proLocked
 }: AnimalMoodMeterProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const meta = getMoodMeta(mood);
   const fillWidth = `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`;
 
@@ -25,14 +27,19 @@ export function AnimalMoodMeter({
     return (
       <View style={styles.root}>
         <View style={styles.header}>
-          <Ionicons color={colors.pro} name="lock-closed" size={18} />
+          <Ionicons color={theme.colors.pro} name="lock-closed" size={18} />
           <Text style={styles.title}>Mood locked in Pro</Text>
         </View>
         <Text style={styles.helper}>
           Upgrade to rescue and care for more animals.
         </Text>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: "18%", backgroundColor: colors.pro }]} />
+          <View
+            style={[
+              styles.fill,
+              { width: "18%", backgroundColor: theme.colors.pro }
+            ]}
+          />
         </View>
       </View>
     );
@@ -62,7 +69,8 @@ export function AnimalMoodMeter({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   fill: {
     borderRadius: 8,
     height: "100%"
@@ -92,9 +100,10 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   track: {
-    backgroundColor: "#E8EDF4",
+    backgroundColor: colors.border,
     borderRadius: 8,
     height: 12,
     overflow: "hidden"
   }
-});
+  });
+}

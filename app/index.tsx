@@ -2,15 +2,17 @@ import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useOnboarding } from "../src/features/onboarding/useOnboarding";
-import { colors } from "../src/theme/colors";
+import { type AppColors, useAppTheme } from "../src/theme/colors";
 
 export default function IndexScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const { hasOnboarded, isLoading } = useOnboarding();
 
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={colors.primary} size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     );
   }
@@ -18,11 +20,13 @@ export default function IndexScreen() {
   return <Redirect href={hasOnboarded ? "/(tabs)/home" : "/onboarding"} />;
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   loading: {
     alignItems: "center",
     backgroundColor: colors.backgroundBottom,
     flex: 1,
     justifyContent: "center"
   }
-});
+  });
+}

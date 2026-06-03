@@ -4,9 +4,11 @@ import { FlatList, StyleSheet, Text, View } from "react-native";
 import { AnimalCard } from "../../src/components/AnimalCard";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { UiSprite } from "../../src/components/UiSprite";
+import type { UiSpriteKey } from "../../src/data/ui.generated";
 import type { Animal } from "../../src/data/types";
 import { useRescue } from "../../src/state/RescueProvider";
-import { colors } from "../../src/theme/colors";
+import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { formatRescueDate } from "../../src/utils/date";
 
@@ -15,14 +17,18 @@ type AnimalSectionProps = {
   animals: Animal[];
   emptyTitle: string;
   emptyMessage: string;
+  emptySpriteKey: UiSpriteKey;
 };
 
 function AnimalSection({
   title,
   animals,
   emptyTitle,
-  emptyMessage
+  emptyMessage,
+  emptySpriteKey
 }: AnimalSectionProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const {
     getAnimalStatus,
     getAnimalMetrics,
@@ -34,7 +40,7 @@ function AnimalSection({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {animals.length === 0 ? (
-        <EmptyState title={emptyTitle} message={emptyMessage} />
+        <EmptyState title={emptyTitle} message={emptyMessage} spriteKey={emptySpriteKey} />
       ) : (
         <FlatList
           data={animals}
@@ -73,26 +79,33 @@ function AnimalSection({
 }
 
 export default function AnimalsScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const { lockedAnimals, unlockedAnimals } = useRescue();
 
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={styles.title}>Animal Collection</Text>
-        <Text style={styles.subtitle}>
-          Locked friends wait for care. Rescued friends stay safe here.
-        </Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Animal Collection</Text>
+          <Text style={styles.subtitle}>
+            Locked friends wait for care. Rescued friends stay safe here.
+          </Text>
+        </View>
+        <UiSprite spriteKey="collectionAnimalAlbum" size={96} />
       </View>
 
       <AnimalSection
         animals={lockedAnimals}
         emptyMessage="You rescued everyone. You are a hero."
+        emptySpriteKey="emptyAnimalWave"
         emptyTitle="No locked animals"
         title="Locked Animals"
       />
       <AnimalSection
         animals={unlockedAnimals}
         emptyMessage="No animals rescued yet. Your first rescue starts today."
+        emptySpriteKey="emptySanctuaryNest"
         emptyTitle="Your safe home is waiting"
         title="Unlocked Animals"
       />
@@ -100,13 +113,21 @@ export default function AnimalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   cardSlot: {
     flex: 1,
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.xs
   },
   header: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  headerCopy: {
+    flex: 1,
     gap: spacing.xs
   },
   section: {
@@ -128,4 +149,5 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "900"
   }
-});
+  });
+}

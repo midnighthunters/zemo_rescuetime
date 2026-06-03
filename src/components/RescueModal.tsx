@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { Modal, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
 import { AppButton } from "./AppButton";
@@ -21,6 +21,9 @@ export function RescueModal({
   onViewAnimals,
   onNextRescue
 }: RescueModalProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
+
   return (
     <Modal animationType="fade" transparent visible={visible}>
       <View style={styles.overlay}>
@@ -51,7 +54,8 @@ export function RescueModal({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   buttonRow: {
     gap: spacing.sm,
     width: "100%"
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     alignItems: "center",
-    backgroundColor: "rgba(34,48,71,0.42)",
+    backgroundColor: colors.overlay,
     flex: 1,
     justifyContent: "center"
   },
@@ -90,4 +94,5 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     textAlign: "center"
   }
-});
+  });
+}

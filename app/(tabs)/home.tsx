@@ -6,8 +6,10 @@ import { AppButton } from "../../src/components/AppButton";
 import { RescueModal } from "../../src/components/RescueModal";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { StepHeroCard } from "../../src/components/StepHeroCard";
+import { UiSprite } from "../../src/components/UiSprite";
+import type { UiSpriteKey } from "../../src/data/ui.generated";
 import { useRescue } from "../../src/state/RescueProvider";
-import { colors } from "../../src/theme/colors";
+import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 
@@ -22,7 +24,23 @@ function getGreeting() {
   return "Good evening, Rescuer";
 }
 
+function getCareSprite(label: string): UiSpriteKey {
+  const normalized = label.toLowerCase();
+
+  if (normalized.includes("water")) {
+    return "careWaterBowl";
+  }
+
+  if (normalized.includes("food") || normalized.includes("feed")) {
+    return "careFoodBowl";
+  }
+
+  return "careMedkit";
+}
+
 export default function HomeScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
   const {
     currentAnimal,
     getAnimalMetrics,
@@ -51,10 +69,13 @@ export default function HomeScreen() {
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={styles.greeting}>{getGreeting()}</Text>
-        <Text style={styles.subtitle}>
-          Every walk can make today safer for someone small.
-        </Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.subtitle}>
+            Every walk can make today safer for someone small.
+          </Text>
+        </View>
+        <UiSprite spriteKey="homeSanctuaryIsland" size={104} style={styles.headerSprite} />
       </View>
 
       {steps.error || steps.permissionStatus === "denied" ? (
@@ -74,8 +95,11 @@ export default function HomeScreen() {
 
       {lastCareEvent ? (
         <Pressable onPress={dismissCareEvent} style={styles.careToast}>
-          <Text style={styles.careTitle}>You gave {lastCareEvent.animalName} {lastCareEvent.label}.</Text>
-          <Text style={styles.careCopy}>Mood improved. Keep going.</Text>
+          <UiSprite spriteKey={getCareSprite(lastCareEvent.label)} size={54} />
+          <View style={styles.careCopyWrap}>
+            <Text style={styles.careTitle}>You gave {lastCareEvent.animalName} {lastCareEvent.label}.</Text>
+            <Text style={styles.careCopy}>Mood improved. Keep going.</Text>
+          </View>
         </Pressable>
       ) : null}
 
@@ -99,7 +123,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
   careCopy: {
     color: colors.primaryDark,
     fontSize: 13,
@@ -111,13 +136,19 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   careToast: {
-    backgroundColor: "#E9F8EF",
-    borderColor: "#BFE9CE",
-    borderRadius: 8,
+    alignItems: "center",
+    backgroundColor: colors.surfaceSoft,
+    borderColor: isDark ? colors.border : "#BFE9CE",
+    borderRadius: 20,
     borderWidth: 1,
+    flexDirection: "row",
     gap: spacing.xs,
     padding: spacing.md,
     ...shadows.card
+  },
+  careCopyWrap: {
+    flex: 1,
+    gap: spacing.xs
   },
   greeting: {
     color: colors.text,
@@ -125,12 +156,22 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   header: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  headerCopy: {
+    flex: 1,
     gap: spacing.xs
+  },
+  headerSprite: {
+    marginRight: -8
   },
   permissionCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg
@@ -152,4 +193,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 21
   }
-});
+  });
+}

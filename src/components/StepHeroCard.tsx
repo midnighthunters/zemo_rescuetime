@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { cageImage } from "../data/assets";
 import type { AnimalMetrics } from "../state/RescueProvider";
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
 import { formatNumber } from "../utils/format";
@@ -13,6 +12,7 @@ import { AppButton } from "./AppButton";
 import { CareMilestoneRow } from "./CareMilestoneRow";
 import { CircularStepProgress } from "./CircularStepProgress";
 import { ProBadge } from "./ProBadge";
+import { UiSprite } from "./UiSprite";
 
 type StepHeroCardProps = {
   metrics?: AnimalMetrics;
@@ -49,9 +49,13 @@ export function StepHeroCard({
   stepsToday,
   onOpenPaywall
 }: StepHeroCardProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
+
   if (!metrics) {
     return (
       <View style={styles.card}>
+        <UiSprite spriteKey="emptySanctuaryNest" size={112} style={styles.emptySprite} />
         <Text style={styles.title}>Everyone is safe</Text>
         <Text style={styles.copy}>
           You rescued every animal in this world. Keep walking to stay ready for
@@ -66,12 +70,16 @@ export function StepHeroCard({
 
   return (
     <View style={styles.card}>
+      <UiSprite spriteKey="homeGoldenFootprint" size={78} style={styles.cornerSprite} />
       <View style={styles.topRow}>
-        <View>
+        <View style={styles.stepsPanel}>
           <Text style={styles.eyebrow}>Today's Steps</Text>
           <Text style={styles.steps}>{formatNumber(stepsToday)}</Text>
         </View>
-        <CircularStepProgress progress={metrics.progress} />
+        <View style={styles.progressWrap}>
+          <UiSprite spriteKey="homeProgressRingMascot" size={58} style={styles.progressMascot} />
+          <CircularStepProgress progress={metrics.progress} />
+        </View>
       </View>
 
       <View style={styles.rescueHeader}>
@@ -84,16 +92,22 @@ export function StepHeroCard({
         {proLocked ? <ProBadge /> : null}
       </View>
 
-      <AnimalCage
-        animalImage={image}
-        cageImage={cageImage}
-        careState={metrics.careState}
-        isRescued={metrics.isRescued}
-        progress={metrics.progress}
-      />
+      <View style={styles.sceneWrap}>
+        <AnimalCage
+          animalImage={image}
+          careState={metrics.careState}
+          isRescued={metrics.isRescued}
+          progress={metrics.progress}
+        />
+        <UiSprite
+          spriteKey={metrics.progress >= 0.9 ? "homeAnimalSteppingOut" : "homeCageOpening"}
+          size={82}
+          style={styles.sceneBadge}
+        />
+      </View>
 
       <View style={styles.stepsLine}>
-        <Ionicons color={colors.primary} name="footsteps" size={18} />
+        <Ionicons color={theme.colors.primary} name="footsteps" size={18} />
         <Text style={styles.stepsLineText}>
           {formatNumber(stepsToday)} / {formatNumber(metrics.milestone.unlockSteps)} steps
         </Text>
@@ -101,18 +115,24 @@ export function StepHeroCard({
 
       <Text style={styles.copy}>{getProgressCopy(metrics)}</Text>
 
-      <AnimalMoodMeter
-        mood={metrics.mood}
-        progress={metrics.progress}
-        proLocked={proLocked}
-      />
+      <View style={styles.moodWrap}>
+        <AnimalMoodMeter
+          mood={metrics.mood}
+          progress={metrics.progress}
+          proLocked={proLocked}
+        />
+        <UiSprite spriteKey="microMoodTrail" size={46} style={styles.moodSprite} />
+      </View>
 
-      <CareMilestoneRow
-        claimedMiniMilestones={metrics.claimedMiniMilestones}
-        milestone={metrics.milestone}
-        proLocked={proLocked}
-        stepsToday={stepsToday}
-      />
+      <View style={styles.careWrap}>
+        <UiSprite spriteKey="homeRescueBackpack" size={62} style={styles.backpackSprite} />
+        <CareMilestoneRow
+          claimedMiniMilestones={metrics.claimedMiniMilestones}
+          milestone={metrics.milestone}
+          proLocked={proLocked}
+          stepsToday={stepsToday}
+        />
+      </View>
 
       <View style={styles.nextCare}>
         <Text style={styles.nextCareLabel}>Next care milestone</Text>
@@ -143,15 +163,32 @@ export function StepHeroCard({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderColor: "rgba(255,255,255,0.72)",
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: 24,
     borderWidth: 1,
     gap: spacing.lg,
+    overflow: "hidden",
     padding: spacing.lg,
     ...shadows.card
+  },
+  backpackSprite: {
+    position: "absolute",
+    right: -8,
+    top: -18,
+    zIndex: 2
+  },
+  careWrap: {
+    position: "relative"
+  },
+  cornerSprite: {
+    opacity: 0.22,
+    position: "absolute",
+    right: -10,
+    top: -8
   },
   copy: {
     color: colors.muted,
@@ -168,8 +205,8 @@ const styles = StyleSheet.create({
   },
   nextCare: {
     backgroundColor: colors.surfaceWarm,
-    borderColor: "#FFE0A8",
-    borderRadius: 8,
+    borderColor: isDark ? "#4B3E25" : "#FFE0A8",
+    borderRadius: 18,
     borderWidth: 1,
     gap: spacing.xs,
     padding: spacing.md
@@ -193,13 +230,39 @@ const styles = StyleSheet.create({
   },
   steps: {
     color: colors.text,
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: "900"
+  },
+  emptySprite: {
+    alignSelf: "center"
+  },
+  moodSprite: {
+    bottom: -6,
+    position: "absolute",
+    right: 2
+  },
+  moodWrap: {
+    position: "relative"
+  },
+  progressMascot: {
+    position: "absolute",
+    right: -22,
+    top: -22,
+    zIndex: 2
+  },
+  progressWrap: {
+    position: "relative"
+  },
+  stepsPanel: {
+    flex: 1,
+    gap: spacing.xs
   },
   stepsLine: {
     alignItems: "center",
-    backgroundColor: "#EFFAF4",
-    borderRadius: 8,
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md
@@ -208,6 +271,15 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 15,
     fontWeight: "900"
+  },
+  sceneBadge: {
+    bottom: 6,
+    position: "absolute",
+    right: 6,
+    zIndex: 10
+  },
+  sceneWrap: {
+    position: "relative"
   },
   title: {
     color: colors.text,
@@ -220,4 +292,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between"
   }
-});
+  });
+}

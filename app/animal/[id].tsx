@@ -6,15 +6,16 @@ import { AnimalMoodMeter } from "../../src/components/AnimalMoodMeter";
 import { AppButton } from "../../src/components/AppButton";
 import { CareMilestoneRow } from "../../src/components/CareMilestoneRow";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
-import { cageImage } from "../../src/data/assets";
 import { useRescue } from "../../src/state/RescueProvider";
-import { colors } from "../../src/theme/colors";
+import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 import { formatRescueDate } from "../../src/utils/date";
 import { formatNumber } from "../../src/utils/format";
 
 export default function AnimalDetailScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { animals, getAnimalMetrics, rescueProgress, stepsToday } = useRescue();
   const animal = animals.find((item) => item.id === id);
@@ -48,7 +49,6 @@ export default function AnimalDetailScreen() {
         <Text style={styles.title}>{animal.name}</Text>
         <AnimalCage
           animalImage={image}
-          cageImage={cageImage}
           careState={metrics.careState}
           isRescued={metrics.isRescued}
           progress={metrics.progress}
@@ -96,7 +96,8 @@ export default function AnimalDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -119,8 +120,8 @@ const styles = StyleSheet.create({
     textTransform: "uppercase"
   },
   safePanel: {
-    backgroundColor: "#E9F8EF",
-    borderColor: "#BFE9CE",
+    backgroundColor: colors.surfaceSoft,
+    borderColor: isDark ? colors.border : "#BFE9CE",
     borderRadius: 8,
     borderWidth: 1,
     gap: spacing.xs,
@@ -136,4 +137,5 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "900"
   }
-});
+  });
+}

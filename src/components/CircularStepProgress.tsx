@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { formatPercent } from "../utils/format";
 
 type CircularStepProgressProps = {
@@ -8,11 +8,18 @@ type CircularStepProgressProps = {
 };
 
 export function CircularStepProgress({ progress }: CircularStepProgressProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const clamped = Math.max(0, Math.min(1, progress));
 
   return (
     <View style={styles.outer}>
-      <View style={[styles.inner, { borderColor: clamped > 0.7 ? colors.primary : colors.secondary }]}>
+      <View
+        style={[
+          styles.inner,
+          { borderColor: clamped > 0.7 ? theme.colors.primary : theme.colors.secondary }
+        ]}
+      >
         <Text style={styles.percent}>{formatPercent(clamped)}</Text>
         <Text style={styles.label}>Rescue</Text>
       </View>
@@ -20,10 +27,11 @@ export function CircularStepProgress({ progress }: CircularStepProgressProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   inner: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 52,
     borderWidth: 8,
     height: 104,
@@ -44,4 +52,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900"
   }
-});
+  });
+}

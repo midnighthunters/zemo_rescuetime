@@ -5,10 +5,11 @@ import { Alert, Linking, StyleSheet, Switch, Text, View } from "react-native";
 
 import { AppButton } from "../../src/components/AppButton";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { UiSprite } from "../../src/components/UiSprite";
 import { useOnboarding } from "../../src/features/onboarding/useOnboarding";
 import { useEntitlements } from "../../src/features/purchases/useEntitlements";
 import { useRescue } from "../../src/state/RescueProvider";
-import { colors } from "../../src/theme/colors";
+import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 import { formatNumber } from "../../src/utils/format";
@@ -20,6 +21,9 @@ function SettingsPanel({
   title: string;
   children: ReactNode;
 }) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
+
   return (
     <View style={styles.panel}>
       <Text style={styles.panelTitle}>{title}</Text>
@@ -29,6 +33,8 @@ function SettingsPanel({
 }
 
 export default function SettingsScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
   const router = useRouter();
   const {
     isPro,
@@ -65,11 +71,14 @@ export default function SettingsScreen() {
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>
-          Your step data stays on your device. We only use it to calculate
-          rescue progress.
-        </Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Settings</Text>
+          <Text style={styles.subtitle}>
+            Your step data stays on your device. We only use it to calculate
+            rescue progress.
+          </Text>
+        </View>
+        <UiSprite spriteKey="emptySettingsAnimal" size={92} />
       </View>
 
       <SettingsPanel title="Pro">
@@ -124,6 +133,18 @@ export default function SettingsScreen() {
         />
       </SettingsPanel>
 
+      <SettingsPanel title="Appearance">
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Theme</Text>
+          <Text style={styles.rowValue}>
+            {theme.isDark ? "Dark" : "Light"}
+          </Text>
+        </View>
+        <Text style={styles.note}>
+          The app follows your device appearance automatically.
+        </Text>
+      </SettingsPanel>
+
       <SettingsPanel title="Local Data">
         <AppButton
           icon="refresh"
@@ -148,8 +169,11 @@ export default function SettingsScreen() {
             <Text style={styles.rowLabel}>Mock Pro</Text>
             <Switch
               onValueChange={setDevProEnabled}
-              thumbColor={devProEnabled ? colors.primary : colors.white}
-              trackColor={{ false: colors.border, true: "#BFE9CE" }}
+              thumbColor={devProEnabled ? theme.colors.primary : theme.colors.white}
+              trackColor={{
+                false: theme.colors.border,
+                true: theme.isDark ? "#245A43" : "#BFE9CE"
+              }}
               value={devProEnabled}
             />
           </View>
@@ -190,7 +214,8 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark = false) {
+  return StyleSheet.create({
   devGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -202,6 +227,13 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   header: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  headerCopy: {
+    flex: 1,
     gap: spacing.xs
   },
   note: {
@@ -213,7 +245,7 @@ const styles = StyleSheet.create({
   panel: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg,
@@ -261,4 +293,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center"
   }
-});
+  });
+}
