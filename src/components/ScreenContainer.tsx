@@ -6,9 +6,9 @@ import {
   View,
   type ViewStyle
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors } from "../theme/colors";
+import { useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 
 type ScreenContainerProps = PropsWithChildren<{
@@ -21,19 +21,24 @@ export function ScreenContainer({
   scroll = true,
   contentStyle
 }: ScreenContainerProps) {
+  const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
   const content = (
     <View style={[styles.content, contentStyle]}>{children}</View>
   );
 
   return (
     <LinearGradient
-      colors={[colors.backgroundTop, colors.backgroundBottom]}
+      colors={theme.gradient}
       style={styles.root}
     >
       <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
         {scroll ? (
           <ScrollView
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: 112 + insets.bottom }
+            ]}
             showsVerticalScrollIndicator={false}
           >
             {content}
@@ -49,7 +54,8 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   content: {
     gap: spacing.lg,
-    padding: spacing.lg
+    padding: spacing.lg,
+    paddingTop: spacing.xl
   },
   root: {
     flex: 1

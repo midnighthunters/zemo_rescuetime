@@ -1,10 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { AppButton } from "../src/components/AppButton";
 import { ScreenContainer } from "../src/components/ScreenContainer";
+import { UiSprite } from "../src/components/UiSprite";
 import { useEntitlements } from "../src/features/purchases/useEntitlements";
-import { colors } from "../src/theme/colors";
+import { type AppColors, useAppTheme } from "../src/theme/colors";
 import { shadows } from "../src/theme/shadows";
 import { spacing } from "../src/theme/spacing";
 
@@ -17,6 +19,8 @@ const benefits = [
 ];
 
 export default function PaywallScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const {
     purchasePro,
     restorePurchases,
@@ -44,6 +48,7 @@ export default function PaywallScreen() {
   return (
     <ScreenContainer>
       <View style={styles.hero}>
+        <UiSprite spriteKey="proSanctuaryGate" size={136} style={styles.heroSprite} />
         <Text style={styles.eyebrow}>Pro Rescue Pass</Text>
         <Text style={styles.title}>Rescue Every Animal</Text>
         <Text style={styles.subtitle}>
@@ -53,9 +58,18 @@ export default function PaywallScreen() {
       </View>
 
       <View style={styles.card}>
+        <View style={styles.proFamilyRow}>
+          <UiSprite spriteKey="proAnimalFamily" size={92} />
+          <UiSprite spriteKey="proGoldenKey" size={72} />
+          <UiSprite spriteKey="proTreasureChest" size={82} />
+        </View>
         {benefits.map((benefit) => (
           <View key={benefit} style={styles.benefitRow}>
-            <Text style={styles.check}>✓</Text>
+            <Ionicons
+              color={theme.colors.primary}
+              name="checkmark-circle"
+              size={21}
+            />
             <Text style={styles.benefit}>{benefit}</Text>
           </View>
         ))}
@@ -95,65 +109,71 @@ export default function PaywallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  benefit: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "800",
-    lineHeight: 22
-  },
-  benefitRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: spacing.md,
-    padding: spacing.lg,
-    ...shadows.card
-  },
-  check: {
-    color: colors.primary,
-    fontSize: 19,
-    fontWeight: "900"
-  },
-  error: {
-    color: colors.danger,
-    fontSize: 14,
-    fontWeight: "800",
-    textAlign: "center"
-  },
-  eyebrow: {
-    color: colors.pro,
-    fontSize: 13,
-    fontWeight: "900",
-    textTransform: "uppercase"
-  },
-  hero: {
-    gap: spacing.md,
-    paddingTop: spacing.xl
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 16,
-    fontWeight: "700",
-    lineHeight: 23
-  },
-  success: {
-    color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: "900",
-    textAlign: "center"
-  },
-  title: {
-    color: colors.text,
-    fontSize: 36,
-    fontWeight: "900",
-    lineHeight: 41
-  }
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    benefit: {
+      color: colors.text,
+      flex: 1,
+      fontSize: 16,
+      fontWeight: "800",
+      lineHeight: 22
+    },
+    benefitRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: spacing.md
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 24,
+      borderWidth: 1,
+      gap: spacing.md,
+      padding: spacing.lg,
+      ...shadows.card
+    },
+    error: {
+      color: colors.danger,
+      fontSize: 14,
+      fontWeight: "800",
+      textAlign: "center"
+    },
+    eyebrow: {
+      color: colors.pro,
+      fontSize: 13,
+      fontWeight: "900",
+      textTransform: "uppercase"
+    },
+    hero: {
+      alignItems: "flex-start",
+      gap: spacing.md,
+      paddingTop: spacing.xl
+    },
+    heroSprite: {
+      alignSelf: "center"
+    },
+    proFamilyRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between"
+    },
+    subtitle: {
+      color: colors.muted,
+      fontSize: 16,
+      fontWeight: "700",
+      lineHeight: 23
+    },
+    success: {
+      color: colors.primaryDark,
+      fontSize: 14,
+      fontWeight: "900",
+      textAlign: "center"
+    },
+    title: {
+      color: colors.text,
+      fontSize: 36,
+      fontWeight: "900",
+      lineHeight: 41
+    }
+  });
+}

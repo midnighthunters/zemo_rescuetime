@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import type { RescueMilestone } from "../data/types";
 import { feedingMilestoneIcons, feedingMilestoneLabels } from "../data/milestones";
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { formatNumber } from "../utils/format";
 
@@ -20,6 +20,8 @@ export function CareMilestoneRow({
   claimedMiniMilestones,
   proLocked
 }: CareMilestoneRowProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
   const items = [
     ...milestone.miniMilestones.map((target, index) => ({
       key: `${target}`,
@@ -48,10 +50,10 @@ export function CareMilestoneRow({
           <Ionicons
             color={
               proLocked
-                ? colors.locked
+                ? theme.colors.locked
                 : item.complete
-                  ? colors.primary
-                  : colors.muted
+                  ? theme.colors.primary
+                  : theme.colors.muted
             }
             name={item.complete ? "checkmark-circle" : (item.icon as keyof typeof Ionicons.glyphMap)}
             size={16}
@@ -60,9 +62,9 @@ export function CareMilestoneRow({
             numberOfLines={1}
             adjustsFontSizeToFit
             style={[styles.label, item.complete && styles.completeLabel]}
-          >
-            {item.label}
-          </Text>
+        >
+          {item.label}
+        </Text>
           <Text style={styles.target}>{formatNumber(item.target)}</Text>
         </View>
       ))}
@@ -70,13 +72,14 @@ export function CareMilestoneRow({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
   completeLabel: {
     color: colors.primaryDark
   },
   item: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: isDark ? "rgba(31,42,39,0.72)" : "rgba(255,255,255,0.72)",
     borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
@@ -86,8 +89,8 @@ const styles = StyleSheet.create({
     padding: spacing.sm
   },
   itemComplete: {
-    backgroundColor: "#E9F8EF",
-    borderColor: "#BFE9CE"
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.primary
   },
   label: {
     color: colors.text,
@@ -103,4 +106,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700"
   }
-});
+  });
+}

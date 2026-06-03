@@ -1,26 +1,42 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
+import type { UiSpriteKey } from "../data/ui.generated";
+import { UiSprite } from "./UiSprite";
 
 type EmptyStateProps = {
   icon?: keyof typeof Ionicons.glyphMap;
+  spriteKey?: UiSpriteKey | null;
   title: string;
   message: string;
 };
 
-export function EmptyState({ icon = "paw-outline", title, message }: EmptyStateProps) {
+export function EmptyState({
+  icon = "paw-outline",
+  spriteKey = "emptyAnimalWave",
+  title,
+  message
+}: EmptyStateProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
+
   return (
     <View style={styles.root}>
-      <Ionicons color={colors.primary} name={icon} size={30} />
+      {spriteKey ? (
+        <UiSprite spriteKey={spriteKey} size={86} />
+      ) : (
+        <Ionicons color={theme.colors.primary} name={icon} size={30} />
+      )}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
   message: {
     color: colors.muted,
     fontSize: 14,
@@ -29,9 +45,9 @@ const styles = StyleSheet.create({
   },
   root: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.62)",
+    backgroundColor: isDark ? "rgba(31,42,39,0.64)" : "rgba(255,255,255,0.64)",
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.xl
@@ -42,4 +58,5 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     textAlign: "center"
   }
-});
+  });
+}

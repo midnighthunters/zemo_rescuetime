@@ -1,21 +1,19 @@
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRef, useState } from "react";
 import {
   FlatList,
+  Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppButton } from "../../components/AppButton";
 import { onboardingSlides, type OnboardingSlide } from "../../data/onboarding";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { AppButton } from "../../components/AppButton";
 
 type OnboardingCarouselProps = {
   onDone: () => void;
@@ -23,6 +21,7 @@ type OnboardingCarouselProps = {
 
 export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
   const { width } = useWindowDimensions();
+  const theme = useAppTheme();
   const listRef = useRef<FlatList<OnboardingSlide>>(null);
   const [index, setIndex] = useState(0);
   const isLast = index === onboardingSlides.length - 1;
@@ -42,7 +41,7 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.backgroundBottom }]}>
       <FlatList
         ref={listRef}
         data={onboardingSlides}
@@ -51,115 +50,56 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
         onMomentumScrollEnd={handleMomentumEnd}
         pagingEnabled
         renderItem={({ item }) => (
-          <View style={[styles.slide, { width }]}>
-            <Image contentFit="cover" source={item.image} style={styles.image} />
-            <LinearGradient
-              colors={["rgba(34,48,71,0.08)", "rgba(34,48,71,0.62)"]}
-              style={styles.overlay}
-            />
-            <SafeAreaView style={styles.safeArea}>
-              <View style={styles.copyWrap}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.subtitle}>{item.subtitle}</Text>
-              </View>
-            </SafeAreaView>
-          </View>
+          <Pressable
+            accessibilityLabel="Onboarding image"
+            accessibilityRole="button"
+            onPress={handleNext}
+            style={[styles.slide, { width }]}
+          >
+            <View style={styles.imageContainer}>
+              <Image contentFit="contain" source={item.image} style={styles.image} />
+            </View>
+          </Pressable>
         )}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
       />
-
-      <SafeAreaView edges={["bottom"]} style={styles.controls}>
-        <View style={styles.dots}>
-          {onboardingSlides.map((slide, dotIndex) => (
-            <View
-              key={slide.id}
-              style={[styles.dot, dotIndex === index && styles.activeDot]}
-            />
-          ))}
-        </View>
-        <View style={styles.buttonRow}>
-          <AppButton onPress={onDone} title="Skip" variant="ghost" />
+      {isLast && (
+        <View style={styles.controls}>
           <AppButton
-            icon={isLast ? "checkmark" : "arrow-forward"}
+            icon="heart"
             onPress={handleNext}
-            title={isLast ? "Start Rescuing" : "Continue"}
+            title="Start Rescuing"
+            variant="primary"
           />
         </View>
-      </SafeAreaView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  activeDot: {
-    backgroundColor: colors.primary,
-    width: 28
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: spacing.sm
-  },
-  controls: {
-    backgroundColor: colors.backgroundBottom,
-    borderTopColor: "rgba(255,255,255,0.8)",
-    borderTopWidth: 1,
-    bottom: 0,
-    gap: spacing.lg,
-    left: 0,
-    padding: spacing.lg,
-    position: "absolute",
-    right: 0
-  },
-  copyWrap: {
-    gap: spacing.md,
-    marginTop: "auto",
-    padding: spacing.xl,
-    paddingBottom: 150
-  },
-  dot: {
-    backgroundColor: "#B7C4D6",
-    borderRadius: 8,
-    height: 8,
-    width: 8
-  },
-  dots: {
-    alignSelf: "center",
-    flexDirection: "row",
-    gap: spacing.sm
+  imageContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl
   },
   image: {
-    height: "100%",
-    position: "absolute",
+    height: "80%",
     width: "100%"
   },
-  overlay: {
-    bottom: 0,
-    left: 0,
+  controls: {
+    bottom: spacing.xl,
+    left: spacing.lg,
     position: "absolute",
-    right: 0,
-    top: 0
+    right: spacing.lg
   },
   root: {
-    backgroundColor: colors.backgroundBottom,
-    flex: 1
-  },
-  safeArea: {
     flex: 1
   },
   slide: {
     flex: 1
-  },
-  subtitle: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: "700",
-    lineHeight: 26
-  },
-  title: {
-    color: colors.white,
-    fontSize: 36,
-    fontWeight: "900",
-    lineHeight: 42
   }
 });

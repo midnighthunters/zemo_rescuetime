@@ -3,13 +3,14 @@ import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { cageImage } from "../data/assets";
+import { jailSprites } from "../data/assets";
 import type { Animal, AnimalCardStatus } from "../data/types";
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
 import { formatNumber, formatPercent } from "../utils/format";
 import { ProBadge } from "./ProBadge";
+import { UiSprite } from "./UiSprite";
 
 type AnimalCardProps = {
   animal: Animal;
@@ -28,6 +29,8 @@ function AnimalCardComponent({
   rescuedDate,
   onPress
 }: AnimalCardProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
   const isUnlocked = status === "unlocked";
   const isProLocked = status === "pro_locked";
   const image = isUnlocked ? animal.happyImage : animal.sadImage;
@@ -50,14 +53,45 @@ function AnimalCardComponent({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.imageWrap}>
+        <UiSprite
+          spriteKey={isUnlocked ? "collectionUnlockedFrame" : "collectionLockedBubble"}
+          size={96}
+          style={styles.collectionFrame}
+        />
+        {!isUnlocked ? (
+          <Image
+            contentFit="contain"
+            source={jailSprites.platform}
+            style={styles.platformImage}
+          />
+        ) : null}
         <Image contentFit="contain" source={image} style={styles.animalImage} />
         {!isUnlocked ? (
-          <Image contentFit="contain" source={cageImage} style={styles.cageImage} />
+          <View pointerEvents="none" style={styles.jailStack}>
+            <Image
+              contentFit="contain"
+              source={jailSprites.openJail}
+              style={styles.openJailImage}
+            />
+            <Image
+              contentFit="contain"
+              source={jailSprites.gate}
+              style={styles.gateImage}
+            />
+            <Image
+              contentFit="contain"
+              source={jailSprites.top}
+              style={styles.topImage}
+            />
+          </View>
         ) : null}
         {isUnlocked ? (
           <View style={styles.rescuedBadge}>
-            <Ionicons color={colors.white} name="heart" size={12} />
+            <Ionicons color={theme.colors.white} name="heart" size={12} />
           </View>
+        ) : null}
+        {isProLocked ? (
+          <UiSprite spriteKey="collectionPremiumBadge" size={42} style={styles.proSprite} />
         ) : null}
       </View>
       <View style={styles.copy}>
@@ -97,23 +131,19 @@ function AnimalCardComponent({
 
 export const AnimalCard = memo(AnimalCardComponent);
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
   animalImage: {
-    height: "92%",
-    width: "92%"
-  },
-  cageImage: {
-    height: "100%",
-    left: 0,
-    opacity: 0.64,
+    bottom: "12%",
+    height: "58%",
     position: "absolute",
-    top: 0,
-    width: "100%"
+    width: "68%",
+    zIndex: 3
   },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     flex: 1,
     gap: spacing.sm,
@@ -124,14 +154,37 @@ const styles = StyleSheet.create({
   copy: {
     gap: spacing.xs
   },
+  collectionFrame: {
+    opacity: 0.85,
+    position: "absolute",
+    right: -16,
+    top: -14,
+    zIndex: 1
+  },
+  gateImage: {
+    bottom: "22%",
+    height: "42%",
+    position: "absolute",
+    right: "12%",
+    width: "50%",
+    zIndex: 5
+  },
   imageWrap: {
     alignItems: "center",
     aspectRatio: 1,
-    backgroundColor: "#EEF7FF",
-    borderRadius: 8,
+    backgroundColor: isDark ? "#102821" : "#EEF8F2",
+    borderRadius: 18,
     justifyContent: "center",
     overflow: "hidden",
     width: "100%"
+  },
+  jailStack: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 4
   },
   name: {
     color: colors.text,
@@ -152,16 +205,37 @@ const styles = StyleSheet.create({
   pressed: {
     transform: [{ scale: 0.99 }]
   },
+  proSprite: {
+    bottom: spacing.sm,
+    position: "absolute",
+    right: spacing.sm,
+    zIndex: 8
+  },
   progressFill: {
     backgroundColor: colors.primary,
-    borderRadius: 8,
+    borderRadius: 12,
     height: "100%"
   },
   progressTrack: {
-    backgroundColor: "#E8EDF4",
+    backgroundColor: colors.border,
     borderRadius: 8,
     height: 8,
     overflow: "hidden"
+  },
+  openJailImage: {
+    bottom: "7%",
+    height: "62%",
+    left: "8%",
+    position: "absolute",
+    width: "84%",
+    zIndex: 4
+  },
+  platformImage: {
+    bottom: "5%",
+    height: "24%",
+    position: "absolute",
+    width: "82%",
+    zIndex: 2
   },
   rescuedBadge: {
     alignItems: "center",
@@ -183,5 +257,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 12,
     fontWeight: "700"
+  },
+  topImage: {
+    height: "25%",
+    left: "8%",
+    position: "absolute",
+    top: "5%",
+    width: "84%",
+    zIndex: 6
   }
-});
+  });
+}

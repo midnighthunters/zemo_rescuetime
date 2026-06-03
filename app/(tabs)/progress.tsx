@@ -3,9 +3,11 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { EmptyState } from "../../src/components/EmptyState";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { UiSprite } from "../../src/components/UiSprite";
 import { feedingMilestoneLabels } from "../../src/data/milestones";
+import type { UiSpriteKey } from "../../src/data/ui.generated";
 import { useRescue } from "../../src/state/RescueProvider";
-import { colors } from "../../src/theme/colors";
+import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 import { formatNumber } from "../../src/utils/format";
@@ -13,15 +15,23 @@ import { formatNumber } from "../../src/utils/format";
 function StatCard({
   label,
   value,
-  icon
+  icon,
+  spriteKey
 }: {
   label: string;
   value: string;
   icon: keyof typeof Ionicons.glyphMap;
+  spriteKey: UiSpriteKey;
 }) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
+
   return (
     <View style={styles.statCard}>
-      <Ionicons color={colors.primary} name={icon} size={22} />
+      <View style={styles.statTop}>
+        <Ionicons color={theme.colors.primary} name={icon} size={22} />
+        <UiSprite spriteKey={spriteKey} size={42} />
+      </View>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -29,6 +39,8 @@ function StatCard({
 }
 
 export default function ProgressScreen() {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const {
     currentAnimal,
     getAnimalMetrics,
@@ -77,27 +89,34 @@ export default function ProgressScreen() {
         <StatCard
           icon="paw"
           label="Animals rescued"
+          spriteKey="progressPawTrophy"
           value={formatNumber(unlockedAnimals.length)}
         />
         <StatCard
           icon="footsteps"
           label="Steps today"
+          spriteKey="microWalkingShoe"
           value={formatNumber(stepsToday)}
         />
         <StatCard
           icon="heart"
           label="Care milestones"
+          spriteKey="careRewardChest"
           value={formatNumber(careMilestonesCompleted)}
         />
         <StatCard
           icon="calendar"
           label="Steps this week"
+          spriteKey="progressWeeklyCalendar"
           value={formatNumber(weeklySteps)}
         />
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Timeline</Text>
+        <View style={styles.panelHeader}>
+          <Text style={styles.panelTitle}>Timeline</Text>
+          <UiSprite spriteKey="progressTimelineTrail" size={66} />
+        </View>
         {timeline.length === 0 ? (
           <EmptyState
             message="You rescued everyone in this world. Future rescue paths can start here."
@@ -114,7 +133,7 @@ export default function ProgressScreen() {
                   ]}
                 >
                   {item.complete ? (
-                    <Ionicons color={colors.white} name="checkmark" size={12} />
+                    <Ionicons color={theme.colors.white} name="checkmark" size={12} />
                   ) : null}
                 </View>
                 {index < timeline.length - 1 ? <View style={styles.line} /> : null}
@@ -131,7 +150,8 @@ export default function ProgressScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   header: {
     gap: spacing.xs
   },
@@ -143,7 +163,7 @@ const styles = StyleSheet.create({
   panel: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.lg,
     padding: spacing.lg,
@@ -154,10 +174,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900"
   },
+  panelHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
   statCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     flexBasis: "48%",
     flexGrow: 1,
@@ -170,6 +195,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.md
+  },
+  statTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
   },
   statLabel: {
     color: colors.muted,
@@ -196,7 +226,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.white,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 11,
     borderWidth: 2,
     height: 22,
     justifyContent: "center",
@@ -228,4 +258,5 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "900"
   }
-});
+  });
+}

@@ -11,7 +11,7 @@ import {
   type ViewStyle
 } from "react-native";
 
-import { colors } from "../theme/colors";
+import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -33,7 +33,15 @@ export function AppButton({
   style,
   ...props
 }: AppButtonProps) {
+  const theme = useAppTheme();
+  const styles = createStyles(theme.colors);
   const isDisabled = disabled || loading;
+  const contentColor =
+    variant === "ghost"
+      ? theme.colors.primary
+      : variant === "secondary" || variant === "pro"
+        ? "#172033"
+        : theme.colors.white;
 
   return (
     <Pressable
@@ -49,12 +57,12 @@ export function AppButton({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "ghost" ? colors.primary : colors.white} />
+        <ActivityIndicator color={contentColor} />
       ) : (
         <View style={styles.content}>
           {icon ? (
             <Ionicons
-              color={variant === "ghost" ? colors.primary : colors.white}
+              color={contentColor}
               name={icon}
               size={18}
             />
@@ -65,7 +73,8 @@ export function AppButton({
             style={[
               styles.label,
               variant === "ghost" && styles.ghostLabel,
-              variant === "secondary" && styles.secondaryLabel
+              (variant === "secondary" || variant === "pro") &&
+                styles.accentLabel
             ]}
           >
             {title}
@@ -76,7 +85,8 @@ export function AppButton({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   base: {
     minHeight: 48,
     borderRadius: 8,
@@ -121,7 +131,8 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: colors.secondary
   },
-  secondaryLabel: {
-    color: colors.text
+  accentLabel: {
+    color: "#172033"
   }
-});
+  });
+}
