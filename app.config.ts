@@ -31,7 +31,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     permissions: ["ACTIVITY_RECOGNITION"]
   },
-  plugins: ["expo-router", "expo-font"],
+  plugins: [
+    "expo-router",
+    "expo-font",
+    [
+      "expo-sensors",
+      {
+        motionPermission:
+          "Allow Rescue Animals Steps to read your device step count for rescue progress."
+      }
+    ]
+  ],
   extra: {
     revenueCatEntitlementId:
       process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "pro",

@@ -6,6 +6,7 @@ import { AnimalMoodMeter } from "../../src/components/AnimalMoodMeter";
 import { AppButton } from "../../src/components/AppButton";
 import { CareMilestoneRow } from "../../src/components/CareMilestoneRow";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { UiSprite } from "../../src/components/UiSprite";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
@@ -43,10 +44,18 @@ export default function AnimalDetailScreen() {
       />
 
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>
-          {metrics.isRescued ? "Rescued Friend" : "Locked Rescue"}
-        </Text>
-        <Text style={styles.title}>{animal.name}</Text>
+        <View style={styles.detailHeader}>
+          <View style={styles.detailCopy}>
+            <Text style={styles.eyebrow}>
+              {metrics.isRescued ? "Safe friend" : "Rescue target"}
+            </Text>
+            <Text style={styles.title}>{animal.name}</Text>
+          </View>
+          <UiSprite
+            spriteKey={metrics.isRescued ? "microHeartBubble" : "homeRescuerFlag"}
+            size={68}
+          />
+        </View>
         <AnimalCage
           animalImage={image}
           careState={metrics.careState}
@@ -64,6 +73,24 @@ export default function AnimalDetailScreen() {
           </View>
         ) : (
           <>
+            <View style={styles.statRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Today</Text>
+                <Text style={styles.statValue}>{formatNumber(stepsToday)}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Target</Text>
+                <Text style={styles.statValue}>
+                  {formatNumber(metrics.milestone.unlockSteps)}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Left</Text>
+                <Text style={styles.statValue}>
+                  {formatNumber(metrics.remainingSteps)}
+                </Text>
+              </View>
+            </View>
             <Text style={styles.copy}>
               {formatNumber(stepsToday)} / {formatNumber(metrics.milestone.unlockSteps)} steps.
               {metrics.remainingSteps > 0
@@ -113,6 +140,16 @@ function createStyles(colors: AppColors, isDark: boolean) {
     fontWeight: "700",
     lineHeight: 22
   },
+  detailCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  detailHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
   eyebrow: {
     color: colors.primary,
     fontSize: 12,
@@ -130,6 +167,30 @@ function createStyles(colors: AppColors, isDark: boolean) {
   safeTitle: {
     color: colors.primaryDark,
     fontSize: 17,
+    fontWeight: "900"
+  },
+  statItem: {
+    backgroundColor: isDark ? colors.surfaceElevated : "#FAFCF7",
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  statLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  statRow: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  statValue: {
+    color: colors.text,
+    fontSize: 16,
     fontWeight: "900"
   },
   title: {

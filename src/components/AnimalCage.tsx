@@ -73,32 +73,40 @@ export function AnimalCage({
     >
       <View
         style={[
-          styles.glow,
+          styles.stageFloor,
           {
             backgroundColor: theme.isDark
-              ? "rgba(69,209,143,0.18)"
-              : "rgba(243,179,61,0.18)"
+              ? "rgba(69,209,143,0.10)"
+              : "rgba(255,191,63,0.20)"
           }
         ]}
       />
       {!isRescued ? (
-        <Image
-          contentFit="contain"
-          source={jailSprites.platform}
-          style={styles.platform}
-        />
-      ) : null}
-      <Image contentFit="contain" source={animalImage} style={styles.animal} />
-      {!isRescued ? (
-        <Animated.View pointerEvents="none" style={[styles.jailOverlay, cageStyle]}>
+        <Animated.View pointerEvents="none" style={[styles.openJailLayer, cageStyle]}>
           <Image
             contentFit="contain"
             source={jailSprites.openJail}
-            style={styles.openJail}
+            style={styles.layerImage}
           />
-          <Image contentFit="contain" source={jailSprites.gate} style={styles.gate} />
-          <Image contentFit="contain" source={jailSprites.top} style={styles.top} />
         </Animated.View>
+      ) : null}
+      <Image contentFit="contain" source={animalImage} style={styles.animal} />
+      {!isRescued ? (
+        <>
+          <Animated.View pointerEvents="none" style={[styles.gateLayer, cageStyle]}>
+            <Image contentFit="contain" source={jailSprites.gate} style={styles.layerImage} />
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={[styles.platformLayer, cageStyle]}>
+            <Image
+              contentFit="contain"
+              source={jailSprites.platform}
+              style={styles.layerImage}
+            />
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={[styles.topLayer, cageStyle]}>
+            <Image contentFit="contain" source={jailSprites.top} style={styles.layerImage} />
+          </Animated.View>
+        </>
       ) : null}
       <View style={styles.badgeRow}>
         {careBadges[careState].map((badge) => (
@@ -114,10 +122,10 @@ export function AnimalCage({
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
   animal: {
-    bottom: "12%",
-    height: "62%",
+    bottom: "21%",
+    height: "48%",
     position: "absolute",
-    width: "68%",
+    width: "58%",
     zIndex: 3
   },
   badge: {
@@ -142,42 +150,32 @@ function createStyles(colors: AppColors, isDark: boolean) {
     position: "absolute",
     right: spacing.sm
   },
-  gate: {
-    bottom: "22%",
-    height: "48%",
+  gateLayer: {
+    height: "57%",
+    left: "18%",
     position: "absolute",
-    right: "13%",
-    width: "52%",
+    top: "27%",
+    width: "64%",
     zIndex: 6
   },
-  jailOverlay: {
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0
+  layerImage: {
+    height: "100%",
+    width: "100%"
   },
-  glow: {
-    borderRadius: 96,
-    height: 192,
+  openJailLayer: {
+    bottom: "8%",
+    height: "84%",
+    left: "3%",
     position: "absolute",
-    width: 192,
-    zIndex: 1
-  },
-  openJail: {
-    bottom: "6%",
-    height: "72%",
-    left: "7%",
-    position: "absolute",
-    width: "86%",
-    zIndex: 5
-  },
-  platform: {
-    bottom: "5%",
-    height: "25%",
-    position: "absolute",
-    width: "86%",
+    width: "94%",
     zIndex: 2
+  },
+  platformLayer: {
+    bottom: "3%",
+    height: "35%",
+    position: "absolute",
+    width: "94%",
+    zIndex: 7
   },
   root: {
     alignItems: "center",
@@ -189,13 +187,21 @@ function createStyles(colors: AppColors, isDark: boolean) {
     overflow: "hidden",
     width: "100%"
   },
-  top: {
-    height: "30%",
-    left: "7%",
+  stageFloor: {
+    bottom: 0,
+    height: "36%",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    zIndex: 1
+  },
+  topLayer: {
+    height: "35%",
+    left: "3%",
     position: "absolute",
     top: "1%",
-    width: "86%",
-    zIndex: 7
+    width: "94%",
+    zIndex: 8
   }
   });
 }

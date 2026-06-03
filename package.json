@@ -8,9 +8,6 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "extract:sprites": "tsx scripts/extractSprites.ts",
-    "prestart": "npm run extract:sprites",
-    "prebuild": "npm run extract:sprites",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

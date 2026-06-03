@@ -126,11 +126,11 @@ function createStyles(colors: AppColors) {
     card: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      borderRadius: 24,
+      borderRadius: 8,
       borderWidth: 1,
       gap: spacing.md,
       padding: spacing.lg,
-      ...shadows.card
+      ...shadows.soft
     },
     error: {
       color: colors.danger,

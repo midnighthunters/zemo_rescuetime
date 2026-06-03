@@ -10,6 +10,7 @@ import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
+import { getCurrentWeekDateKeys } from "../../src/utils/date";
 import { formatNumber } from "../../src/utils/format";
 
 function StatCard({
@@ -50,6 +51,9 @@ export default function ProgressScreen() {
     unlockedAnimals
   } = useRescue();
   const metrics = currentAnimal ? getAnimalMetrics(currentAnimal.id) : undefined;
+  const weekKeys = getCurrentWeekDateKeys();
+  const weekValues = weekKeys.map((key) => rescueProgress.dailyStepHistory[key] ?? 0);
+  const maxWeekValue = Math.max(stepsToday, ...weekValues, 1);
   const careMilestonesCompleted = Object.values(
     rescueProgress.claimedMiniMilestones
   ).reduce((total, steps) => total + steps.length, 0);
@@ -79,10 +83,52 @@ export default function ProgressScreen() {
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={styles.title}>Rescue Progress</Text>
-        <Text style={styles.subtitle}>
-          Your care milestones show how every walk changes the story.
-        </Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.kicker}>Progress</Text>
+          <Text style={styles.title}>Step Journey</Text>
+          <Text style={styles.subtitle}>
+            Your daily count turns into care, rescues, and safe friends.
+          </Text>
+        </View>
+        <UiSprite spriteKey="progressMountainTrail" size={96} />
+      </View>
+
+      <View style={styles.focusPanel}>
+        <View style={styles.focusCopy}>
+          <Text style={styles.focusLabel}>Today</Text>
+          <Text selectable style={styles.focusValue}>{formatNumber(stepsToday)}</Text>
+          <Text style={styles.focusText}>{metrics ? `${formatNumber(metrics.remainingSteps)} steps left for ${metrics.animal.name}` : "All active rescues complete"}</Text>
+        </View>
+        <UiSprite spriteKey="progressCompletedBadge" size={84} />
+      </View>
+
+      <View style={styles.weekPanel}>
+        <View style={styles.panelHeader}>
+          <Text style={styles.panelTitle}>This Week</Text>
+          <Text style={styles.weekTotal}>{formatNumber(weeklySteps)} steps</Text>
+        </View>
+        <View style={styles.weekBars}>
+          {weekKeys.map((key, index) => {
+            const value =
+              key === weekKeys[weekKeys.length - 1]
+                ? Math.max(weekValues[index], stepsToday)
+                : weekValues[index];
+            const [year, month, day] = key.split("-").map(Number);
+            const date = new Date(year, month - 1, day);
+            const height = Math.max(10, Math.round((value / maxWeekValue) * 74));
+
+            return (
+              <View key={key} style={styles.weekBarItem}>
+                <View style={styles.weekBarTrack}>
+                  <View style={[styles.weekBarFill, { height }]} />
+                </View>
+                <Text style={styles.weekDay}>
+                  {date.toLocaleDateString(undefined, { weekday: "narrow" })}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.statGrid}>
@@ -152,8 +198,54 @@ export default function ProgressScreen() {
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
-  header: {
+  focusCopy: {
+    flex: 1,
     gap: spacing.xs
+  },
+  focusLabel: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  focusPanel: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceWarm,
+    borderColor: "#FFE0A8",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.lg,
+    ...shadows.soft
+  },
+  focusText: {
+    color: colors.muted,
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 20
+  },
+  focusValue: {
+    color: colors.text,
+    fontSize: 42,
+    fontVariant: ["tabular-nums"],
+    fontWeight: "900"
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  headerCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  kicker: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase"
   },
   line: {
     backgroundColor: colors.border,
@@ -163,7 +255,7 @@ function createStyles(colors: AppColors) {
   panel: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 22,
+    borderRadius: 8,
     borderWidth: 1,
     gap: spacing.lg,
     padding: spacing.lg,
@@ -182,7 +274,7 @@ function createStyles(colors: AppColors) {
   statCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     flexBasis: "48%",
     flexGrow: 1,
@@ -255,7 +347,52 @@ function createStyles(colors: AppColors) {
   },
   title: {
     color: colors.text,
-    fontSize: 30,
+    fontSize: 32,
+    fontWeight: "900"
+  },
+  weekBarFill: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0
+  },
+  weekBarItem: {
+    alignItems: "center",
+    flex: 1,
+    gap: spacing.xs
+  },
+  weekBarTrack: {
+    backgroundColor: colors.border,
+    borderRadius: 8,
+    height: 78,
+    overflow: "hidden",
+    position: "relative",
+    width: "100%"
+  },
+  weekBars: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    gap: spacing.xs
+  },
+  weekDay: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  weekPanel: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.lg,
+    ...shadows.soft
+  },
+  weekTotal: {
+    color: colors.primaryDark,
+    fontSize: 13,
     fontWeight: "900"
   }
   });

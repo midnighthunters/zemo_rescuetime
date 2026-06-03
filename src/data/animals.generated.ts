@@ -4,151 +4,151 @@ export const generatedAnimals: Animal[] = [
   {
     id: "animal_001",
     name: "Lion",
-    sadImage: require("../../assets/generated/animals/sad/animal_001.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_001.png")
+    sadImage: require("../../public/data/sad/sprite_000_r0c0.png"),
+    happyImage: require("../../public/data/happy/sprite_000_r0c0.png")
   },
   {
     id: "animal_002",
     name: "Elephant",
-    sadImage: require("../../assets/generated/animals/sad/animal_002.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_002.png")
+    sadImage: require("../../public/data/sad/sprite_001_r0c1.png"),
+    happyImage: require("../../public/data/happy/sprite_001_r0c1.png")
   },
   {
     id: "animal_003",
     name: "Giraffe",
-    sadImage: require("../../assets/generated/animals/sad/animal_003.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_003.png")
+    sadImage: require("../../public/data/sad/sprite_002_r0c2.png"),
+    happyImage: require("../../public/data/happy/sprite_002_r0c2.png")
   },
   {
     id: "animal_004",
     name: "Panda",
-    sadImage: require("../../assets/generated/animals/sad/animal_004.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_004.png")
+    sadImage: require("../../public/data/sad/sprite_003_r0c3.png"),
+    happyImage: require("../../public/data/happy/sprite_003_r0c3.png")
   },
   {
     id: "animal_005",
     name: "Bunny",
-    sadImage: require("../../assets/generated/animals/sad/animal_005.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_005.png")
+    sadImage: require("../../public/data/sad/sprite_004_r0c4.png"),
+    happyImage: require("../../public/data/happy/sprite_004_r0c4.png")
   },
   {
     id: "animal_006",
     name: "Fox",
-    sadImage: require("../../assets/generated/animals/sad/animal_006.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_006.png")
+    sadImage: require("../../public/data/sad/sprite_005_r1c0.png"),
+    happyImage: require("../../public/data/happy/sprite_005_r1c0.png")
   },
   {
     id: "animal_007",
     name: "Bear",
-    sadImage: require("../../assets/generated/animals/sad/animal_007.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_007.png")
+    sadImage: require("../../public/data/sad/sprite_006_r1c1.png"),
+    happyImage: require("../../public/data/happy/sprite_006_r1c1.png")
   },
   {
     id: "animal_008",
     name: "Kitten",
-    sadImage: require("../../assets/generated/animals/sad/animal_008.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_008.png")
+    sadImage: require("../../public/data/sad/sprite_007_r1c2.png"),
+    happyImage: require("../../public/data/happy/sprite_007_r1c2.png")
   },
   {
     id: "animal_009",
     name: "Puppy",
-    sadImage: require("../../assets/generated/animals/sad/animal_009.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_009.png")
+    sadImage: require("../../public/data/sad/sprite_008_r1c3.png"),
+    happyImage: require("../../public/data/happy/sprite_008_r1c3.png")
   },
   {
     id: "animal_010",
     name: "Monkey",
-    sadImage: require("../../assets/generated/animals/sad/animal_010.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_010.png")
+    sadImage: require("../../public/data/sad/sprite_009_r1c4.png"),
+    happyImage: require("../../public/data/happy/sprite_009_r1c4.png")
   },
   {
     id: "animal_011",
     name: "Koala",
-    sadImage: require("../../assets/generated/animals/sad/animal_011.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_011.png")
+    sadImage: require("../../public/data/sad/sprite_010_r2c0.png"),
+    happyImage: require("../../public/data/happy/sprite_010_r2c0.png")
   },
   {
     id: "animal_012",
     name: "Penguin",
-    sadImage: require("../../assets/generated/animals/sad/animal_012.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_012.png")
+    sadImage: require("../../public/data/sad/sprite_011_r2c1.png"),
+    happyImage: require("../../public/data/happy/sprite_011_r2c1.png")
   },
   {
     id: "animal_013",
     name: "Owl",
-    sadImage: require("../../assets/generated/animals/sad/animal_013.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_013.png")
+    sadImage: require("../../public/data/sad/sprite_012_r2c2.png"),
+    happyImage: require("../../public/data/happy/sprite_012_r2c2.png")
   },
   {
     id: "animal_014",
     name: "Frog",
-    sadImage: require("../../assets/generated/animals/sad/animal_014.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_014.png")
+    sadImage: require("../../public/data/sad/sprite_013_r2c3.png"),
+    happyImage: require("../../public/data/happy/sprite_013_r2c3.png")
   },
   {
     id: "animal_015",
     name: "Hippo",
-    sadImage: require("../../assets/generated/animals/sad/animal_015.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_015.png")
+    sadImage: require("../../public/data/sad/sprite_014_r2c4.png"),
+    happyImage: require("../../public/data/happy/sprite_014_r2c4.png")
   },
   {
     id: "animal_016",
     name: "Tiger",
-    sadImage: require("../../assets/generated/animals/sad/animal_016.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_016.png")
+    sadImage: require("../../public/data/sad/sprite_015_r3c0.png"),
+    happyImage: require("../../public/data/happy/sprite_015_r3c0.png")
   },
   {
     id: "animal_017",
     name: "Deer",
-    sadImage: require("../../assets/generated/animals/sad/animal_017.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_017.png")
+    sadImage: require("../../public/data/sad/sprite_016_r3c1.png"),
+    happyImage: require("../../public/data/happy/sprite_016_r3c1.png")
   },
   {
     id: "animal_018",
     name: "Zebra",
-    sadImage: require("../../assets/generated/animals/sad/animal_018.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_018.png")
+    sadImage: require("../../public/data/sad/sprite_017_r3c2.png"),
+    happyImage: require("../../public/data/happy/sprite_017_r3c2.png")
   },
   {
     id: "animal_019",
     name: "Squirrel",
-    sadImage: require("../../assets/generated/animals/sad/animal_019.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_019.png")
+    sadImage: require("../../public/data/sad/sprite_018_r3c3.png"),
+    happyImage: require("../../public/data/happy/sprite_018_r3c3.png")
   },
   {
     id: "animal_020",
     name: "Lamb",
-    sadImage: require("../../assets/generated/animals/sad/animal_020.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_020.png")
+    sadImage: require("../../public/data/sad/sprite_019_r3c4.png"),
+    happyImage: require("../../public/data/happy/sprite_019_r3c4.png")
   },
   {
     id: "animal_021",
     name: "Cow",
-    sadImage: require("../../assets/generated/animals/sad/animal_021.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_021.png")
+    sadImage: require("../../public/data/sad/sprite_020_r4c0.png"),
+    happyImage: require("../../public/data/happy/sprite_020_r4c0.png")
   },
   {
     id: "animal_022",
     name: "Piglet",
-    sadImage: require("../../assets/generated/animals/sad/animal_022.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_022.png")
+    sadImage: require("../../public/data/sad/sprite_021_r4c1.png"),
+    happyImage: require("../../public/data/happy/sprite_021_r4c1.png")
   },
   {
     id: "animal_023",
     name: "Duckling",
-    sadImage: require("../../assets/generated/animals/sad/animal_023.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_023.png")
+    sadImage: require("../../public/data/sad/sprite_022_r4c2.png"),
+    happyImage: require("../../public/data/happy/sprite_022_r4c2.png")
   },
   {
     id: "animal_024",
     name: "Turtle",
-    sadImage: require("../../assets/generated/animals/sad/animal_024.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_024.png")
+    sadImage: require("../../public/data/sad/sprite_023_r4c3.png"),
+    happyImage: require("../../public/data/happy/sprite_023_r4c3.png")
   },
   {
     id: "animal_025",
     name: "Raccoon",
-    sadImage: require("../../assets/generated/animals/sad/animal_025.png"),
-    happyImage: require("../../assets/generated/animals/happy/animal_025.png")
+    sadImage: require("../../public/data/sad/sprite_024_r4c4.png"),
+    happyImage: require("../../public/data/happy/sprite_024_r4c4.png")
   }
 ];

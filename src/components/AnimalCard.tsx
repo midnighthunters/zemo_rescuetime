@@ -61,8 +61,8 @@ function AnimalCardComponent({
         {!isUnlocked ? (
           <Image
             contentFit="contain"
-            source={jailSprites.platform}
-            style={styles.platformImage}
+            source={jailSprites.openJail}
+            style={styles.openJailImage}
           />
         ) : null}
         <Image contentFit="contain" source={image} style={styles.animalImage} />
@@ -70,13 +70,13 @@ function AnimalCardComponent({
           <View pointerEvents="none" style={styles.jailStack}>
             <Image
               contentFit="contain"
-              source={jailSprites.openJail}
-              style={styles.openJailImage}
+              source={jailSprites.gate}
+              style={styles.gateImage}
             />
             <Image
               contentFit="contain"
-              source={jailSprites.gate}
-              style={styles.gateImage}
+              source={jailSprites.platform}
+              style={styles.platformImage}
             />
             <Image
               contentFit="contain"
@@ -134,22 +134,22 @@ export const AnimalCard = memo(AnimalCardComponent);
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
   animalImage: {
-    bottom: "12%",
-    height: "58%",
+    bottom: "21%",
+    height: "48%",
     position: "absolute",
-    width: "68%",
+    width: "58%",
     zIndex: 3
   },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     flex: 1,
     gap: spacing.sm,
     minWidth: 150,
     padding: spacing.md,
-    ...shadows.card
+    ...shadows.soft
   },
   copy: {
     gap: spacing.xs
@@ -162,18 +162,18 @@ function createStyles(colors: AppColors, isDark: boolean) {
     zIndex: 1
   },
   gateImage: {
-    bottom: "22%",
-    height: "42%",
+    height: "57%",
+    left: "18%",
     position: "absolute",
-    right: "12%",
-    width: "50%",
-    zIndex: 5
+    top: "27%",
+    width: "64%",
+    zIndex: 6
   },
   imageWrap: {
     alignItems: "center",
     aspectRatio: 1,
     backgroundColor: isDark ? "#102821" : "#EEF8F2",
-    borderRadius: 18,
+    borderRadius: 8,
     justifyContent: "center",
     overflow: "hidden",
     width: "100%"
@@ -184,7 +184,7 @@ function createStyles(colors: AppColors, isDark: boolean) {
     position: "absolute",
     right: 0,
     top: 0,
-    zIndex: 4
+    zIndex: 5
   },
   name: {
     color: colors.text,
@@ -223,19 +223,19 @@ function createStyles(colors: AppColors, isDark: boolean) {
     overflow: "hidden"
   },
   openJailImage: {
-    bottom: "7%",
-    height: "62%",
-    left: "8%",
+    bottom: "8%",
+    height: "84%",
+    left: "3%",
     position: "absolute",
-    width: "84%",
-    zIndex: 4
+    width: "94%",
+    zIndex: 2
   },
   platformImage: {
-    bottom: "5%",
-    height: "24%",
+    bottom: "3%",
+    height: "35%",
     position: "absolute",
-    width: "82%",
-    zIndex: 2
+    width: "94%",
+    zIndex: 7
   },
   rescuedBadge: {
     alignItems: "center",
@@ -259,12 +259,12 @@ function createStyles(colors: AppColors, isDark: boolean) {
     fontWeight: "700"
   },
   topImage: {
-    height: "25%",
-    left: "8%",
+    height: "35%",
+    left: "3%",
     position: "absolute",
-    top: "5%",
-    width: "84%",
-    zIndex: 6
+    top: "1%",
+    width: "94%",
+    zIndex: 8
   }
   });
 }

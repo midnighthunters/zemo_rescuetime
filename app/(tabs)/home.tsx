@@ -70,42 +70,76 @@ export default function HomeScreen() {
     <ScreenContainer>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.kicker}>{getGreeting()}</Text>
+          <Text style={styles.greeting}>Rescue Steps</Text>
           <Text style={styles.subtitle}>
-            Every walk can make today safer for someone small.
+            Count today. Open gates. Build your safe home.
           </Text>
         </View>
-        <UiSprite spriteKey="homeSanctuaryIsland" size={104} style={styles.headerSprite} />
+        <UiSprite
+          spriteKey="homeSanctuaryIsland"
+          size={100}
+          style={styles.headerSprite}
+        />
       </View>
 
       {steps.error || steps.permissionStatus === "denied" ? (
         <View style={styles.permissionCard}>
-          <Text style={styles.permissionTitle}>Step tracking is off</Text>
-          <Text style={styles.permissionCopy}>
-            Allow motion access so your walks can rescue animals.
-          </Text>
-          <AppButton
-            icon="settings"
-            onPress={() => Linking.openSettings()}
-            title="Open Settings"
-            variant="secondary"
-          />
+          <View style={styles.permissionTop}>
+            <UiSprite spriteKey="emptyPermissionPhone" size={58} />
+            <View style={styles.permissionCopyWrap}>
+              <Text style={styles.permissionTitle}>Pedometer needs access</Text>
+              <Text style={styles.permissionCopy}>
+                Allow motion access so rescue progress uses real device steps.
+              </Text>
+            </View>
+          </View>
+          {steps.error ? <Text style={styles.errorText}>{steps.error}</Text> : null}
+          <View style={styles.permissionActions}>
+            <AppButton
+              icon="refresh"
+              loading={steps.isLoading}
+              onPress={steps.refreshSteps}
+              title="Retry"
+              variant="secondary"
+            />
+            <AppButton
+              icon="settings"
+              onPress={() => Linking.openSettings()}
+              title="Settings"
+              variant="ghost"
+            />
+          </View>
         </View>
-      ) : null}
+      ) : (
+        <View style={styles.statusStrip}>
+          <UiSprite spriteKey="microWalkingShoe" size={34} />
+          <View style={styles.statusCopy}>
+            <Text style={styles.statusLabel}>Tracking</Text>
+            <Text style={styles.statusValue}>{steps.sourceLabel}</Text>
+          </View>
+          <Text style={styles.statusSteps}>{steps.permissionStatus}</Text>
+        </View>
+      )}
 
       {lastCareEvent ? (
         <Pressable onPress={dismissCareEvent} style={styles.careToast}>
           <UiSprite spriteKey={getCareSprite(lastCareEvent.label)} size={54} />
           <View style={styles.careCopyWrap}>
-            <Text style={styles.careTitle}>You gave {lastCareEvent.animalName} {lastCareEvent.label}.</Text>
-            <Text style={styles.careCopy}>Mood improved. Keep going.</Text>
+            <Text style={styles.careTitle}>Care complete</Text>
+            <Text style={styles.careCopy}>
+              {lastCareEvent.animalName} got {lastCareEvent.label}.
+            </Text>
           </View>
         </Pressable>
       ) : null}
 
       <StepHeroCard
+        isRefreshing={steps.isLoading}
         metrics={metrics}
         onOpenPaywall={() => router.push("/paywall")}
+        onRefreshSteps={steps.refreshSteps}
+        sourceLabel={steps.sourceLabel}
         stepsToday={stepsToday}
       />
 
@@ -139,20 +173,26 @@ function createStyles(colors: AppColors, isDark: boolean) {
     alignItems: "center",
     backgroundColor: colors.surfaceSoft,
     borderColor: isDark ? colors.border : "#BFE9CE",
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
     padding: spacing.md,
-    ...shadows.card
+    ...shadows.soft
   },
   careCopyWrap: {
     flex: 1,
     gap: spacing.xs
   },
+  errorText: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 19
+  },
   greeting: {
     color: colors.text,
-    fontSize: 30,
+    fontSize: 34,
     fontWeight: "900"
   },
   header: {
@@ -168,13 +208,24 @@ function createStyles(colors: AppColors, isDark: boolean) {
   headerSprite: {
     marginRight: -8
   },
+  kicker: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  permissionActions: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
   permissionCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     gap: spacing.md,
-    padding: spacing.lg
+    padding: spacing.lg,
+    ...shadows.soft
   },
   permissionCopy: {
     color: colors.muted,
@@ -182,9 +233,50 @@ function createStyles(colors: AppColors, isDark: boolean) {
     fontWeight: "700",
     lineHeight: 20
   },
+  permissionCopyWrap: {
+    flex: 1,
+    gap: spacing.xs
+  },
   permissionTitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 17,
+    fontWeight: "900"
+  },
+  permissionTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  statusCopy: {
+    flex: 1,
+    gap: 2
+  },
+  statusLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  statusSteps: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "capitalize"
+  },
+  statusStrip: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+    ...shadows.soft
+  },
+  statusValue: {
+    color: colors.text,
+    fontSize: 15,
     fontWeight: "900"
   },
   subtitle: {
