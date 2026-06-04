@@ -12,7 +12,5 @@ yarn-error.log*
 .env.*
 !.env.example
 
-public/*
-!public/data/
-!public/data/**
+public/
 assets/
