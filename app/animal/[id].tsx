@@ -9,6 +9,7 @@ import { CareMilestoneRow } from "../../src/components/CareMilestoneRow";
 import { CircularStepProgress } from "../../src/components/CircularStepProgress";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
+import { feedingMilestoneIcons, feedingMilestoneLabels } from "../../src/data/milestones";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
@@ -37,6 +38,24 @@ export default function AnimalDetailScreen() {
   const image = metrics.isRescued ? animal.happyImage : animal.sadImage;
   const progressPercent = `${Math.round(metrics.progress * 100)}%` as `${number}%`;
   const nextCareTarget = metrics.nextMiniMilestone ?? metrics.milestone.unlockSteps;
+
+  // Work out which mini-milestone is next and get its label/icon
+  const nextMiniIndex = metrics.nextMiniMilestone
+    ? metrics.milestone.miniMilestones.indexOf(metrics.nextMiniMilestone)
+    : -1;
+  const nextTargetLabel = metrics.nextMiniMilestone
+    ? (feedingMilestoneLabels[nextMiniIndex] ?? "Care")
+    : "Rescue";
+  const nextTargetIcon = metrics.nextMiniMilestone
+    ? (feedingMilestoneIcons[nextMiniIndex] ?? "heart")
+    : "key";
+  const nextTargetSpriteKey = metrics.nextMiniMilestone
+    ? nextMiniIndex === 0
+      ? ("careWaterBowl" as const)
+      : nextMiniIndex === 1
+        ? ("careFoodBowl" as const)
+        : ("careMedkit" as const)
+    : ("proGoldenKey" as const);
 
   return (
     <ScreenContainer>
@@ -124,14 +143,24 @@ export default function AnimalDetailScreen() {
           </View>
 
           <View style={styles.nextTargetPanel}>
-            <UiSprite spriteKey="careWaterBowl" size={96} />
+            <UiSprite spriteKey={nextTargetSpriteKey} size={96} />
             <View style={styles.targetCopy}>
               <View style={styles.targetPill}>
-                <Ionicons color="#096DD9" name="locate" size={16} />
+                <Ionicons
+                  color="#096DD9"
+                  name={nextTargetIcon as keyof typeof Ionicons.glyphMap}
+                  size={16}
+                />
                 <Text style={styles.targetPillText}>Next Target</Text>
               </View>
-              <Text style={styles.targetTitle}>{animal.name} needs care</Text>
-              <Text style={styles.targetSubtitle}>Care is the next target.</Text>
+              <Text style={styles.targetTitle}>{nextTargetLabel}</Text>
+              <Text style={styles.targetSubtitle}>
+                {animal.name} needs {nextTargetLabel.toLowerCase()} at{" "}
+                <Text style={{ fontWeight: "900", color: "#0D55B8" }}>
+                  {formatNumber(nextCareTarget)}
+                </Text>
+                {" "}steps
+              </Text>
             </View>
             <UiSprite spriteKey="homeProgressRingMascot" size={72} />
           </View>

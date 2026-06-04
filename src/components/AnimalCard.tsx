@@ -52,25 +52,32 @@ function AnimalCardComponent({
     >
       <View style={styles.imageWrap}>
         {!isUnlocked ? (
-          <Image
-            contentFit="contain"
-            source={jailSprites.openJail}
-            style={styles.openJailImage}
-          />
-        ) : null}
-        <Image contentFit="contain" source={image} style={styles.animalImage} />
-        {!isUnlocked ? (
-          <View pointerEvents="none" style={styles.jailStack}>
-            <Image
-              contentFit="contain"
-              source={jailSprites.gate}
-              style={styles.gateImage}
-            />
+          <>
+            {/* z=1: Platform base — BEHIND everything */}
             <Image
               contentFit="contain"
               source={jailSprites.platform}
               style={styles.platformImage}
             />
+            {/* z=2: Back cage body */}
+            <Image
+              contentFit="contain"
+              source={jailSprites.openJail}
+              style={styles.openJailImage}
+            />
+          </>
+        ) : null}
+        {/* z=4: Animal — in front of base, behind gate */}
+        <Image contentFit="contain" source={image} style={styles.animalImage} />
+        {!isUnlocked ? (
+          <View pointerEvents="none" style={styles.jailStack}>
+            {/* z=6: Front gate bars */}
+            <Image
+              contentFit="contain"
+              source={jailSprites.gate}
+              style={styles.gateImage}
+            />
+            {/* z=8: Top lid */}
             <Image
               contentFit="contain"
               source={jailSprites.top}
@@ -120,11 +127,11 @@ export const AnimalCard = memo(AnimalCardComponent);
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
     animalImage: {
-      bottom: "24%",
-      height: "48%",
+      bottom: "20%",
+      height: "52%",
       position: "absolute",
-      width: "48%",
-      zIndex: 3
+      width: "52%",
+      zIndex: 4
     },
     avatar: {
       backgroundColor: colors.surfaceSoft,
@@ -152,11 +159,11 @@ function createStyles(colors: AppColors, isDark: boolean) {
       paddingHorizontal: spacing.xs
     },
     gateImage: {
-      height: "43%",
-      left: "22%",
+      height: "54%",
+      left: "15%",
       position: "absolute",
-      top: "31%",
-      width: "56%",
+      top: "25%",
+      width: "70%",
       zIndex: 6
     },
     imageWrap: {
@@ -207,11 +214,11 @@ function createStyles(colors: AppColors, isDark: boolean) {
       fontWeight: "900"
     },
     platformImage: {
-      bottom: "0%",
-      height: "26%",
+      bottom: "-1%",
+      height: "30%",
       position: "absolute",
-      width: "90%",
-      zIndex: 7
+      width: "96%",
+      zIndex: 1
     },
     pressed: {
       transform: [{ scale: 0.99 }]

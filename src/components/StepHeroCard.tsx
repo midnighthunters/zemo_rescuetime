@@ -1,11 +1,11 @@
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+﻿import { Ionicons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AnimalMetrics } from "../state/RescueProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
-import { formatNumber } from "../utils/format";
+import { formatNumber, formatPercent } from "../utils/format";
 import { AnimalCage } from "./AnimalCage";
 import { AnimalMoodMeter } from "./AnimalMoodMeter";
 import { AppButton } from "./AppButton";
@@ -23,34 +23,18 @@ type StepHeroCardProps = {
   onViewAnimal: () => void;
 };
 
-function getProgressCopy(metrics: AnimalMetrics) {
-  if (metrics.status === "pro_locked") {
-    return "Unlock Pro to continue this rescue path.";
-  }
-
-  if (metrics.progress <= 0.25) {
-    return `${metrics.animal.name} is waiting`;
-  }
-
-  if (metrics.progress <= 0.5) {
-    return `${metrics.animal.name} needs care`;
-  }
-
-  if (metrics.progress <= 0.75) {
-    return `${metrics.animal.name} is almost safe`;
-  }
-
-  if (metrics.progress < 1) {
-    return "Gate is nearly open";
-  }
-
-  return `${metrics.animal.name} is safe`;
+function getStatusCopy(metrics: AnimalMetrics) {
+  if (metrics.status === "pro_locked") return "Unlock Pro to rescue";
+  if (metrics.progress <= 0.25) return "Waiting for you…";
+  if (metrics.progress <= 0.5) return "Needs your care";
+  if (metrics.progress <= 0.75) return "Almost safe!";
+  if (metrics.progress < 1) return "Gate nearly open! 🔑";
+  return "Safe & free! 🎉";
 }
 
 export function StepHeroCard({
   metrics,
   stepsToday,
-  sourceLabel,
   isRefreshing,
   onOpenPaywall,
   onRefreshSteps,
@@ -59,17 +43,18 @@ export function StepHeroCard({
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
 
+  /* ── Empty state ── */
   if (!metrics) {
     return (
       <View style={styles.emptyCard}>
-        <UiSprite spriteKey="emptySanctuaryNest" size={128} />
-        <Text style={styles.emptyTitle}>All friends are safe</Text>
-        <Text selectable style={styles.emptySteps}>
-          {formatNumber(stepsToday)}
-        </Text>
-        <Text style={styles.copy}>
-          Your pedometer is still counting today&apos;s real device steps.
-        </Text>
+        <UiSprite spriteKey="emptySanctuaryNest" size={96} />
+        <View style={styles.emptyCopy}>
+          <Text style={styles.emptyTitle}>All friends are safe 🎉</Text>
+          <Text selectable style={styles.emptySteps}>
+            {formatNumber(stepsToday)}
+          </Text>
+          <Text style={styles.emptySubtitle}>steps today</Text>
+        </View>
         <AppButton
           icon="refresh"
           loading={isRefreshing}
@@ -85,57 +70,58 @@ export function StepHeroCard({
   const image = metrics.isRescued ? metrics.animal.happyImage : metrics.animal.sadImage;
   const progressPercent = `${Math.round(metrics.progress * 100)}%` as `${number}%`;
   const nextTarget = metrics.nextMiniMilestone ?? metrics.milestone.unlockSteps;
-  const targetLabel =
-    metrics.nextMiniMilestone && !proLocked ? "Next Care" : "Target";
+  const targetLabel = metrics.nextMiniMilestone && !proLocked ? "Next Care" : "Target";
   const remainingLabel = proLocked
-    ? "Pro"
+    ? "Pro required"
     : metrics.remainingSteps > 0
       ? `${formatNumber(metrics.remainingSteps)} left`
-      : "Ready";
+      : "Ready!";
 
   return (
     <View style={styles.root}>
-      <View style={styles.summaryCard}>
-        <View style={styles.todayColumn}>
-          <View style={styles.sourceChip}>
-            <Ionicons color={theme.colors.primaryDark} name="footsteps" size={16} />
-            <Text numberOfLines={1} style={styles.sourceText}>
-              {sourceLabel}
-            </Text>
-          </View>
-          <Text style={styles.label}>Today</Text>
-          <View style={styles.stepsRow}>
-            <Text selectable style={styles.steps}>
-              {formatNumber(stepsToday)}
-            </Text>
-            <Text style={styles.stepsUnit}>Steps</Text>
-          </View>
-          <Text style={styles.stepsCaption}>Pedometer steps only</Text>
-        </View>
 
-        <View style={styles.activeColumn}>
-          <Text style={styles.label}>Active Rescue</Text>
-          <View style={styles.activeAnimal}>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.activeName}>
-              {metrics.animal.name}
-            </Text>
-            <AppButton
-              icon="paw"
-              onPress={onViewAnimal}
-              title="View Animal"
-              variant="ghost"
-            />
+      {/* ── Step counter hero row ── */}
+      <View style={styles.stepHero}>
+        <View style={styles.stepHeroLeft}>
+          <Text style={styles.stepHeroLabel}>Today's Steps</Text>
+          <Text selectable style={styles.stepHeroNumber}>
+            {formatNumber(stepsToday)}
+          </Text>
+          <View style={styles.progressBarWrap}>
+            <View style={styles.progressBarTrack}>
+              <View style={[styles.progressBarFill, { width: progressPercent }]} />
+            </View>
+            <Text style={styles.progressBarPct}>{formatPercent(metrics.progress)}</Text>
           </View>
         </View>
-
-        <View style={styles.progressColumn}>
-          <Text style={styles.label}>Progress</Text>
-          <CircularStepProgress progress={metrics.progress} />
-        </View>
+        <CircularStepProgress progress={metrics.progress} />
       </View>
 
-      <View style={styles.rescueStage}>
-        <View style={styles.cageColumn}>
+      {/* ── Cage + Animal info ── */}
+      <View style={styles.rescueCard}>
+        {/* Animal header row */}
+        <View style={styles.animalHeader}>
+          <View style={styles.animalHeaderLeft}>
+            <View style={styles.rescuingBadge}>
+              <Ionicons color={theme.colors.primaryDark} name="paw" size={12} />
+              <Text style={styles.rescuingBadgeText}>Rescuing</Text>
+            </View>
+            <Text numberOfLines={1} style={styles.animalName}>
+              {metrics.animal.name}
+            </Text>
+            <Text style={styles.animalStatus}>{getStatusCopy(metrics)}</Text>
+          </View>
+          <View style={styles.animalHeaderRight}>
+            {proLocked ? <ProBadge /> : <UiSprite spriteKey="microPawConfetti" size={44} />}
+            <Pressable onPress={onViewAnimal} style={styles.viewBtn}>
+              <Ionicons color={theme.colors.primaryDark} name="eye-outline" size={15} />
+              <Text style={styles.viewBtnText}>View</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Cage — full width, prominent */}
+        <View style={styles.cageWrap}>
           <AnimalCage
             animalImage={image}
             careState={metrics.careState}
@@ -144,61 +130,61 @@ export function StepHeroCard({
           />
         </View>
 
-        <View style={styles.rescueCopyColumn}>
-          <View style={styles.rescueHeader}>
-            <View style={styles.rescueTitleWrap}>
-              <Text style={styles.rescueTitle}>{getProgressCopy(metrics)}</Text>
-              <Text style={styles.rescueSubtitle}>Every step moves the gate.</Text>
-            </View>
-            {proLocked ? <ProBadge /> : <UiSprite spriteKey="microPawConfetti" size={38} />}
-          </View>
+        {/* Mood meter */}
+        <AnimalMoodMeter
+          mood={metrics.mood}
+          progress={metrics.progress}
+          proLocked={proLocked}
+        />
 
-          <View style={styles.metricGrid}>
-            <View style={styles.metricPill}>
-              <Ionicons color={theme.colors.primary} name="flag" size={26} />
-              <View style={styles.metricCopy}>
-                <Text style={styles.metricLabel}>{targetLabel}</Text>
-                <Text style={styles.metricValue}>{formatNumber(nextTarget)}</Text>
-              </View>
-            </View>
-            <View style={styles.metricPill}>
-              <Ionicons color={theme.colors.coral} name="timer" size={26} />
-              <View style={styles.metricCopy}>
-                <Text style={styles.metricLabel}>Remaining</Text>
-                <Text style={styles.metricValue}>{remainingLabel}</Text>
-              </View>
+        {/* Metric chips row */}
+        <View style={styles.chipRow}>
+          <View style={styles.chip}>
+            <Ionicons color={theme.colors.primary} name="flag-outline" size={16} />
+            <View style={styles.chipText}>
+              <Text style={styles.chipLabel}>{targetLabel}</Text>
+              <Text style={styles.chipValue}>{formatNumber(nextTarget)}</Text>
             </View>
           </View>
-
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: progressPercent }]} />
+          <View style={[styles.chip, styles.chipDivider]} />
+          <View style={styles.chip}>
+            <Ionicons color={theme.colors.coral} name="timer-outline" size={16} />
+            <View style={styles.chipText}>
+              <Text style={styles.chipLabel}>Remaining</Text>
+              <Text style={[styles.chipValue, metrics.remainingSteps === 0 && styles.chipValueReady]}>
+                {remainingLabel}
+              </Text>
+            </View>
           </View>
+        </View>
 
-          <AnimalMoodMeter
-            mood={metrics.mood}
-            progress={metrics.progress}
-            proLocked={proLocked}
+        {/* Action row */}
+        <View style={styles.actionRow}>
+          <AppButton
+            icon="refresh"
+            loading={isRefreshing}
+            onPress={onRefreshSteps}
+            style={styles.actionBtn}
+            title="Refresh"
+            variant="secondary"
           />
-
-          <View style={styles.actionRow}>
+          {proLocked ? (
             <AppButton
-              icon="refresh"
-              loading={isRefreshing}
-              onPress={onRefreshSteps}
-              style={styles.actionButton}
-              title="Retry"
-              variant="secondary"
+              icon="sparkles"
+              onPress={onOpenPaywall}
+              style={styles.actionBtn}
+              title="Unlock Pro"
+              variant="pro"
             />
-            {proLocked ? (
-              <AppButton
-                icon="sparkles"
-                onPress={onOpenPaywall}
-                style={styles.actionButton}
-                title="Unlock"
-                variant="pro"
-              />
-            ) : null}
-          </View>
+          ) : (
+            <AppButton
+              icon="paw"
+              onPress={onViewAnimal}
+              style={styles.actionBtn}
+              title="View Animal"
+              variant="primary"
+            />
+          )}
         </View>
       </View>
     </View>
@@ -207,42 +193,92 @@ export function StepHeroCard({
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
-    actionButton: {
+    actionBtn: {
       flex: 1
     },
     actionRow: {
       flexDirection: "row",
       gap: spacing.sm
     },
-    activeAnimal: {
-      gap: spacing.sm
-    },
-    activeColumn: {
-      flex: 1.1,
+    animalHeader: {
+      alignItems: "flex-start",
+      flexDirection: "row",
       gap: spacing.sm,
-      minWidth: 116
+      justifyContent: "space-between"
     },
-    activeName: {
+    animalHeaderLeft: {
+      flex: 1,
+      gap: 3,
+      minWidth: 0
+    },
+    animalHeaderRight: {
+      alignItems: "center",
+      gap: spacing.xs
+    },
+    animalName: {
       color: colors.text,
-      fontSize: 30,
+      fontSize: 26,
+      fontWeight: "900",
+      letterSpacing: -0.4
+    },
+    animalStatus: {
+      color: colors.muted,
+      fontSize: 13,
+      fontWeight: "700"
+    },
+    cageWrap: {
+      borderRadius: 10,
+      overflow: "hidden"
+    },
+    chip: {
+      alignItems: "center",
+      flex: 1,
+      flexDirection: "row",
+      gap: spacing.xs
+    },
+    chipDivider: {
+      backgroundColor: colors.border,
+      flex: 0,
+      height: 28,
+      width: 1
+    },
+    chipLabel: {
+      color: colors.muted,
+      fontSize: 10,
+      fontWeight: "900",
+      textTransform: "uppercase"
+    },
+    chipRow: {
+      alignItems: "center",
+      backgroundColor: isDark ? colors.surfaceElevated : "rgba(255,255,255,0.7)",
+      borderColor: colors.border,
+      borderRadius: 10,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm
+    },
+    chipText: {
+      gap: 1
+    },
+    chipValue: {
+      color: colors.text,
+      fontSize: 14,
       fontWeight: "900"
     },
-    cageColumn: {
-      flex: 1,
-      minWidth: 190
+    chipValueReady: {
+      color: colors.primary
     },
-    copy: {
-      color: colors.muted,
-      fontSize: 15,
-      fontWeight: "700",
-      lineHeight: 21,
-      textAlign: "center"
+    emptyCopy: {
+      alignItems: "center",
+      gap: 4
     },
     emptyCard: {
       alignItems: "center",
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      borderRadius: 8,
+      borderRadius: 16,
       borderWidth: 1,
       gap: spacing.md,
       padding: spacing.xl,
@@ -250,176 +286,117 @@ function createStyles(colors: AppColors, isDark: boolean) {
     },
     emptySteps: {
       color: colors.text,
-      fontSize: 44,
+      fontSize: 48,
       fontVariant: ["tabular-nums"],
       fontWeight: "900"
     },
+    emptySubtitle: {
+      color: colors.muted,
+      fontSize: 14,
+      fontWeight: "700"
+    },
     emptyTitle: {
       color: colors.text,
-      fontSize: 24,
+      fontSize: 20,
       fontWeight: "900",
       textAlign: "center"
     },
-    label: {
-      color: colors.muted,
+    progressBarFill: {
+      backgroundColor: colors.primary,
+      borderRadius: 4,
+      height: "100%"
+    },
+    progressBarPct: {
+      color: colors.primaryDark,
       fontSize: 11,
-      fontWeight: "900",
-      textTransform: "uppercase"
+      fontWeight: "900"
     },
-    metricCopy: {
+    progressBarTrack: {
+      backgroundColor: colors.border,
+      borderRadius: 4,
       flex: 1,
-      gap: 2
+      height: 6,
+      overflow: "hidden"
     },
-    metricGrid: {
+    progressBarWrap: {
+      alignItems: "center",
       flexDirection: "row",
       gap: spacing.sm
     },
-    metricLabel: {
+    rescuingBadge: {
+      alignItems: "center",
+      alignSelf: "flex-start",
+      backgroundColor: colors.surfaceSoft,
+      borderColor: isDark ? colors.border : "#CBEED8",
+      borderRadius: 20,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3
+    },
+    rescuingBadgeText: {
+      color: colors.primaryDark,
+      fontSize: 10,
+      fontWeight: "900",
+      textTransform: "uppercase"
+    },
+    rescueCard: {
+      backgroundColor: isDark ? colors.surfaceSoft : "#F2FBF5",
+      borderColor: isDark ? colors.border : "#C3E8C9",
+      borderRadius: 16,
+      borderWidth: 1,
+      gap: spacing.md,
+      padding: spacing.md,
+      ...shadows.soft
+    },
+    root: {
+      gap: spacing.md
+    },
+    stepHero: {
+      alignItems: "center",
+      backgroundColor: isDark ? colors.surface : "#E8F7FF",
+      borderColor: isDark ? colors.border : "#B4DEFF",
+      borderRadius: 16,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: spacing.md,
+      justifyContent: "space-between",
+      padding: spacing.lg,
+      ...shadows.card
+    },
+    stepHeroLabel: {
       color: colors.muted,
       fontSize: 11,
       fontWeight: "900",
       textTransform: "uppercase"
     },
-    metricPill: {
-      alignItems: "center",
-      backgroundColor: isDark ? colors.surfaceElevated : "rgba(255,255,255,0.86)",
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
+    stepHeroLeft: {
       flex: 1,
-      flexDirection: "row",
-      gap: spacing.sm,
-      minHeight: 66,
-      padding: spacing.md
+      gap: spacing.sm
     },
-    metricValue: {
+    stepHeroNumber: {
       color: colors.text,
-      fontSize: 16,
-      fontWeight: "900"
+      fontSize: 48,
+      fontVariant: ["tabular-nums"],
+      fontWeight: "900",
+      letterSpacing: -1
     },
-    progressColumn: {
+    viewBtn: {
       alignItems: "center",
-      gap: spacing.sm,
-      minWidth: 112
-    },
-    progressFill: {
-      backgroundColor: colors.primary,
-      borderRadius: 8,
-      height: "100%"
-    },
-    progressTrack: {
-      backgroundColor: colors.border,
-      borderRadius: 8,
-      height: 12,
-      overflow: "hidden"
-    },
-    rescueCopyColumn: {
-      flex: 1.08,
-      gap: spacing.md,
-      minWidth: 210
-    },
-    rescueHeader: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: spacing.sm,
-      justifyContent: "space-between"
-    },
-    rescueStage: {
-      alignItems: "center",
-      backgroundColor: isDark ? colors.surfaceSoft : "#EAF8DD",
-      borderColor: isDark ? colors.border : "#C9E8C2",
-      borderRadius: 8,
-      borderWidth: 1,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.lg,
-      overflow: "hidden",
-      padding: spacing.lg,
-      ...shadows.soft
-    },
-    rescueSubtitle: {
-      color: colors.muted,
-      fontSize: 14,
-      fontWeight: "700",
-      lineHeight: 20
-    },
-    rescueTitle: {
-      color: colors.text,
-      fontSize: 24,
-      fontWeight: "900"
-    },
-    rescueTitleWrap: {
-      flex: 1,
-      gap: spacing.xs
-    },
-    root: {
-      gap: spacing.lg
-    },
-    sourceChip: {
-      alignItems: "center",
-      alignSelf: "flex-start",
       backgroundColor: colors.surfaceSoft,
       borderColor: isDark ? colors.border : "#CBEED8",
       borderRadius: 8,
       borderWidth: 1,
       flexDirection: "row",
-      gap: spacing.xs,
-      maxWidth: "100%",
+      gap: 4,
       paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs
+      paddingVertical: 5
     },
-    sourceText: {
+    viewBtnText: {
       color: colors.primaryDark,
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: "900"
-    },
-    steps: {
-      color: colors.text,
-      fontSize: 52,
-      fontVariant: ["tabular-nums"],
-      fontWeight: "900"
-    },
-    stepsCaption: {
-      alignSelf: "flex-start",
-      backgroundColor: isDark ? colors.surfaceElevated : "rgba(255,255,255,0.68)",
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
-      color: colors.muted,
-      fontSize: 12,
-      fontWeight: "800",
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs
-    },
-    stepsRow: {
-      alignItems: "flex-end",
-      flexDirection: "row",
-      gap: spacing.xs
-    },
-    stepsUnit: {
-      color: colors.muted,
-      fontSize: 16,
-      fontWeight: "900",
-      paddingBottom: 9
-    },
-    summaryCard: {
-      alignItems: "center",
-      backgroundColor: isDark ? colors.surface : "#D9F4FF",
-      borderColor: isDark ? colors.border : "#A8DFF2",
-      borderRadius: 8,
-      borderWidth: 1,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.lg,
-      justifyContent: "space-between",
-      overflow: "hidden",
-      padding: spacing.lg,
-      ...shadows.card
-    },
-    todayColumn: {
-      flex: 1,
-      gap: spacing.xs,
-      minWidth: 130
     }
   });
 }
