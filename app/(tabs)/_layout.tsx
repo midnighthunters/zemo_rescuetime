@@ -29,16 +29,15 @@ export default function TabsLayout() {
           borderTopWidth: 1,
           borderWidth: 1,
           bottom: Math.max(insets.bottom, 12),
+          boxShadow: theme.isDark
+            ? "0 10px 30px rgba(0, 0, 0, 0.32)"
+            : "0 10px 30px rgba(19, 37, 31, 0.12)",
           height: 66,
           left: 16,
           paddingBottom: 8,
           paddingTop: 8,
           position: "absolute",
-          right: 16,
-          shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: theme.isDark ? 0.32 : 0.12,
-          shadowRadius: 20
+          right: 16
         }
       }}
     >

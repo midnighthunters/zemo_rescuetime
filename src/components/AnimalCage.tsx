@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useEffect } from "react";
-import { StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
+import { StyleSheet, View, type ImageSourcePropType } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -12,7 +12,6 @@ import Animated, {
 import { jailSprites } from "../data/assets";
 import type { AnimalCareState } from "../data/types";
 import { type AppColors, useAppTheme } from "../theme/colors";
-import { spacing } from "../theme/spacing";
 
 type AnimalCageProps = {
   animalImage: ImageSourcePropType;
@@ -21,18 +20,9 @@ type AnimalCageProps = {
   isRescued?: boolean;
 };
 
-const careBadges: Record<AnimalCareState, string[]> = {
-  hungry: ["Water"],
-  fed: ["Water", "Food"],
-  healing: ["Water", "Food", "Care"],
-  hopeful: ["Water", "Food", "Care"],
-  ready_to_rescue: ["Safe"]
-};
-
 export function AnimalCage({
   animalImage,
   progress,
-  careState,
   isRescued
 }: AnimalCageProps) {
   const theme = useAppTheme();
@@ -45,18 +35,13 @@ export function AnimalCage({
       shake.value = withRepeat(withTiming(1, { duration: 140 }), -1, true);
       return;
     }
-
     shake.value = withTiming(0, { duration: 180 });
   }, [isRescued, progress, shake]);
 
   const cageStyle = useAnimatedStyle(() => ({
     transform: [
-      {
-        translateX: interpolate(shake.value, [0, 1], [0, 4])
-      },
-      {
-        rotate: `${interpolate(shake.value, [0, 1], [0, -2])}deg`
-      }
+      { translateX: interpolate(shake.value, [0, 1], [0, 4]) },
+      { rotate: `${interpolate(shake.value, [0, 1], [0, -2])}deg` }
     ]
   }));
 
@@ -67,135 +52,111 @@ export function AnimalCage({
         styles.root,
         {
           backgroundColor:
-            warmth > 0.7 ? theme.colors.surfaceWarm : theme.colors.surfaceSoft
+            isRescued
+              ? theme.colors.surfaceSoft
+              : warmth > 0.7
+                ? theme.colors.surfaceWarm
+                : theme.isDark
+                  ? "#102821"
+                  : "#BFEFFF"
         }
       ]}
     >
-      <View
-        style={[
-          styles.glow,
-          {
-            backgroundColor: theme.isDark
-              ? "rgba(69,209,143,0.18)"
-              : "rgba(243,179,61,0.18)"
-          }
-        ]}
-      />
       {!isRescued ? (
-        <Image
-          contentFit="contain"
-          source={jailSprites.platform}
-          style={styles.platform}
-        />
+        <>
+          {/* z=2: Back cage body � behind everything */}
+          <Animated.View pointerEvents="none" style={[styles.openJailLayer, cageStyle]}>
+            <Image
+              contentFit="contain"
+              source={jailSprites.openJail}
+              style={styles.layerImage}
+            />
+          </Animated.View>
+
+          {/* z=3: Platform/base � behind the animal and gate */}
+          <Animated.View pointerEvents="none" style={[styles.platformLayer, cageStyle]}>
+            <Image
+              contentFit="contain"
+              source={jailSprites.platform}
+              style={styles.layerImage}
+            />
+          </Animated.View>
+        </>
       ) : null}
+
+      {/* z=4: Animal � in front of back body + platform, behind gate bars */}
       <Image contentFit="contain" source={animalImage} style={styles.animal} />
+
       {!isRescued ? (
-        <Animated.View pointerEvents="none" style={[styles.jailOverlay, cageStyle]}>
-          <Image
-            contentFit="contain"
-            source={jailSprites.openJail}
-            style={styles.openJail}
-          />
-          <Image contentFit="contain" source={jailSprites.gate} style={styles.gate} />
-          <Image contentFit="contain" source={jailSprites.top} style={styles.top} />
-        </Animated.View>
+        <>
+          {/* z=6: Front gate bars � in front of the animal */}
+          <Animated.View pointerEvents="none" style={[styles.gateLayer, cageStyle]}>
+            <Image contentFit="contain" source={jailSprites.gate} style={styles.layerImage} />
+          </Animated.View>
+
+          {/* z=8: Top handle/lid � topmost layer */}
+          <Animated.View pointerEvents="none" style={[styles.topLayer, cageStyle]}>
+            <Image contentFit="contain" source={jailSprites.top} style={styles.layerImage} />
+          </Animated.View>
+        </>
       ) : null}
-      <View style={styles.badgeRow}>
-        {careBadges[careState].map((badge) => (
-          <Text key={badge} style={styles.badge}>
-            {badge}
-          </Text>
-        ))}
-      </View>
     </View>
   );
 }
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
-  animal: {
-    bottom: "12%",
-    height: "62%",
-    position: "absolute",
-    width: "68%",
-    zIndex: 3
-  },
-  badge: {
-    backgroundColor: isDark ? "rgba(31,42,39,0.88)" : "rgba(255,255,255,0.9)",
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
-  },
-  badgeRow: {
-    bottom: spacing.sm,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    justifyContent: "center",
-    left: spacing.sm,
-    position: "absolute",
-    right: spacing.sm
-  },
-  gate: {
-    bottom: "22%",
-    height: "48%",
-    position: "absolute",
-    right: "13%",
-    width: "52%",
-    zIndex: 6
-  },
-  jailOverlay: {
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0
-  },
-  glow: {
-    borderRadius: 96,
-    height: 192,
-    position: "absolute",
-    width: 192,
-    zIndex: 1
-  },
-  openJail: {
-    bottom: "6%",
-    height: "72%",
-    left: "7%",
-    position: "absolute",
-    width: "86%",
-    zIndex: 5
-  },
-  platform: {
-    bottom: "5%",
-    height: "25%",
-    position: "absolute",
-    width: "86%",
-    zIndex: 2
-  },
-  root: {
-    alignItems: "center",
-    aspectRatio: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    justifyContent: "center",
-    overflow: "hidden",
-    width: "100%"
-  },
-  top: {
-    height: "30%",
-    left: "7%",
-    position: "absolute",
-    top: "1%",
-    width: "86%",
-    zIndex: 7
-  }
+    animal: {
+      bottom: "20%",
+      height: "52%",
+      position: "absolute",
+      width: "52%",
+      zIndex: 4
+    },
+    gateLayer: {
+      height: "54%",
+      left: "15%",
+      position: "absolute",
+      top: "25%",
+      width: "70%",
+      zIndex: 6
+    },
+    layerImage: {
+      height: "100%",
+      width: "100%"
+    },
+    openJailLayer: {
+      height: "72%",
+      left: "5%",
+      position: "absolute",
+      top: "14%",
+      width: "90%",
+      zIndex: 2
+    },
+    platformLayer: {
+      bottom: "-1%",
+      height: "30%",
+      position: "absolute",
+      width: "96%",
+      zIndex: 1
+    },
+    root: {
+      alignItems: "center",
+      aspectRatio: 1,
+      borderColor: isDark ? colors.border : "#FFFFFF",
+      borderRadius: 8,
+      borderWidth: 1,
+      justifyContent: "center",
+      overflow: "hidden",
+      width: "100%"
+    },
+    topLayer: {
+      height: "31%",
+      left: "5%",
+      position: "absolute",
+      top: "2%",
+      width: "90%",
+      zIndex: 8
+    }
   });
 }

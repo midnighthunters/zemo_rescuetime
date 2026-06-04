@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
@@ -11,6 +12,7 @@ import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { formatRescueDate } from "../../src/utils/date";
+import { formatNumber } from "../../src/utils/format";
 
 type AnimalSectionProps = {
   title: string;
@@ -38,7 +40,17 @@ function AnimalSection({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleWrap}>
+          <Ionicons
+            color={theme.colors.primary}
+            name={title === "Waiting" ? "time" : "heart"}
+            size={24}
+          />
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        <View style={styles.sectionLine} />
+      </View>
       {animals.length === 0 ? (
         <EmptyState title={emptyTitle} message={emptyMessage} spriteKey={emptySpriteKey} />
       ) : (
@@ -82,32 +94,61 @@ export default function AnimalsScreen() {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors);
   const { lockedAnimals, unlockedAnimals } = useRescue();
+  const totalAnimals = lockedAnimals.length + unlockedAnimals.length;
 
   return (
     <ScreenContainer>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Animal Collection</Text>
+          <View style={styles.kickerPill}>
+            <Ionicons color={theme.colors.primaryDark} name="paw" size={18} />
+            <Text style={styles.kicker}>Collection</Text>
+          </View>
+          <Text style={styles.title}>Rescue Album</Text>
           <Text style={styles.subtitle}>
-            Locked friends wait for care. Rescued friends stay safe here.
+            Tap a card to see its gate, mood, and step target.
           </Text>
         </View>
-        <UiSprite spriteKey="collectionAnimalAlbum" size={96} />
+        <UiSprite spriteKey="collectionAnimalAlbum" size={142} />
+      </View>
+
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryItem}>
+          <UiSprite spriteKey="microHeartBubble" size={58} />
+          <View>
+            <Text style={styles.summaryValue}>{formatNumber(unlockedAnimals.length)}</Text>
+            <Text style={styles.summaryLabel}>Safe</Text>
+          </View>
+        </View>
+        <View style={styles.summaryItem}>
+          <UiSprite spriteKey="progressPawTrophy" size={58} />
+          <View>
+            <Text style={styles.summaryValue}>{formatNumber(lockedAnimals.length)}</Text>
+            <Text style={styles.summaryLabel}>Waiting</Text>
+          </View>
+        </View>
+        <View style={styles.summaryItem}>
+          <UiSprite spriteKey="microPawConfetti" size={58} />
+          <View>
+            <Text style={styles.summaryValue}>{formatNumber(totalAnimals)}</Text>
+            <Text style={styles.summaryLabel}>Total</Text>
+          </View>
+        </View>
       </View>
 
       <AnimalSection
         animals={lockedAnimals}
-        emptyMessage="You rescued everyone. You are a hero."
+        emptyMessage="Every waiting card is cleared."
         emptySpriteKey="emptyAnimalWave"
-        emptyTitle="No locked animals"
-        title="Locked Animals"
+        emptyTitle="No waiting animals"
+        title="Waiting"
       />
       <AnimalSection
         animals={unlockedAnimals}
-        emptyMessage="No animals rescued yet. Your first rescue starts today."
+        emptyMessage="Your first rescue starts with today's pedometer count."
         emptySpriteKey="emptySanctuaryNest"
-        emptyTitle="Your safe home is waiting"
-        title="Unlocked Animals"
+        emptyTitle="Safe home is waiting"
+        title="Safe Home"
       />
     </ScreenContainer>
   );
@@ -130,13 +171,46 @@ function createStyles(colors: AppColors) {
     flex: 1,
     gap: spacing.xs
   },
+  kicker: {
+    color: colors.primaryDark,
+    fontSize: 16,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  kickerPill: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.surfaceSoft,
+    borderColor: "#CBEED8",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
   section: {
     gap: spacing.md
   },
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  sectionLine: {
+    backgroundColor: colors.border,
+    flex: 1,
+    height: 1
+  },
   sectionTitle: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 27,
     fontWeight: "900"
+  },
+  sectionTitleWrap: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm
   },
   subtitle: {
     color: colors.muted,
@@ -144,9 +218,36 @@ function createStyles(colors: AppColors) {
     fontWeight: "700",
     lineHeight: 21
   },
+  summaryItem: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 86,
+    padding: spacing.sm
+  },
+  summaryLabel: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  summaryRow: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  summaryValue: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: "900"
+  },
   title: {
     color: colors.text,
-    fontSize: 30,
+    fontSize: 48,
     fontWeight: "900"
   }
   });

@@ -92,6 +92,7 @@ type RescueContextValue = {
   weeklySteps: number;
   lastRescueEvent?: RescueEvent;
   lastCareEvent?: CareEvent;
+  devMockSteps?: number;
   canAccessAnimal: (animalId: string) => boolean;
   getAnimalStatus: (animalId: string) => AnimalCardStatus;
   getMilestone: (animalId: string) => RescueMilestone | undefined;
@@ -100,6 +101,8 @@ type RescueContextValue = {
   rescueAnimal: (animalId: string, unlockedAtSteps?: number) => Promise<void>;
   resetProgress: () => Promise<void>;
   unlockFirstAnimal: () => Promise<void>;
+  advanceMockSteps: () => void;
+  resetMockSteps: () => void;
   dismissRescueEvent: () => void;
   dismissCareEvent: () => void;
 };
@@ -178,6 +181,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(true);
   const [lastRescueEvent, setLastRescueEvent] = useState<RescueEvent>();
   const [lastCareEvent, setLastCareEvent] = useState<CareEvent>();
+  // Dev-only: mock step override (undefined = use real steps)
+  const [devMockSteps, setDevMockSteps] = useState<number | undefined>();
 
   const persistProgress = useCallback(async (next: RescueProgress) => {
     setRescueProgress(next);
@@ -228,6 +233,9 @@ export function RescueProvider({ children }: PropsWithChildren) {
     : -1;
   const currentMilestone =
     currentAnimalIndex >= 0 ? milestones[currentAnimalIndex] : undefined;
+
+  // Effective steps: dev mock overrides real pedometer
+  const effectiveStepsToday = devMockSteps !== undefined ? devMockSteps : steps.stepsToday;
 
   const lockedAnimals = useMemo(
     () => getLockedAnimals(animals, rescueProgress),
@@ -282,14 +290,14 @@ export function RescueProvider({ children }: PropsWithChildren) {
 
       const isRescued = rescueProgress.rescuedAnimalIds.includes(animalId);
       const progress = getProgressToMilestone(
-        steps.stepsToday,
+        effectiveStepsToday,
         milestone,
         index
       );
       const claimedMiniMilestones =
         rescueProgress.claimedMiniMilestones[animalId] ?? [];
       const completedMiniMilestones = getCompletedMiniMilestones(
-        steps.stepsToday,
+        effectiveStepsToday,
         milestone
       );
       const mood = getAnimalMood(progress, isRescued);
@@ -300,10 +308,10 @@ export function RescueProvider({ children }: PropsWithChildren) {
         index,
         previousSteps: getPreviousMilestoneSteps(index),
         progress,
-        remainingSteps: Math.max(0, milestone.unlockSteps - steps.stepsToday),
+        remainingSteps: Math.max(0, milestone.unlockSteps - effectiveStepsToday),
         completedMiniMilestones,
         claimedMiniMilestones,
-        nextMiniMilestone: getNextMiniMilestone(steps.stepsToday, milestone),
+        nextMiniMilestone: getNextMiniMilestone(effectiveStepsToday, milestone),
         careState: getCareState(mood),
         mood,
         moodMeta: getMoodMeta(mood),
@@ -319,7 +327,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
       milestones,
       rescueProgress.claimedMiniMilestones,
       rescueProgress.rescuedAnimalIds,
-      steps.stepsToday
+      effectiveStepsToday
     ]
   );
 
@@ -369,7 +377,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
   );
 
   const rescueAnimal = useCallback(
-    async (animalId: string, unlockedAtSteps = steps.stepsToday) => {
+    async (animalId: string, unlockedAtSteps = effectiveStepsToday) => {
       const animal = animals.find((item) => item.id === animalId);
       const milestone = getMilestone(animalId);
 
@@ -427,7 +435,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
       rescueProgress.claimedMiniMilestones[currentAnimal.id] ?? [];
     const newlyCompleted = currentMilestone.miniMilestones.filter(
       (stepTarget) =>
-        steps.stepsToday >= stepTarget && !claimed.includes(stepTarget)
+        effectiveStepsToday >= stepTarget && !claimed.includes(stepTarget)
     );
 
     if (newlyCompleted.length > 0) {
@@ -435,8 +443,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    if (steps.stepsToday >= currentMilestone.unlockSteps) {
-      rescueAnimal(currentAnimal.id, steps.stepsToday);
+    if (effectiveStepsToday >= currentMilestone.unlockSteps) {
+      rescueAnimal(currentAnimal.id, effectiveStepsToday);
     }
   }, [
     canAccessAnimal,
@@ -447,7 +455,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
     rescueAnimal,
     rescueProgress.claimedMiniMilestones,
     rescueProgress.rescuedAnimalIds,
-    steps.stepsToday
+    effectiveStepsToday
   ]);
 
   useEffect(() => {
@@ -459,8 +467,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
     const recordedToday = rescueProgress.dailyStepHistory[today] ?? 0;
     const shouldUpdate =
       rescueProgress.lastKnownDate !== today ||
-      steps.stepsToday - recordedToday >= 25 ||
-      (recordedToday === 0 && steps.stepsToday > 0);
+      effectiveStepsToday - recordedToday >= 25 ||
+      (recordedToday === 0 && effectiveStepsToday > 0);
 
     if (!shouldUpdate) {
       return;
@@ -471,10 +479,10 @@ export function RescueProvider({ children }: PropsWithChildren) {
       lastKnownDate: today,
       dailyStepHistory: {
         ...rescueProgress.dailyStepHistory,
-        [today]: Math.max(recordedToday, steps.stepsToday)
+        [today]: Math.max(recordedToday, effectiveStepsToday)
       }
     });
-  }, [isLoading, persistProgress, rescueProgress, steps.stepsToday]);
+  }, [isLoading, persistProgress, rescueProgress, effectiveStepsToday]);
 
   const resetProgress = useCallback(async () => {
     const next = createDefaultProgress(animals);
@@ -482,6 +490,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
     await persistProgress(next);
     setLastCareEvent(undefined);
     setLastRescueEvent(undefined);
+    setDevMockSteps(undefined);
   }, [animals, persistProgress]);
 
   const unlockFirstAnimal = useCallback(async () => {
@@ -507,6 +516,23 @@ export function RescueProvider({ children }: PropsWithChildren) {
     });
   }, [animals, persistProgress, rescueProgress]);
 
+  // DEV: advance mock steps to the next unclaimed target for the current animal
+  const advanceMockSteps = useCallback(() => {
+    if (!currentAnimal || !currentMilestone) return;
+    const claimed = rescueProgress.claimedMiniMilestones[currentAnimal.id] ?? [];
+    const current = devMockSteps !== undefined ? devMockSteps : steps.stepsToday;
+    // find the next target that hasn't been hit yet
+    const allTargets = [...currentMilestone.miniMilestones, currentMilestone.unlockSteps];
+    const nextTarget = allTargets.find((t) => current < t);
+    if (nextTarget !== undefined) {
+      setDevMockSteps(nextTarget);
+    }
+  }, [currentAnimal, currentMilestone, devMockSteps, rescueProgress.claimedMiniMilestones, steps.stepsToday]);
+
+  const resetMockSteps = useCallback(() => {
+    setDevMockSteps(undefined);
+  }, []);
+
   const weeklySteps = useMemo(() => {
     const keys = getCurrentWeekDateKeys();
     return keys.reduce(
@@ -527,10 +553,11 @@ export function RescueProvider({ children }: PropsWithChildren) {
       lockedAnimals,
       unlockedAnimals,
       steps,
-      stepsToday: steps.stepsToday,
+      stepsToday: effectiveStepsToday,
       weeklySteps,
       lastRescueEvent,
       lastCareEvent,
+      devMockSteps,
       canAccessAnimal,
       getAnimalStatus,
       getMilestone,
@@ -539,16 +566,21 @@ export function RescueProvider({ children }: PropsWithChildren) {
       rescueAnimal,
       resetProgress,
       unlockFirstAnimal,
+      advanceMockSteps,
+      resetMockSteps,
       dismissRescueEvent: () => setLastRescueEvent(undefined),
       dismissCareEvent: () => setLastCareEvent(undefined)
     }),
     [
       animals,
+      advanceMockSteps,
+      resetMockSteps,
       canAccessAnimal,
       claimMiniMilestone,
       currentAnimal,
       currentAnimalIndex,
       currentMilestone,
+      devMockSteps,
       getAnimalMetrics,
       getAnimalStatus,
       getMilestone,
@@ -563,7 +595,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
       steps,
       unlockFirstAnimal,
       unlockedAnimals,
-      weeklySteps
+      weeklySteps,
+      effectiveStepsToday
     ]
   );
 

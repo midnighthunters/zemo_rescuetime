@@ -1,18 +1,8 @@
-import { Platform } from "react-native";
-
-import { colors } from "./colors";
-
 export const shadows = {
-  card: Platform.select({
-    ios: {
-      shadowColor: colors.shadow,
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 8 }
-    },
-    android: {
-      elevation: 4
-    },
-    default: {}
-  })
+  card: {
+    boxShadow: "0 10px 30px rgba(19, 37, 31, 0.10)"
+  },
+  soft: {
+    boxShadow: "0 6px 18px rgba(19, 37, 31, 0.08)"
+  }
 };

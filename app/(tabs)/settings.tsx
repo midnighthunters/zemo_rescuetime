@@ -72,10 +72,10 @@ export default function SettingsScreen() {
     <ScreenContainer>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
+          <Text style={styles.kicker}>Device</Text>
           <Text style={styles.title}>Settings</Text>
           <Text style={styles.subtitle}>
-            Your step data stays on your device. We only use it to calculate
-            rescue progress.
+            Step data stays on your device and feeds rescue progress locally.
           </Text>
         </View>
         <UiSprite spriteKey="emptySettingsAnimal" size={92} />
@@ -116,6 +116,10 @@ export default function SettingsScreen() {
           <Text style={styles.rowValue}>{formatNumber(stepsToday)}</Text>
         </View>
         <View style={styles.row}>
+          <Text style={styles.rowLabel}>Source</Text>
+          <Text style={styles.rowValue}>{steps.sourceLabel}</Text>
+        </View>
+        <View style={styles.row}>
           <Text style={styles.rowLabel}>Permission</Text>
           <Text style={styles.rowValue}>{steps.permissionStatus}</Text>
         </View>
@@ -125,6 +129,34 @@ export default function SettingsScreen() {
             {steps.isAvailable ? "available" : "unavailable"}
           </Text>
         </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Mode</Text>
+          <Text style={styles.rowValue}>{steps.countingMode.replace("-", " ")}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Stored today</Text>
+          <Text style={styles.rowValue}>
+            {formatNumber(steps.historicalStepsToday)}
+          </Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Live session</Text>
+          <Text style={styles.rowValue}>{formatNumber(steps.liveSteps)}</Text>
+        </View>
+        {steps.countingMode === "live-session" ? (
+          <Text style={styles.note}>
+            This platform reports live pedometer updates through Expo Sensors.
+            Keep the app open while walking for rescue progress.
+          </Text>
+        ) : null}
+        {steps.error ? <Text style={styles.error}>{steps.error}</Text> : null}
+        <AppButton
+          icon="refresh"
+          loading={steps.isLoading}
+          onPress={steps.refreshSteps}
+          title="Refresh Pedometer"
+          variant="secondary"
+        />
         <AppButton
           icon="settings"
           onPress={() => Linking.openSettings()}
@@ -177,28 +209,6 @@ export default function SettingsScreen() {
               value={devProEnabled}
             />
           </View>
-          <View style={styles.devGrid}>
-            <AppButton
-              onPress={() => steps.addMockSteps(100)}
-              title="+100 steps"
-              variant="secondary"
-            />
-            <AppButton
-              onPress={() => steps.addMockSteps(500)}
-              title="+500 steps"
-              variant="secondary"
-            />
-            <AppButton
-              onPress={() => steps.addMockSteps(1000)}
-              title="+1000 steps"
-              variant="secondary"
-            />
-            <AppButton
-              onPress={steps.resetMockSteps}
-              title="Reset Steps"
-              variant="ghost"
-            />
-          </View>
           <AppButton
             icon="paw"
             onPress={unlockFirstAnimal}
@@ -216,11 +226,6 @@ export default function SettingsScreen() {
 
 function createStyles(colors: AppColors, isDark = false) {
   return StyleSheet.create({
-  devGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm
-  },
   error: {
     color: colors.danger,
     fontSize: 13,
@@ -236,6 +241,12 @@ function createStyles(colors: AppColors, isDark = false) {
     flex: 1,
     gap: spacing.xs
   },
+  kicker: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
   note: {
     color: colors.muted,
     fontSize: 13,
@@ -245,11 +256,11 @@ function createStyles(colors: AppColors, isDark = false) {
   panel: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg,
-    ...shadows.card
+    ...shadows.soft
   },
   panelTitle: {
     color: colors.text,
@@ -284,7 +295,7 @@ function createStyles(colors: AppColors, isDark = false) {
   },
   title: {
     color: colors.text,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "900"
   },
   version: {

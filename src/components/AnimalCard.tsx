@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -10,7 +9,6 @@ import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
 import { formatNumber, formatPercent } from "../utils/format";
 import { ProBadge } from "./ProBadge";
-import { UiSprite } from "./UiSprite";
 
 type AnimalCardProps = {
   animal: Animal;
@@ -53,31 +51,33 @@ function AnimalCardComponent({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.imageWrap}>
-        <UiSprite
-          spriteKey={isUnlocked ? "collectionUnlockedFrame" : "collectionLockedBubble"}
-          size={96}
-          style={styles.collectionFrame}
-        />
         {!isUnlocked ? (
-          <Image
-            contentFit="contain"
-            source={jailSprites.platform}
-            style={styles.platformImage}
-          />
-        ) : null}
-        <Image contentFit="contain" source={image} style={styles.animalImage} />
-        {!isUnlocked ? (
-          <View pointerEvents="none" style={styles.jailStack}>
+          <>
+            {/* z=1: Platform base — BEHIND everything */}
+            <Image
+              contentFit="contain"
+              source={jailSprites.platform}
+              style={styles.platformImage}
+            />
+            {/* z=2: Back cage body */}
             <Image
               contentFit="contain"
               source={jailSprites.openJail}
               style={styles.openJailImage}
             />
+          </>
+        ) : null}
+        {/* z=4: Animal — in front of base, behind gate */}
+        <Image contentFit="contain" source={image} style={styles.animalImage} />
+        {!isUnlocked ? (
+          <View pointerEvents="none" style={styles.jailStack}>
+            {/* z=6: Front gate bars */}
             <Image
               contentFit="contain"
               source={jailSprites.gate}
               style={styles.gateImage}
             />
+            {/* z=8: Top lid */}
             <Image
               contentFit="contain"
               source={jailSprites.top}
@@ -85,43 +85,36 @@ function AnimalCardComponent({
             />
           </View>
         ) : null}
-        {isUnlocked ? (
-          <View style={styles.rescuedBadge}>
-            <Ionicons color={theme.colors.white} name="heart" size={12} />
-          </View>
-        ) : null}
-        {isProLocked ? (
-          <UiSprite spriteKey="collectionPremiumBadge" size={42} style={styles.proSprite} />
-        ) : null}
       </View>
+
       <View style={styles.copy}>
         <View style={styles.nameRow}>
-          <Text numberOfLines={1} style={styles.name}>
-            {animal.name}
-          </Text>
+          <Image contentFit="contain" source={image} style={styles.avatar} />
+          <View style={styles.nameCopy}>
+            <Text numberOfLines={1} style={styles.name}>
+              {animal.name}
+            </Text>
+            <Text numberOfLines={1} style={styles.status}>
+              {statusCopy}
+            </Text>
+          </View>
           {isProLocked ? <ProBadge /> : null}
         </View>
-        <Text numberOfLines={1} style={styles.status}>
-          {statusCopy}
-        </Text>
+
         {!isUnlocked ? (
           <>
             <Text style={styles.steps}>
               Unlocks at {formatNumber(requiredSteps)} steps
             </Text>
-            {status === "active" ? (
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.round(progress * 100)}%` as `${number}%` }
-                  ]}
-                />
-              </View>
-            ) : null}
-            {status === "active" ? (
-              <Text style={styles.percent}>{formatPercent(progress)}</Text>
-            ) : null}
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.round(progress * 100)}%` as `${number}%` }
+                ]}
+              />
+            </View>
+            <Text style={styles.percent}>{formatPercent(progress)}</Text>
           </>
         ) : null}
       </View>
@@ -133,138 +126,131 @@ export const AnimalCard = memo(AnimalCardComponent);
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
-  animalImage: {
-    bottom: "12%",
-    height: "58%",
-    position: "absolute",
-    width: "68%",
-    zIndex: 3
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    flex: 1,
-    gap: spacing.sm,
-    minWidth: 150,
-    padding: spacing.md,
-    ...shadows.card
-  },
-  copy: {
-    gap: spacing.xs
-  },
-  collectionFrame: {
-    opacity: 0.85,
-    position: "absolute",
-    right: -16,
-    top: -14,
-    zIndex: 1
-  },
-  gateImage: {
-    bottom: "22%",
-    height: "42%",
-    position: "absolute",
-    right: "12%",
-    width: "50%",
-    zIndex: 5
-  },
-  imageWrap: {
-    alignItems: "center",
-    aspectRatio: 1,
-    backgroundColor: isDark ? "#102821" : "#EEF8F2",
-    borderRadius: 18,
-    justifyContent: "center",
-    overflow: "hidden",
-    width: "100%"
-  },
-  jailStack: {
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-    zIndex: 4
-  },
-  name: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "900"
-  },
-  nameRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm
-  },
-  percent: {
-    color: colors.primaryDark,
-    fontSize: 11,
-    fontWeight: "900"
-  },
-  pressed: {
-    transform: [{ scale: 0.99 }]
-  },
-  proSprite: {
-    bottom: spacing.sm,
-    position: "absolute",
-    right: spacing.sm,
-    zIndex: 8
-  },
-  progressFill: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    height: "100%"
-  },
-  progressTrack: {
-    backgroundColor: colors.border,
-    borderRadius: 8,
-    height: 8,
-    overflow: "hidden"
-  },
-  openJailImage: {
-    bottom: "7%",
-    height: "62%",
-    left: "8%",
-    position: "absolute",
-    width: "84%",
-    zIndex: 4
-  },
-  platformImage: {
-    bottom: "5%",
-    height: "24%",
-    position: "absolute",
-    width: "82%",
-    zIndex: 2
-  },
-  rescuedBadge: {
-    alignItems: "center",
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    height: 24,
-    justifyContent: "center",
-    position: "absolute",
-    right: spacing.sm,
-    top: spacing.sm,
-    width: 24
-  },
-  status: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "800"
-  },
-  steps: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "700"
-  },
-  topImage: {
-    height: "25%",
-    left: "8%",
-    position: "absolute",
-    top: "5%",
-    width: "84%",
-    zIndex: 6
-  }
+    animalImage: {
+      bottom: "20%",
+      height: "52%",
+      position: "absolute",
+      width: "52%",
+      zIndex: 4
+    },
+    avatar: {
+      backgroundColor: colors.surfaceSoft,
+      borderColor: colors.border,
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 34,
+      width: 34
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 8,
+      borderWidth: 1,
+      flex: 1,
+      gap: spacing.sm,
+      minWidth: 150,
+      overflow: "hidden",
+      padding: spacing.sm,
+      ...shadows.soft
+    },
+    copy: {
+      gap: spacing.xs,
+      paddingBottom: spacing.xs,
+      paddingHorizontal: spacing.xs
+    },
+    gateImage: {
+      height: "54%",
+      left: "15%",
+      position: "absolute",
+      top: "25%",
+      width: "70%",
+      zIndex: 6
+    },
+    imageWrap: {
+      alignItems: "center",
+      aspectRatio: 1.18,
+      backgroundColor: isDark ? "#102821" : "#CDEFFF",
+      borderColor: isDark ? colors.border : "#FFFFFF",
+      borderRadius: 8,
+      borderWidth: 1,
+      justifyContent: "center",
+      overflow: "hidden",
+      width: "100%"
+    },
+    jailStack: {
+      bottom: 0,
+      left: 0,
+      position: "absolute",
+      right: 0,
+      top: 0,
+      zIndex: 5
+    },
+    name: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: "900"
+    },
+    nameCopy: {
+      flex: 1,
+      gap: 1,
+      minWidth: 0
+    },
+    nameRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: spacing.sm
+    },
+    openJailImage: {
+      height: "72%",
+      left: "5%",
+      position: "absolute",
+      top: "14%",
+      width: "90%",
+      zIndex: 2
+    },
+    percent: {
+      color: colors.primaryDark,
+      fontSize: 12,
+      fontWeight: "900"
+    },
+    platformImage: {
+      bottom: "-1%",
+      height: "30%",
+      position: "absolute",
+      width: "96%",
+      zIndex: 1
+    },
+    pressed: {
+      transform: [{ scale: 0.99 }]
+    },
+    progressFill: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      height: "100%"
+    },
+    progressTrack: {
+      backgroundColor: colors.border,
+      borderRadius: 8,
+      height: 8,
+      overflow: "hidden"
+    },
+    status: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "800"
+    },
+    steps: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: "700"
+    },
+    topImage: {
+      height: "31%",
+      left: "5%",
+      position: "absolute",
+      top: "2%",
+      width: "90%",
+      zIndex: 8
+    }
   });
 }

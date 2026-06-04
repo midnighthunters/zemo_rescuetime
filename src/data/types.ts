@@ -41,12 +41,9 @@ export type RescueProgress = {
   claimedMiniMilestones: Record<string, number[]>;
   rescuedDates: Record<string, string>;
   lastKnownDate: string;
-  dailyStepsOverride?: number;
   dailyStepHistory: Record<string, number>;
 };
 
 export type DevSettings = {
-  mockSteps?: number;
-  mockStepsDate?: string;
   mockProEnabled?: boolean;
 };

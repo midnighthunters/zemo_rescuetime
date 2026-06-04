@@ -47,7 +47,7 @@ function createStyles(colors: AppColors, isDark: boolean) {
     alignItems: "center",
     backgroundColor: isDark ? "rgba(31,42,39,0.64)" : "rgba(255,255,255,0.64)",
     borderColor: colors.border,
-    borderRadius: 22,
+    borderRadius: 8,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.xl
