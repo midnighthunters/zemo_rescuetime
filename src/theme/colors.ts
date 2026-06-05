@@ -1,4 +1,17 @@
-import { useColorScheme } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren
+} from "react";
+import { useColorScheme, type ColorSchemeName } from "react-native";
+
+import { STORAGE_KEYS } from "../storage/storageKeys";
 
 export type AppColors = {
   readonly backgroundTop: string;
@@ -71,16 +84,116 @@ export const darkColors: AppColors = {
 
 export const colors = lightColors;
 
-export function useAppTheme() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+export type ThemePreference = "system" | "light" | "dark";
+
+type AppTheme = {
+  readonly colors: AppColors;
+  readonly gradient: readonly [string, string];
+  readonly isDark: boolean;
+  readonly isThemeLoading: boolean;
+  readonly resolvedColorScheme: "light" | "dark";
+  readonly setThemePreference: (preference: ThemePreference) => Promise<void>;
+  readonly statusBarStyle: "light" | "dark";
+  readonly themePreference: ThemePreference;
+};
+
+const ThemeContext = createContext<AppTheme | undefined>(undefined);
+
+function isThemePreference(value: string | null): value is ThemePreference {
+  return value === "system" || value === "light" || value === "dark";
+}
+
+function resolveIsDark(
+  preference: ThemePreference,
+  systemColorScheme: ColorSchemeName
+) {
+  if (preference === "dark") {
+    return true;
+  }
+
+  if (preference === "light") {
+    return false;
+  }
+
+  return systemColorScheme === "dark";
+}
+
+function createTheme(
+  preference: ThemePreference,
+  systemColorScheme: ColorSchemeName,
+  isThemeLoading = false,
+  setThemePreference: AppTheme["setThemePreference"] = async () => {}
+): AppTheme {
+  const isDark = resolveIsDark(preference, systemColorScheme);
   const palette = isDark ? darkColors : lightColors;
-  const statusBarStyle: "light" | "dark" = isDark ? "light" : "dark";
 
   return {
     colors: palette,
     gradient: [palette.backgroundTop, palette.backgroundBottom] as const,
     isDark,
-    statusBarStyle
+    isThemeLoading,
+    resolvedColorScheme: isDark ? "dark" : "light",
+    setThemePreference,
+    statusBarStyle: isDark ? "light" : "dark",
+    themePreference: preference
   };
+}
+
+export function ThemeProvider({ children }: PropsWithChildren) {
+  const systemColorScheme = useColorScheme();
+  const [themePreference, setThemePreferenceState] =
+    useState<ThemePreference>("system");
+  const [isThemeLoading, setIsThemeLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AsyncStorage.getItem(STORAGE_KEYS.THEME_PREFERENCE)
+      .then((storedPreference) => {
+        if (!mounted || !isThemePreference(storedPreference)) {
+          return;
+        }
+
+        setThemePreferenceState(storedPreference);
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsThemeLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const setThemePreference = useCallback(async (preference: ThemePreference) => {
+    setThemePreferenceState(preference);
+
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.THEME_PREFERENCE, preference);
+    } catch {
+      // Theme persistence is nice to have; the in-memory choice still applies.
+    }
+  }, []);
+
+  const theme = useMemo(
+    () =>
+      createTheme(
+        themePreference,
+        systemColorScheme,
+        isThemeLoading,
+        setThemePreference
+      ),
+    [isThemeLoading, setThemePreference, systemColorScheme, themePreference]
+  );
+
+  return createElement(ThemeContext.Provider, { value: theme }, children);
+}
+
+export function useAppTheme() {
+  const context = useContext(ThemeContext);
+  const systemColorScheme = useColorScheme();
+
+  return context ?? createTheme("system", systemColorScheme);
 }

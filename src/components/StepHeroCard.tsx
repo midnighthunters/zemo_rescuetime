@@ -1,4 +1,5 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AnimalMetrics } from "../state/RescueProvider";
@@ -10,6 +11,7 @@ import { AnimalCage } from "./AnimalCage";
 import { AnimalMoodMeter } from "./AnimalMoodMeter";
 import { AppButton } from "./AppButton";
 import { CircularStepProgress } from "./CircularStepProgress";
+import { AnimatedProgressFill, MotionView, PulseView } from "./Motion";
 import { ProBadge } from "./ProBadge";
 import { UiSprite } from "./UiSprite";
 
@@ -46,8 +48,10 @@ export function StepHeroCard({
   /* ── Empty state ── */
   if (!metrics) {
     return (
-      <View style={styles.emptyCard}>
-        <UiSprite spriteKey="emptySanctuaryNest" size={96} />
+      <MotionView direction="fade" style={styles.emptyCard}>
+        <PulseView floatDistance={6} pulseScale={1.03}>
+          <UiSprite spriteKey="emptySanctuaryNest" size={96} />
+        </PulseView>
         <View style={styles.emptyCopy}>
           <Text style={styles.emptyTitle}>All friends are safe 🎉</Text>
           <Text selectable style={styles.emptySteps}>
@@ -62,15 +66,15 @@ export function StepHeroCard({
           title="Refresh Steps"
           variant="secondary"
         />
-      </View>
+      </MotionView>
     );
   }
 
   const proLocked = metrics.status === "pro_locked";
   const image = metrics.isRescued ? metrics.animal.happyImage : metrics.animal.sadImage;
-  const progressPercent = `${Math.round(metrics.progress * 100)}%` as `${number}%`;
-  const nextTarget = metrics.nextMiniMilestone ?? metrics.milestone.unlockSteps;
-  const targetLabel = metrics.nextMiniMilestone && !proLocked ? "Next Care" : "Target";
+  const nextRewardTarget = metrics.nextRewardTarget;
+  const nextTarget = nextRewardTarget?.stepTarget ?? metrics.milestone.unlockSteps;
+  const targetLabel = nextRewardTarget && !proLocked ? "Next Reward" : "Target";
   const remainingLabel = proLocked
     ? "Pro required"
     : metrics.remainingSteps > 0
@@ -81,7 +85,7 @@ export function StepHeroCard({
     <View style={styles.root}>
 
       {/* ── Step counter hero row ── */}
-      <View style={styles.stepHero}>
+      <MotionView style={styles.stepHero}>
         <View style={styles.stepHeroLeft}>
           <Text style={styles.stepHeroLabel}>Today's Steps</Text>
           <Text selectable style={styles.stepHeroNumber}>
@@ -89,16 +93,21 @@ export function StepHeroCard({
           </Text>
           <View style={styles.progressBarWrap}>
             <View style={styles.progressBarTrack}>
-              <View style={[styles.progressBarFill, { width: progressPercent }]} />
+              <AnimatedProgressFill
+                progress={metrics.progress}
+                style={styles.progressBarFill}
+              />
             </View>
             <Text style={styles.progressBarPct}>{formatPercent(metrics.progress)}</Text>
           </View>
         </View>
-        <CircularStepProgress progress={metrics.progress} />
-      </View>
+        <PulseView active={metrics.progress > 0} floatDistance={3} pulseScale={1.02}>
+          <CircularStepProgress progress={metrics.progress} />
+        </PulseView>
+      </MotionView>
 
       {/* ── Cage + Animal info ── */}
-      <View style={styles.rescueCard}>
+      <MotionView delay={90} style={styles.rescueCard}>
         {/* Animal header row */}
         <View style={styles.animalHeader}>
           <View style={styles.animalHeaderLeft}>
@@ -112,7 +121,13 @@ export function StepHeroCard({
             <Text style={styles.animalStatus}>{getStatusCopy(metrics)}</Text>
           </View>
           <View style={styles.animalHeaderRight}>
-            {proLocked ? <ProBadge /> : <UiSprite spriteKey="microPawConfetti" size={44} />}
+            {proLocked ? (
+              <ProBadge />
+            ) : (
+              <PulseView floatDistance={4} pulseScale={1.06}>
+                <UiSprite spriteKey="microPawConfetti" size={44} />
+              </PulseView>
+            )}
             <Pressable onPress={onViewAnimal} style={styles.viewBtn}>
               <Ionicons color={theme.colors.primaryDark} name="eye-outline" size={15} />
               <Text style={styles.viewBtnText}>View</Text>
@@ -137,8 +152,29 @@ export function StepHeroCard({
           proLocked={proLocked}
         />
 
+        {nextRewardTarget && !proLocked ? (
+          <MotionView delay={160} style={styles.nextRewardPanel}>
+            <PulseView floatDistance={3} pulseScale={1.04}>
+              <Image
+                contentFit="contain"
+                source={nextRewardTarget.image}
+                style={styles.nextRewardImage}
+              />
+            </PulseView>
+            <View style={styles.nextRewardCopy}>
+              <Text style={styles.nextRewardLabel}>Next Reward</Text>
+              <Text numberOfLines={2} style={styles.nextRewardTitle}>
+                {nextRewardTarget.title}
+              </Text>
+              <Text style={styles.nextRewardSteps}>
+                {formatNumber(nextRewardTarget.stepTarget)} steps
+              </Text>
+            </View>
+          </MotionView>
+        ) : null}
+
         {/* Metric chips row */}
-        <View style={styles.chipRow}>
+        <MotionView delay={210} style={styles.chipRow}>
           <View style={styles.chip}>
             <Ionicons color={theme.colors.primary} name="flag-outline" size={16} />
             <View style={styles.chipText}>
@@ -156,10 +192,10 @@ export function StepHeroCard({
               </Text>
             </View>
           </View>
-        </View>
+        </MotionView>
 
         {/* Action row */}
-        <View style={styles.actionRow}>
+        <MotionView delay={260} style={styles.actionRow}>
           <AppButton
             icon="refresh"
             loading={isRefreshing}
@@ -185,8 +221,8 @@ export function StepHeroCard({
               variant="primary"
             />
           )}
-        </View>
-      </View>
+        </MotionView>
+      </MotionView>
     </View>
   );
 }
@@ -269,6 +305,46 @@ function createStyles(colors: AppColors, isDark: boolean) {
     },
     chipValueReady: {
       color: colors.primary
+    },
+    nextRewardCopy: {
+      flex: 1,
+      gap: 2,
+      minWidth: 0
+    },
+    nextRewardImage: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 66,
+      width: 66
+    },
+    nextRewardLabel: {
+      color: colors.primaryDark,
+      fontSize: 11,
+      fontWeight: "900",
+      textTransform: "uppercase"
+    },
+    nextRewardPanel: {
+      alignItems: "center",
+      backgroundColor: isDark ? colors.surfaceElevated : "#FFFFFF",
+      borderColor: isDark ? colors.border : "#CBEED8",
+      borderRadius: 8,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: spacing.md,
+      padding: spacing.sm
+    },
+    nextRewardSteps: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "800"
+    },
+    nextRewardTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "900",
+      lineHeight: 19
     },
     emptyCopy: {
       alignItems: "center",

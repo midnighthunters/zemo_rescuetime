@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -7,9 +8,10 @@ import { AnimalMoodMeter } from "../../src/components/AnimalMoodMeter";
 import { AppButton } from "../../src/components/AppButton";
 import { CareMilestoneRow } from "../../src/components/CareMilestoneRow";
 import { CircularStepProgress } from "../../src/components/CircularStepProgress";
+import { AnimatedProgressFill, MotionView, PulseView } from "../../src/components/Motion";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
-import { feedingMilestoneIcons, feedingMilestoneLabels } from "../../src/data/milestones";
+import { getAnimalFunFacts } from "../../src/data/animalFacts";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
@@ -36,30 +38,16 @@ export default function AnimalDetailScreen() {
 
   const proLocked = metrics.status === "pro_locked";
   const image = metrics.isRescued ? animal.happyImage : animal.sadImage;
-  const progressPercent = `${Math.round(metrics.progress * 100)}%` as `${number}%`;
-  const nextCareTarget = metrics.nextMiniMilestone ?? metrics.milestone.unlockSteps;
-
-  // Work out which mini-milestone is next and get its label/icon
-  const nextMiniIndex = metrics.nextMiniMilestone
-    ? metrics.milestone.miniMilestones.indexOf(metrics.nextMiniMilestone)
-    : -1;
-  const nextTargetLabel = metrics.nextMiniMilestone
-    ? (feedingMilestoneLabels[nextMiniIndex] ?? "Care")
-    : "Rescue";
-  const nextTargetIcon = metrics.nextMiniMilestone
-    ? (feedingMilestoneIcons[nextMiniIndex] ?? "heart")
-    : "key";
-  const nextTargetSpriteKey = metrics.nextMiniMilestone
-    ? nextMiniIndex === 0
-      ? ("careWaterBowl" as const)
-      : nextMiniIndex === 1
-        ? ("careFoodBowl" as const)
-        : ("careMedkit" as const)
-    : ("proGoldenKey" as const);
+  const displayedProgress = metrics.isRescued ? 1 : metrics.progress;
+  const displayedSteps = metrics.isRescued ? metrics.milestone.unlockSteps : stepsToday;
+  const nextRewardTarget = metrics.nextRewardTarget;
+  const nextCareTarget = nextRewardTarget?.stepTarget ?? metrics.milestone.unlockSteps;
+  const nextTargetLabel = nextRewardTarget?.title ?? "Rescue";
+  const funFacts = getAnimalFunFacts(animal.name);
 
   return (
     <ScreenContainer>
-      <View style={styles.topBar}>
+      <MotionView style={styles.topBar}>
         <AppButton
           icon="arrow-back"
           onPress={() => router.back()}
@@ -77,57 +65,108 @@ export default function AnimalDetailScreen() {
             </Text>
           </View>
         </View>
-        <View style={styles.heartButton}>
+        <PulseView floatDistance={3} pulseScale={1.05} style={styles.heartButton}>
           <UiSprite spriteKey="microHeartBubble" size={44} />
-        </View>
-      </View>
+        </PulseView>
+      </MotionView>
 
-      <View style={styles.heroStage}>
+      <MotionView delay={70} style={styles.heroStage}>
         <AnimalCage
           animalImage={image}
           careState={metrics.careState}
           isRescued={metrics.isRescued}
-          progress={metrics.progress}
+          progress={displayedProgress}
         />
-      </View>
+      </MotionView>
 
-      <View style={styles.progressPanel}>
+      {metrics.isRescued ? (
+        <View style={styles.rewardsPanel}>
+          <View style={styles.rewardsHeader}>
+            <Ionicons color={theme.colors.primary} name="gift" size={22} />
+            <Text style={styles.panelTitle}>Rewards Earned</Text>
+          </View>
+          <CareMilestoneRow
+            claimedMiniMilestones={metrics.claimedMiniMilestones}
+            milestone={metrics.milestone}
+            proLocked={proLocked}
+            stepsToday={displayedSteps}
+          />
+        </View>
+      ) : null}
+
+      <MotionView delay={120} style={styles.progressPanel}>
         <View style={styles.progressHeader}>
           <View style={styles.progressTitleRow}>
             <Ionicons color={theme.colors.muted} name="paw" size={22} />
             <Text style={styles.panelTitle}>Rescue Progress</Text>
           </View>
-          <Text style={styles.percentText}>{Math.round(metrics.progress * 100)}% Complete</Text>
+          <Text style={styles.percentText}>{Math.round(displayedProgress * 100)}% Complete</Text>
         </View>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: progressPercent }]} />
+          <AnimatedProgressFill progress={displayedProgress} style={styles.fill} />
         </View>
         <View style={styles.trackLabels}>
-          <Text style={styles.smallStat}>{formatNumber(stepsToday)}</Text>
+          <Text style={styles.smallStat}>{formatNumber(displayedSteps)}</Text>
           <Text style={styles.smallStat}>
             {formatNumber(metrics.milestone.unlockSteps)} Steps
           </Text>
         </View>
-      </View>
+      </MotionView>
 
       {metrics.isRescued ? (
-        <View style={styles.safePanel}>
-          <UiSprite spriteKey="microHeartBubble" size={58} />
-          <View style={styles.safeCopy}>
-            <Text style={styles.safeTitle}>{animal.name} is safe now</Text>
-            <Text style={styles.copy}>
-              Rescued {formatRescueDate(rescueProgress.rescuedDates[animal.id])}
-              . Your steps opened this gate.
-            </Text>
-          </View>
-        </View>
+        <>
+          <MotionView delay={170} style={styles.safePanel}>
+            <PulseView floatDistance={3} pulseScale={1.05}>
+              <UiSprite spriteKey="microHeartBubble" size={58} />
+            </PulseView>
+            <View style={styles.safeCopy}>
+              <Text style={styles.safeTitle}>{animal.name} is safe now</Text>
+              <Text style={styles.copy}>
+                Rescued {formatRescueDate(rescueProgress.rescuedDates[animal.id])}
+                . Your steps opened this gate.
+              </Text>
+            </View>
+          </MotionView>
+
+          <MotionView delay={220} style={styles.factsSection}>
+            <View style={styles.factsHeader}>
+              <View style={styles.factsIconBadge}>
+                <Ionicons color={theme.colors.primaryDark} name="sparkles" size={20} />
+              </View>
+              <View style={styles.factsTitleBlock}>
+                <Text style={styles.factsEyebrow}>Fun facts</Text>
+                <Text style={styles.factsTitle}>Meet your new safe friend</Text>
+              </View>
+            </View>
+            {funFacts.map((fact, index) => (
+              <MotionView
+                delay={260 + index * 70}
+                key={`${fact.label}-${index}`}
+                style={styles.factCard}
+              >
+                <View style={styles.factIconCircle}>
+                  <Ionicons
+                    color={index % 2 === 0 ? theme.colors.primaryDark : theme.colors.coral}
+                    name={index % 2 === 0 ? "leaf" : "bulb"}
+                    size={19}
+                  />
+                </View>
+                <View style={styles.factCopy}>
+                  <Text style={styles.factLabel}>{fact.label}</Text>
+                  <Text style={styles.factText}>{fact.copy}</Text>
+                </View>
+              </MotionView>
+            ))}
+          </MotionView>
+
+        </>
       ) : (
         <>
-          <View style={styles.infoGrid}>
+          <MotionView delay={170} style={styles.infoGrid}>
             <View style={styles.infoTile}>
               <Ionicons color={theme.colors.primary} name="flag" size={34} />
               <View>
-                <Text style={styles.tileLabel}>Next Care</Text>
+                <Text style={styles.tileLabel}>Next Target</Text>
                 <Text style={styles.tileValue}>{formatNumber(nextCareTarget)}</Text>
                 <Text style={styles.tileUnit}>steps</Text>
               </View>
@@ -140,38 +179,54 @@ export default function AnimalDetailScreen() {
                 <Text style={styles.tileUnit}>steps left</Text>
               </View>
             </View>
-          </View>
+          </MotionView>
 
-          <View style={styles.nextTargetPanel}>
-            <UiSprite spriteKey={nextTargetSpriteKey} size={96} />
+          <MotionView delay={220} style={styles.nextTargetPanel}>
+            {nextRewardTarget ? (
+              <PulseView floatDistance={3} pulseScale={1.04}>
+                <Image
+                  contentFit="contain"
+                  source={nextRewardTarget.image}
+                  style={styles.nextRewardImage}
+                />
+              </PulseView>
+            ) : (
+              <View style={styles.nextRewardFallback}>
+                <Ionicons color="#096DD9" name="key" size={38} />
+              </View>
+            )}
             <View style={styles.targetCopy}>
               <View style={styles.targetPill}>
                 <Ionicons
                   color="#096DD9"
-                  name={nextTargetIcon as keyof typeof Ionicons.glyphMap}
+                  name={nextRewardTarget ? "gift" : "key"}
                   size={16}
                 />
                 <Text style={styles.targetPillText}>Next Target</Text>
               </View>
-              <Text style={styles.targetTitle}>{nextTargetLabel}</Text>
+              <Text adjustsFontSizeToFit numberOfLines={2} style={styles.targetTitle}>
+                {nextTargetLabel}
+              </Text>
               <Text style={styles.targetSubtitle}>
-                {animal.name} needs {nextTargetLabel.toLowerCase()} at{" "}
+                {animal.name} unlocks this at{" "}
                 <Text style={{ fontWeight: "900", color: "#0D55B8" }}>
                   {formatNumber(nextCareTarget)}
                 </Text>
                 {" "}steps
               </Text>
             </View>
-            <UiSprite spriteKey="homeProgressRingMascot" size={72} />
-          </View>
+            <PulseView floatDistance={3} pulseScale={1.03}>
+              <UiSprite spriteKey="homeProgressRingMascot" size={72} />
+            </PulseView>
+          </MotionView>
 
-          <View style={styles.moodPanel}>
+          <MotionView delay={270} style={styles.moodPanel}>
             <AnimalMoodMeter
               mood={metrics.mood}
               progress={metrics.progress}
               proLocked={proLocked}
             />
-          </View>
+          </MotionView>
 
           <CareMilestoneRow
             claimedMiniMilestones={metrics.claimedMiniMilestones}
@@ -180,7 +235,7 @@ export default function AnimalDetailScreen() {
             stepsToday={stepsToday}
           />
 
-          <View style={styles.actionRow}>
+          <MotionView delay={350} style={styles.actionRow}>
             <View style={styles.progressRingWrap}>
               <CircularStepProgress progress={metrics.progress} />
             </View>
@@ -201,7 +256,7 @@ export default function AnimalDetailScreen() {
                 variant="primary"
               />
             )}
-          </View>
+          </MotionView>
         </>
       )}
     </ScreenContainer>
@@ -237,6 +292,79 @@ function createStyles(colors: AppColors, isDark: boolean) {
       fontSize: 15,
       fontWeight: "700",
       lineHeight: 22
+    },
+    factCard: {
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 8,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: spacing.md,
+      minHeight: 94,
+      padding: spacing.lg,
+      ...shadows.soft
+    },
+    factCopy: {
+      flex: 1,
+      gap: spacing.xs,
+      minWidth: 0
+    },
+    factIconCircle: {
+      alignItems: "center",
+      backgroundColor: isDark ? colors.surfaceSoft : "#FFF7DF",
+      borderColor: isDark ? colors.border : "#FFE0A3",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 46,
+      justifyContent: "center",
+      width: 46
+    },
+    factLabel: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "900"
+    },
+    factText: {
+      color: colors.muted,
+      fontSize: 14,
+      fontWeight: "700",
+      lineHeight: 21
+    },
+    factsEyebrow: {
+      color: colors.primaryDark,
+      fontSize: 12,
+      fontWeight: "900",
+      textTransform: "uppercase"
+    },
+    factsHeader: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: spacing.md
+    },
+    factsIconBadge: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceSoft,
+      borderColor: isDark ? colors.border : "#BFE9CE",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 46,
+      justifyContent: "center",
+      width: 46,
+      ...shadows.soft
+    },
+    factsSection: {
+      gap: spacing.md
+    },
+    factsTitle: {
+      color: colors.text,
+      fontSize: 21,
+      fontWeight: "900"
+    },
+    factsTitleBlock: {
+      flex: 1,
+      gap: spacing.xs,
+      minWidth: 0
     },
     fill: {
       backgroundColor: colors.primary,
@@ -299,6 +427,24 @@ function createStyles(colors: AppColors, isDark: boolean) {
       padding: spacing.lg,
       ...shadows.soft
     },
+    nextRewardFallback: {
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderColor: isDark ? colors.border : "#B8E3FF",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 96,
+      justifyContent: "center",
+      width: 96
+    },
+    nextRewardImage: {
+      backgroundColor: colors.surface,
+      borderColor: isDark ? colors.border : "#B8E3FF",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 96,
+      width: 96
+    },
     panelTitle: {
       color: colors.text,
       fontSize: 17,
@@ -334,6 +480,20 @@ function createStyles(colors: AppColors, isDark: boolean) {
       alignItems: "center",
       flexDirection: "row",
       gap: spacing.sm
+    },
+    rewardsHeader: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: spacing.sm
+    },
+    rewardsPanel: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 8,
+      borderWidth: 1,
+      gap: spacing.md,
+      padding: spacing.lg,
+      ...shadows.soft
     },
     safeCopy: {
       flex: 1,
@@ -390,8 +550,9 @@ function createStyles(colors: AppColors, isDark: boolean) {
     },
     targetTitle: {
       color: "#0D55B8",
-      fontSize: 30,
-      fontWeight: "900"
+      fontSize: 24,
+      fontWeight: "900",
+      lineHeight: 28
     },
     tileLabel: {
       color: colors.primaryDark,

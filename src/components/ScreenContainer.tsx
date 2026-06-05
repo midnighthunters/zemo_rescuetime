@@ -3,13 +3,13 @@ import type { PropsWithChildren } from "react";
 import {
   ScrollView,
   StyleSheet,
-  View,
   type ViewStyle
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
+import { MotionView } from "./Motion";
 
 type ScreenContainerProps = PropsWithChildren<{
   scroll?: boolean;
@@ -24,7 +24,9 @@ export function ScreenContainer({
   const insets = useSafeAreaInsets();
   const theme = useAppTheme();
   const content = (
-    <View style={[styles.content, contentStyle]}>{children}</View>
+    <MotionView direction="fade" style={[styles.content, contentStyle]}>
+      {children}
+    </MotionView>
   );
 
   return (

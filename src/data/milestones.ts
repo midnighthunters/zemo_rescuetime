@@ -4,39 +4,59 @@ import type {
   AnimalMood,
   RescueMilestone
 } from "./types";
+import { getGeneratedRewardsForAnimal } from "./rewards.generated";
 
-const baseMilestones = [
-  1000, 2500, 5000, 7500, 10000, 12500, 15000, 20000
+const unlockStepTargets = [
+  5000,
+  8000,
+  12000,
+  14000,
+  18000,
+  20000,
+  22000,
+  24000,
+  26000,
+  28000,
+  30000
 ];
 
-export const feedingMilestoneLabels = ["Water", "Food", "Care"];
-export const feedingMilestoneIcons = ["water", "nutrition", "medkit"];
+function getUnlockStepTarget(index: number) {
+  return unlockStepTargets[index] ?? 30000;
+}
 
 export function generateMilestones(animals: Animal[]): RescueMilestone[] {
   return animals.map((animal, index) => {
-    const previous = getPreviousMilestoneSteps(index);
-    const target = baseMilestones[index] ?? previous + 2500;
-    const gap = target - previous;
+    const target = getUnlockStepTarget(index);
+    const rewards = getGeneratedRewardsForAnimal(animal.name).slice(0, 6);
+    const rewardTargets = rewards.map((reward, rewardIndex) => {
+      const stepTarget = Math.round(
+        target * ((rewardIndex + 1) / (rewards.length + 1))
+      );
+
+      return {
+        id: `${animal.id}_${reward.id}`,
+        animalId: animal.id,
+        rewardId: reward.id,
+        label: reward.label,
+        title: reward.title,
+        image: reward.image,
+        stepTarget,
+        rewardIndex
+      };
+    });
 
     return {
       animalId: animal.id,
       unlockSteps: target,
       isFree: index === 0,
-      miniMilestones: [
-        Math.round(previous + gap * 0.25),
-        Math.round(previous + gap * 0.5),
-        Math.round(previous + gap * 0.75)
-      ]
+      miniMilestones: rewardTargets.map((reward) => reward.stepTarget),
+      rewardTargets
     };
   });
 }
 
 export function getPreviousMilestoneSteps(index: number) {
-  if (index <= 0) {
-    return 0;
-  }
-
-  return baseMilestones[index - 1] ?? index * 2500;
+  return 0;
 }
 
 export function clampProgress(value: number) {
@@ -52,9 +72,8 @@ export function getProgressToMilestone(
   milestone: RescueMilestone,
   animalIndex: number
 ) {
-  const previous = getPreviousMilestoneSteps(animalIndex);
-  const requiredGap = Math.max(1, milestone.unlockSteps - previous);
-  return clampProgress((stepsToday - previous) / requiredGap);
+  const requiredSteps = Math.max(1, milestone.unlockSteps);
+  return clampProgress(stepsToday / requiredSteps);
 }
 
 export function getCompletedMiniMilestones(
@@ -62,6 +81,33 @@ export function getCompletedMiniMilestones(
   milestone: RescueMilestone
 ) {
   return milestone.miniMilestones.filter((stepTarget) => stepsToday >= stepTarget);
+}
+
+export function getCompletedRewardTargets(
+  stepsToday: number,
+  milestone: RescueMilestone
+) {
+  return milestone.rewardTargets.filter(
+    (target) => stepsToday >= target.stepTarget
+  );
+}
+
+export function getNextRewardTarget(
+  stepsToday: number,
+  milestone: RescueMilestone
+) {
+  return milestone.rewardTargets.find(
+    (target) => stepsToday < target.stepTarget
+  );
+}
+
+export function getRewardTargetByStep(
+  milestone: RescueMilestone,
+  stepTarget: number
+) {
+  return milestone.rewardTargets.find(
+    (target) => target.stepTarget === stepTarget
+  );
 }
 
 export function getAnimalMood(progress: number, isRescued: boolean): AnimalMood {

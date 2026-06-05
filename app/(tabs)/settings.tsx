@@ -1,18 +1,41 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
-import { Alert, Linking, StyleSheet, Switch, Text, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View
+} from "react-native";
 
 import { AppButton } from "../../src/components/AppButton";
+import { MotionView, PulseView } from "../../src/components/Motion";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
+import { useUnlockAudioSettings } from "../../src/features/audio/useUnlockAudioSettings";
 import { useOnboarding } from "../../src/features/onboarding/useOnboarding";
 import { useEntitlements } from "../../src/features/purchases/useEntitlements";
 import { useRescue } from "../../src/state/RescueProvider";
-import { type AppColors, useAppTheme } from "../../src/theme/colors";
+import {
+  type AppColors,
+  type ThemePreference,
+  useAppTheme
+} from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 import { formatNumber } from "../../src/utils/format";
+
+const themeOptions: Array<{
+  label: string;
+  value: ThemePreference;
+}> = [
+  { label: "System", value: "system" },
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" }
+];
 
 function SettingsPanel({
   title,
@@ -25,10 +48,10 @@ function SettingsPanel({
   const styles = createStyles(theme.colors);
 
   return (
-    <View style={styles.panel}>
+    <MotionView direction="fade" style={styles.panel}>
       <Text style={styles.panelTitle}>{title}</Text>
       {children}
-    </View>
+    </MotionView>
   );
 }
 
@@ -46,6 +69,11 @@ export default function SettingsScreen() {
     setDevProEnabled
   } = useEntitlements();
   const { resetOnboarding } = useOnboarding();
+  const {
+    isLoading: isUnlockAudioLoading,
+    unlockAudioEnabled,
+    setUnlockAudioEnabled
+  } = useUnlockAudioSettings();
   const {
     resetProgress,
     unlockFirstAnimal,
@@ -70,7 +98,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenContainer>
-      <View style={styles.header}>
+      <MotionView style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.kicker}>Device</Text>
           <Text style={styles.title}>Settings</Text>
@@ -78,8 +106,10 @@ export default function SettingsScreen() {
             Step data stays on your device and feeds rescue progress locally.
           </Text>
         </View>
-        <UiSprite spriteKey="emptySettingsAnimal" size={92} />
-      </View>
+        <PulseView floatDistance={4} pulseScale={1.03}>
+          <UiSprite spriteKey="emptySettingsAnimal" size={92} />
+        </PulseView>
+      </MotionView>
 
       <SettingsPanel title="Pro">
         <View style={styles.row}>
@@ -165,15 +195,60 @@ export default function SettingsScreen() {
         />
       </SettingsPanel>
 
-      <SettingsPanel title="Appearance">
+      <SettingsPanel title="Sound">
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Theme</Text>
-          <Text style={styles.rowValue}>
-            {theme.isDark ? "Dark" : "Light"}
-          </Text>
+          <View style={styles.rowCopy}>
+            <Text style={styles.rowLabel}>Unlock audio</Text>
+            <Text style={styles.note}>
+              Play a gentle chime and spoken congratulations when an animal is rescued.
+            </Text>
+          </View>
+          <Switch
+            accessibilityLabel="Toggle unlock audio"
+            disabled={isUnlockAudioLoading}
+            onValueChange={setUnlockAudioEnabled}
+            thumbColor={unlockAudioEnabled ? theme.colors.primary : theme.colors.white}
+            trackColor={{
+              false: theme.colors.border,
+              true: theme.isDark ? "#245A43" : "#BFE9CE"
+            }}
+            value={unlockAudioEnabled}
+          />
+        </View>
+      </SettingsPanel>
+
+      <SettingsPanel title="Appearance">
+        <View style={styles.segmentedControl}>
+          {themeOptions.map((option) => {
+            const selected = theme.themePreference === option.value;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                key={option.value}
+                onPress={() => {
+                  void theme.setThemePreference(option.value);
+                }}
+                style={[
+                  styles.segment,
+                  selected && styles.segmentSelected
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.segmentLabel,
+                    selected && styles.segmentLabelSelected
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
         <Text style={styles.note}>
-          The app follows your device appearance automatically.
+          Current appearance: {theme.resolvedColorScheme}.
         </Text>
       </SettingsPanel>
 
@@ -273,6 +348,10 @@ function createStyles(colors: AppColors, isDark = false) {
     justifyContent: "space-between",
     gap: spacing.md
   },
+  rowCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
   rowLabel: {
     color: colors.muted,
     fontSize: 14,
@@ -283,6 +362,36 @@ function createStyles(colors: AppColors, isDark = false) {
     fontSize: 14,
     fontWeight: "900",
     textTransform: "capitalize"
+  },
+  segment: {
+    alignItems: "center",
+    borderRadius: 7,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: spacing.sm
+  },
+  segmentedControl: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 2,
+    padding: 3
+  },
+  segmentLabel: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  segmentLabelSelected: {
+    color: colors.primaryDark
+  },
+  segmentSelected: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1
   },
   subtitle: {
     color: colors.muted,

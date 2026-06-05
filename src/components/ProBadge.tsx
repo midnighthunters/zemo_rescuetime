@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
+import { PulseView } from "./Motion";
 
 export function ProBadge() {
   const theme = useAppTheme();
@@ -10,7 +11,9 @@ export function ProBadge() {
 
   return (
     <View accessibilityLabel="Requires Pro" style={styles.badge}>
-      <Ionicons color="#172033" name="star" size={12} />
+      <PulseView pulseScale={1.16}>
+        <Ionicons color="#172033" name="star" size={12} />
+      </PulseView>
       <Text style={styles.text}>PRO</Text>
     </View>
   );

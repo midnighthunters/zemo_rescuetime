@@ -7,6 +7,18 @@ export type Animal = {
   happyImage: ImageSourcePropType;
 };
 
+export type RewardImage = {
+  id: string;
+  animalName: string;
+  label: string;
+  title: string;
+  image: ImageSourcePropType;
+  globalIndex: number;
+  pack: number;
+  sheet: number;
+  cell: number;
+};
+
 export type AnimalCareState =
   | "hungry"
   | "fed"
@@ -26,6 +38,18 @@ export type RescueMilestone = {
   unlockSteps: number;
   isFree: boolean;
   miniMilestones: number[];
+  rewardTargets: RescueRewardTarget[];
+};
+
+export type RescueRewardTarget = {
+  id: string;
+  animalId: string;
+  rewardId: string;
+  label: string;
+  title: string;
+  image: ImageSourcePropType;
+  stepTarget: number;
+  rewardIndex: number;
 };
 
 export type AnimalCardStatus =
@@ -38,12 +62,36 @@ export type RescueProgress = {
   onboarded: boolean;
   rescuedAnimalIds: string[];
   currentAnimalId: string;
+  stepBaselineToday: number;
   claimedMiniMilestones: Record<string, number[]>;
+  focusedUnlockEventId?: string;
+  pendingUnlockEvents: PendingUnlockEvent[];
   rescuedDates: Record<string, string>;
   lastKnownDate: string;
   dailyStepHistory: Record<string, number>;
 };
 
+export type PendingUnlockEvent =
+  | {
+      id: string;
+      type: "reward";
+      animalId: string;
+      rewardId: string;
+      stepTarget: number;
+      createdAt: string;
+    }
+  | {
+      id: string;
+      type: "rescue";
+      animalId: string;
+      stepTarget: number;
+      createdAt: string;
+    };
+
 export type DevSettings = {
   mockProEnabled?: boolean;
+};
+
+export type AppSettings = {
+  unlockAudioEnabled?: boolean;
 };

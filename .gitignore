@@ -13,4 +13,6 @@ yarn-error.log*
 !.env.example
 
 public/
-assets/
+assets/*
+!assets/audio/
+!assets/audio/unlock-chime.wav

@@ -8,11 +8,20 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { UnlockNotificationBridge } from "../src/features/notifications/UnlockNotificationBridge";
 import { EntitlementProvider } from "../src/state/EntitlementProvider";
 import { RescueProvider } from "../src/state/RescueProvider";
-import { useAppTheme } from "../src/theme/colors";
+import { ThemeProvider, useAppTheme } from "../src/theme/colors";
 
 export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutShell />
+    </ThemeProvider>
+  );
+}
+
+function RootLayoutShell() {
   const theme = useAppTheme();
 
   useEffect(() => {
@@ -26,6 +35,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <EntitlementProvider>
           <RescueProvider>
+            <UnlockNotificationBridge />
             <StatusBar
               backgroundColor={theme.colors.backgroundBottom}
               style={theme.statusBarStyle}

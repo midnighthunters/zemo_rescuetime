@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -8,6 +9,7 @@ import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
 import { formatNumber, formatPercent } from "../utils/format";
+import { AnimatedProgressFill, MotionView, PulseView } from "./Motion";
 import { ProBadge } from "./ProBadge";
 
 type AnimalCardProps = {
@@ -16,6 +18,7 @@ type AnimalCardProps = {
   requiredSteps: number;
   progress?: number;
   rescuedDate?: string;
+  concealed?: boolean;
   onPress: () => void;
 };
 
@@ -25,6 +28,7 @@ function AnimalCardComponent({
   requiredSteps,
   progress = 0,
   rescuedDate,
+  concealed = false,
   onPress
 }: AnimalCardProps) {
   const theme = useAppTheme();
@@ -32,8 +36,11 @@ function AnimalCardComponent({
   const isUnlocked = status === "unlocked";
   const isProLocked = status === "pro_locked";
   const image = isUnlocked ? animal.happyImage : animal.sadImage;
+  const isMysteryLocked = concealed && !isUnlocked;
   const statusCopy =
-    status === "active"
+    isMysteryLocked
+      ? "Keep rescuing to reveal"
+      : status === "active"
       ? "Current rescue"
       : isUnlocked
         ? rescuedDate
@@ -44,9 +51,15 @@ function AnimalCardComponent({
           : "Locked";
 
   return (
+    <MotionView direction="fade" style={styles.cardMotion}>
     <Pressable
-      accessibilityLabel={`${animal.name} ${statusCopy}. Rescue at ${requiredSteps} steps.`}
-      accessibilityRole="button"
+      accessibilityLabel={
+        isMysteryLocked
+          ? "Mystery animal. Keep rescuing to reveal."
+          : `${animal.name} ${statusCopy}. Rescue at ${requiredSteps} steps.`
+      }
+      accessibilityRole={isMysteryLocked ? "image" : "button"}
+      disabled={isMysteryLocked}
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
@@ -55,12 +68,14 @@ function AnimalCardComponent({
           <>
             {/* z=1: Platform base — BEHIND everything */}
             <Image
+              blurRadius={isMysteryLocked ? 30 : isProLocked ? 10 : 0}
               contentFit="contain"
               source={jailSprites.platform}
               style={styles.platformImage}
             />
             {/* z=2: Back cage body */}
             <Image
+              blurRadius={isMysteryLocked ? 30 : isProLocked ? 10 : 0}
               contentFit="contain"
               source={jailSprites.openJail}
               style={styles.openJailImage}
@@ -68,57 +83,97 @@ function AnimalCardComponent({
           </>
         ) : null}
         {/* z=4: Animal — in front of base, behind gate */}
-        <Image contentFit="contain" source={image} style={styles.animalImage} />
+        <Image
+          blurRadius={isMysteryLocked ? 40 : isProLocked ? 12 : 0}
+          contentFit="contain"
+          source={image}
+          style={styles.animalImage}
+        />
         {!isUnlocked ? (
           <View pointerEvents="none" style={styles.jailStack}>
             {/* z=6: Front gate bars */}
             <Image
+              blurRadius={isMysteryLocked ? 30 : isProLocked ? 8 : 0}
               contentFit="contain"
               source={jailSprites.gate}
               style={styles.gateImage}
             />
             {/* z=8: Top lid */}
             <Image
+              blurRadius={isMysteryLocked ? 30 : isProLocked ? 8 : 0}
               contentFit="contain"
               source={jailSprites.top}
               style={styles.topImage}
             />
           </View>
         ) : null}
+        {!isUnlocked ? (
+          <PulseView
+            active={status === "active"}
+            pointerEvents="none"
+            pulseScale={1.08}
+            style={styles.lockBadge}
+          >
+            <Ionicons color="#FFFFFF" name="lock-closed" size={20} />
+          </PulseView>
+        ) : null}
+        {isMysteryLocked ? (
+          <View pointerEvents="none" style={styles.mysteryOverlay}>
+            <PulseView floatDistance={3} pulseScale={1.04}>
+              <Text style={styles.mysteryMark}>?</Text>
+            </PulseView>
+          </View>
+        ) : isProLocked ? (
+          <View pointerEvents="none" style={styles.proBlurOverlay} />
+        ) : null}
       </View>
 
       <View style={styles.copy}>
         <View style={styles.nameRow}>
-          <Image contentFit="contain" source={image} style={styles.avatar} />
+          <Image
+            blurRadius={isMysteryLocked ? 30 : isProLocked ? 8 : 0}
+            contentFit="contain"
+            source={image}
+            style={styles.avatar}
+          />
           <View style={styles.nameCopy}>
-            <Text numberOfLines={1} style={styles.name}>
-              {animal.name}
-            </Text>
-            <Text numberOfLines={1} style={styles.status}>
-              {statusCopy}
-            </Text>
+            {isMysteryLocked ? null : (
+              <>
+                <Text numberOfLines={1} style={styles.name}>
+                  {animal.name}
+                </Text>
+                <Text numberOfLines={1} style={styles.status}>
+                  {statusCopy}
+                </Text>
+              </>
+            )}
           </View>
-          {isProLocked ? <ProBadge /> : null}
+          {isProLocked && !isMysteryLocked ? <ProBadge /> : null}
         </View>
 
         {!isUnlocked ? (
           <>
             <Text style={styles.steps}>
-              Unlocks at {formatNumber(requiredSteps)} steps
+              {isMysteryLocked
+                ? "Complete earlier rescues to reveal"
+                : `Unlocks at ${formatNumber(requiredSteps)} steps`}
             </Text>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.round(progress * 100)}%` as `${number}%` }
-                ]}
-              />
-            </View>
-            <Text style={styles.percent}>{formatPercent(progress)}</Text>
+            {!isMysteryLocked ? (
+              <>
+                <View style={styles.progressTrack}>
+                  <AnimatedProgressFill
+                    progress={progress}
+                    style={styles.progressFill}
+                  />
+                </View>
+                <Text style={styles.percent}>{formatPercent(progress)}</Text>
+              </>
+            ) : null}
           </>
         ) : null}
       </View>
     </Pressable>
+    </MotionView>
   );
 }
 
@@ -153,6 +208,9 @@ function createStyles(colors: AppColors, isDark: boolean) {
       padding: spacing.sm,
       ...shadows.soft
     },
+    cardMotion: {
+      flex: 1
+    },
     copy: {
       gap: spacing.xs,
       paddingBottom: spacing.xs,
@@ -184,6 +242,20 @@ function createStyles(colors: AppColors, isDark: boolean) {
       right: 0,
       top: 0,
       zIndex: 5
+    },
+    lockBadge: {
+      alignItems: "center",
+      backgroundColor: "rgba(18, 31, 45, 0.82)",
+      borderColor: "rgba(255, 255, 255, 0.92)",
+      borderRadius: 18,
+      borderWidth: 2,
+      height: 36,
+      justifyContent: "center",
+      position: "absolute",
+      right: "12%",
+      top: "16%",
+      width: 36,
+      zIndex: 12
     },
     name: {
       color: colors.text,
@@ -233,6 +305,31 @@ function createStyles(colors: AppColors, isDark: boolean) {
       borderRadius: 8,
       height: 8,
       overflow: "hidden"
+    },
+    mysteryMark: {
+      color: "#FFFFFF",
+      fontSize: 54,
+      fontWeight: "900"
+    },
+    mysteryOverlay: {
+      alignItems: "center",
+      backgroundColor: isDark ? "rgba(8, 13, 18, 0.88)" : "rgba(26, 38, 52, 0.86)",
+      bottom: 0,
+      justifyContent: "center",
+      left: 0,
+      position: "absolute",
+      right: 0,
+      top: 0,
+      zIndex: 11
+    },
+    proBlurOverlay: {
+      backgroundColor: isDark ? "rgba(8, 13, 18, 0.42)" : "rgba(255, 255, 255, 0.42)",
+      bottom: 0,
+      left: 0,
+      position: "absolute",
+      right: 0,
+      top: 0,
+      zIndex: 10
     },
     status: {
       color: colors.muted,

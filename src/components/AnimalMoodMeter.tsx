@@ -6,6 +6,7 @@ import { getMoodMeta } from "../data/milestones";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { formatPercent } from "../utils/format";
+import { AnimatedProgressFill, MotionView, PulseView } from "./Motion";
 
 type AnimalMoodMeterProps = {
   mood: AnimalMood;
@@ -21,51 +22,51 @@ export function AnimalMoodMeter({
   const theme = useAppTheme();
   const styles = createStyles(theme.colors);
   const meta = getMoodMeta(mood);
-  const fillWidth = `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`;
+  const clampedProgress = Math.max(0, Math.min(1, progress));
 
   if (proLocked) {
     return (
-      <View style={styles.root}>
+      <MotionView direction="fade" style={styles.root}>
         <View style={styles.header}>
-          <Ionicons color={theme.colors.pro} name="lock-closed" size={18} />
+          <PulseView pulseScale={1.08}>
+            <Ionicons color={theme.colors.pro} name="lock-closed" size={18} />
+          </PulseView>
           <Text style={styles.title}>Mood locked in Pro</Text>
         </View>
         <Text style={styles.helper}>
           Upgrade to rescue and care for more animals.
         </Text>
         <View style={styles.track}>
-          <View
-            style={[
-              styles.fill,
-              { width: "18%", backgroundColor: theme.colors.pro }
-            ]}
+          <AnimatedProgressFill
+            progress={0.18}
+            style={[styles.fill, { backgroundColor: theme.colors.pro }]}
           />
         </View>
-      </View>
+      </MotionView>
     );
   }
 
   return (
-    <View style={styles.root}>
+    <MotionView direction="fade" style={styles.root}>
       <View style={styles.header}>
-        <Ionicons
-          color={meta.tint}
-          name={meta.icon as keyof typeof Ionicons.glyphMap}
-          size={19}
-        />
+        <PulseView active={clampedProgress > 0} pulseScale={1.08}>
+          <Ionicons
+            color={meta.tint}
+            name={meta.icon as keyof typeof Ionicons.glyphMap}
+            size={19}
+          />
+        </PulseView>
         <Text style={styles.title}>Mood: {meta.label}</Text>
         <Text style={styles.percent}>{formatPercent(progress)}</Text>
       </View>
       <View style={styles.track}>
-        <View
-          style={[
-            styles.fill,
-            { width: fillWidth as `${number}%`, backgroundColor: meta.tint }
-          ]}
+        <AnimatedProgressFill
+          progress={clampedProgress}
+          style={[styles.fill, { backgroundColor: meta.tint }]}
         />
       </View>
       <Text style={styles.helper}>{meta.helper}</Text>
-    </View>
+    </MotionView>
   );
 }
 

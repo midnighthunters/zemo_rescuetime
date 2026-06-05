@@ -1,6 +1,7 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import * as Speech from "expo-speech";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated as RNAnimated,
   Dimensions,
@@ -13,11 +14,17 @@ import {
 } from "react-native";
 
 import { jailSprites } from "../data/assets";
+import {
+  playUnlockChime,
+  type UnlockChimeSound
+} from "../features/audio/playUnlockChime";
+import { useUnlockAudioSettings } from "../features/audio/useUnlockAudioSettings";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { AppButton } from "./AppButton";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const PARTICLE_COUNT = 36;
 
 type RescueModalProps = {
   visible: boolean;
@@ -25,43 +32,77 @@ type RescueModalProps = {
   animalImage?: ImageSourcePropType;
   nextAnimalName?: string;
   nextAnimalImage?: ImageSourcePropType;
+  nextTargetImage?: ImageSourcePropType;
+  nextTargetTitle?: string;
   nextTargetSteps?: number;
   onViewAnimals: () => void;
   onNextRescue: () => void;
 };
 
-/** Burst particle — floats up from the bottom */
-function Particle({ delay, color, x }: { delay: number; color: string; x: number }) {
+type IconParticleProps = {
+  delay: number;
+  drift: number;
+  icon?: ImageSourcePropType;
+  size: number;
+  x: number;
+};
+
+/** Tiny unlock icon that floats up from the bottom */
+function IconParticle({ delay, drift, icon, size, x }: IconParticleProps) {
   const anim = useRef(new RNAnimated.Value(0)).current;
+
   useEffect(() => {
+    anim.setValue(0);
     const timeout = setTimeout(() => {
-      RNAnimated.loop(
-        RNAnimated.timing(anim, {
-          toValue: 1,
-          duration: 1400 + Math.random() * 600,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true
-        })
-      ).start();
+      RNAnimated.timing(anim, {
+        toValue: 1,
+        duration: 1250 + (delay % 5) * 90,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }).start();
     }, delay);
+
     return () => clearTimeout(timeout);
   }, [anim, delay]);
 
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -(SCREEN_H * 0.45)] });
-  const opacity = anim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.8, 0] });
-  const scale = anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.4, 1.1, 0.6] });
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -(SCREEN_H * 0.62)]
+  });
+  const translateX = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, drift]
+  });
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.12, 0.78, 1],
+    outputRange: [0, 1, 0.86, 0]
+  });
+  const scale = anim.interpolate({
+    inputRange: [0, 0.2, 1],
+    outputRange: [0.35, 1, 0.58]
+  });
+  const rotate = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-14deg", "18deg"]
+  });
 
   return (
     <RNAnimated.View
+      pointerEvents="none"
       style={{
-        position: "absolute",
-        bottom: "15%",
+        bottom: 18,
         left: x,
-        transform: [{ translateY }, { scale }],
-        opacity
+        opacity,
+        position: "absolute",
+        transform: [{ translateX }, { translateY }, { scale }, { rotate }],
+        zIndex: 3
       }}
     >
-      <Text style={{ fontSize: 18 }}>{color}</Text>
+      {icon ? (
+        <Image contentFit="contain" source={icon} style={{ height: size, width: size }} />
+      ) : (
+        <Text style={{ fontSize: size }}>*</Text>
+      )}
     </RNAnimated.View>
   );
 }
@@ -72,12 +113,19 @@ export function RescueModal({
   animalImage,
   nextAnimalName,
   nextAnimalImage,
+  nextTargetImage,
+  nextTargetTitle,
   nextTargetSteps,
   onViewAnimals,
   onNextRescue
 }: RescueModalProps) {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
+  const {
+    isLoading: isUnlockAudioLoading,
+    unlockAudioEnabled
+  } = useUnlockAudioSettings();
+  const unlockSoundRef = useRef<UnlockChimeSound | null>(null);
 
   // --- Animation shared values (plain RN Animated for Modal compat) ---
   const phase = useRef(new RNAnimated.Value(0)).current; // 0→1 over entrance
@@ -89,6 +137,21 @@ export function RescueModal({
   const backdropAnim = useRef(new RNAnimated.Value(0)).current;
   const cardScale = useRef(new RNAnimated.Value(0.85)).current;
   const cardOpacity = useRef(new RNAnimated.Value(0)).current;
+  const iconParticles = useMemo(
+    () =>
+      Array.from({ length: PARTICLE_COUNT }, (_, index) => {
+        const column = index % 12;
+        const row = Math.floor(index / 12);
+
+        return {
+          delay: 120 + index * 32,
+          drift: ((index * 37) % 90) - 45,
+          size: 14 + ((index + row) % 5) * 3,
+          x: (SCREEN_W / 13) * (column + 1) - 10 + row * 8
+        };
+      }),
+    []
+  );
 
   useEffect(() => {
     if (!visible) {
@@ -160,6 +223,61 @@ export function RescueModal({
     ]).start();
   }, [visible, backdropAnim, cardOpacity, cardScale, cageElevate, gateOpen, happyReveal, nextReveal, phase, titleBounce]);
 
+  useEffect(() => {
+    if (
+      !visible ||
+      !animalName ||
+      isUnlockAudioLoading ||
+      !unlockAudioEnabled
+    ) {
+      Speech.stop();
+      unlockSoundRef.current?.unloadAsync().catch(() => undefined);
+      unlockSoundRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    const speechDelay = setTimeout(() => {
+      if (cancelled) {
+        return;
+      }
+
+      Speech.speak(
+        `Congratulations. You have successfully unlocked ${animalName}.`,
+        {
+          pitch: 1.04,
+          rate: 0.9,
+          volume: 0.88
+        }
+      );
+    }, 850);
+
+    async function playRescueChime() {
+      try {
+        const sound = await playUnlockChime(0.42);
+
+        if (cancelled) {
+          await sound.unloadAsync();
+          return;
+        }
+
+        unlockSoundRef.current = sound;
+      } catch {
+        // Audio is celebratory only; unlock flow should continue if playback fails.
+      }
+    }
+
+    playRescueChime();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(speechDelay);
+      Speech.stop();
+      unlockSoundRef.current?.unloadAsync().catch(() => undefined);
+      unlockSoundRef.current = null;
+    };
+  }, [animalName, isUnlockAudioLoading, unlockAudioEnabled, visible]);
+
   // Derived animated styles
   const backdropStyle = {
     opacity: backdropAnim
@@ -209,20 +327,20 @@ export function RescueModal({
     inputRange: [0, 0.5, 1],
     outputRange: [0, 0.8, 1]
   });
-
-  const CONFETTI = ["🎉", "⭐", "✨", "🌟", "💫", "🎊", "🦁", "🐾"];
-  const particles = Array.from({ length: 12 }).map((_, i) => ({
-    emoji: CONFETTI[i % CONFETTI.length],
-    x: (SCREEN_W / 13) * (i + 1) - 12,
-    delay: i * 90
-  }));
+  const gatePivot = 140;
 
   return (
     <Modal animationType="none" transparent visible={visible}>
       <RNAnimated.View style={[styles.overlay, backdropStyle]}>
-        {/* Confetti particles */}
-        {particles.map((p, i) => (
-          <Particle key={i} delay={p.delay} color={p.emoji} x={p.x} />
+        {iconParticles.map((particle, index) => (
+          <IconParticle
+            key={`${animalName}-${index}`}
+            delay={particle.delay}
+            drift={particle.drift}
+            icon={animalImage}
+            size={particle.size}
+            x={particle.x}
+          />
         ))}
 
         <RNAnimated.View style={[styles.card, cardStyle]}>
@@ -270,9 +388,9 @@ export function RescueModal({
                 styles.cageGateWrap,
                 {
                   transform: [
-                    { translateX: -styles.cageGateImage.width / 2 },
+                    { translateX: -gatePivot },
                     { rotateY: gateRotate },
-                    { translateX: styles.cageGateImage.width / 2 }
+                    { translateX: gatePivot }
                   ]
                 }
               ]}
@@ -338,11 +456,20 @@ export function RescueModal({
                   <Text style={styles.nextName}>{nextAnimalName}</Text>
                   {nextTargetSteps !== undefined ? (
                     <Text style={styles.nextSteps}>
-                      {nextTargetSteps.toLocaleString()} steps to rescue
+                      {(nextTargetTitle ?? "First reward")} at{" "}
+                      {nextTargetSteps.toLocaleString()} steps
                     </Text>
                   ) : null}
                 </View>
-                <Ionicons color={theme.colors.muted} name="chevron-forward" size={22} />
+                {nextTargetImage ? (
+                  <Image
+                    contentFit="contain"
+                    source={nextTargetImage}
+                    style={styles.nextRewardThumb}
+                  />
+                ) : (
+                  <Ionicons color={theme.colors.muted} name="chevron-forward" size={22} />
+                )}
               </View>
             </RNAnimated.View>
           ) : null}
@@ -436,7 +563,7 @@ function createStyles(colors: AppColors, isDark: boolean) {
     card: {
       alignItems: "center",
       backgroundColor: colors.surface,
-      borderRadius: 24,
+      borderRadius: 12,
       gap: spacing.lg,
       margin: spacing.lg,
       maxWidth: 440,
@@ -467,7 +594,7 @@ function createStyles(colors: AppColors, isDark: boolean) {
     nextPanel: {
       backgroundColor: isDark ? colors.surfaceElevated : "#EAF6FF",
       borderColor: isDark ? colors.border : "#48AEEF",
-      borderRadius: 14,
+      borderRadius: 8,
       borderWidth: 1.5,
       gap: spacing.sm,
       padding: spacing.lg,
@@ -488,6 +615,14 @@ function createStyles(colors: AppColors, isDark: boolean) {
       alignItems: "center",
       flexDirection: "row",
       gap: spacing.md
+    },
+    nextRewardThumb: {
+      backgroundColor: colors.surface,
+      borderColor: isDark ? colors.border : "#B8E3FF",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 54,
+      width: 54
     },
     nextSteps: {
       color: colors.muted,

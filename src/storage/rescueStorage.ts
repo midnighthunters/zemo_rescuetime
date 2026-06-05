@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { DevSettings, RescueProgress } from "../data/types";
+import type { AppSettings, DevSettings, RescueProgress } from "../data/types";
 
 import { STORAGE_KEYS } from "./storageKeys";
 
@@ -41,6 +41,14 @@ export async function clearRescueProgress() {
   await AsyncStorage.removeItem(STORAGE_KEYS.PROGRESS);
 }
 
+export function getAppSettings() {
+  return readJson<AppSettings>(STORAGE_KEYS.APP_SETTINGS, {});
+}
+
+export async function saveAppSettings(settings: AppSettings) {
+  await writeJson(STORAGE_KEYS.APP_SETTINGS, settings);
+}
+
 export function getDevSettings() {
   return readJson<DevSettings>(STORAGE_KEYS.DEV_SETTINGS, {});
 }
@@ -54,6 +62,7 @@ export async function clearAllLocalRescueData() {
     STORAGE_KEYS.ONBOARDED,
     STORAGE_KEYS.PROGRESS,
     STORAGE_KEYS.STEP_BASELINE,
-    STORAGE_KEYS.DEV_SETTINGS
+    STORAGE_KEYS.DEV_SETTINGS,
+    STORAGE_KEYS.UNLOCK_NOTIFICATIONS
   ]);
 }

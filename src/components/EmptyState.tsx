@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import type { UiSpriteKey } from "../data/ui.generated";
+import { MotionView, PulseView } from "./Motion";
 import { UiSprite } from "./UiSprite";
 
 type EmptyStateProps = {
@@ -23,15 +24,19 @@ export function EmptyState({
   const styles = createStyles(theme.colors, theme.isDark);
 
   return (
-    <View style={styles.root}>
+    <MotionView direction="fade" style={styles.root}>
       {spriteKey ? (
-        <UiSprite spriteKey={spriteKey} size={86} />
+        <PulseView floatDistance={5} pulseScale={1.04}>
+          <UiSprite spriteKey={spriteKey} size={86} />
+        </PulseView>
       ) : (
-        <Ionicons color={theme.colors.primary} name={icon} size={30} />
+        <PulseView pulseScale={1.08}>
+          <Ionicons color={theme.colors.primary} name={icon} size={30} />
+        </PulseView>
       )}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-    </View>
+    </MotionView>
   );
 }
 

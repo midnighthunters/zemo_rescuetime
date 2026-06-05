@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AnimalCard } from "../../src/components/AnimalCard";
 import { EmptyState } from "../../src/components/EmptyState";
+import { MotionView, PulseView } from "../../src/components/Motion";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
 import type { UiSpriteKey } from "../../src/data/ui.generated";
@@ -39,7 +41,7 @@ function AnimalSection({
   } = useRescue();
 
   return (
-    <View style={styles.section}>
+    <MotionView direction="fade" style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleWrap}>
           <Ionicons
@@ -58,16 +60,21 @@ function AnimalSection({
           data={animals}
           keyExtractor={(item) => item.id}
           numColumns={2}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const status = getAnimalStatus(item.id);
             const metrics = getAnimalMetrics(item.id);
             const milestone = getMilestone(item.id);
+            const concealed = title === "Waiting" && index >= 2;
 
             return (
               <View style={styles.cardSlot}>
                 <AnimalCard
                   animal={item}
                   onPress={() => {
+                    if (concealed) {
+                      return;
+                    }
+
                     if (status === "pro_locked") {
                       router.push("/paywall");
                       return;
@@ -78,6 +85,7 @@ function AnimalSection({
                   progress={metrics?.progress}
                   requiredSteps={milestone?.unlockSteps ?? 0}
                   rescuedDate={formatRescueDate(rescueProgress.rescuedDates[item.id])}
+                  concealed={concealed}
                   status={status}
                 />
               </View>
@@ -86,7 +94,7 @@ function AnimalSection({
           scrollEnabled={false}
         />
       )}
-    </View>
+    </MotionView>
   );
 }
 
@@ -94,11 +102,11 @@ export default function AnimalsScreen() {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors);
   const { lockedAnimals, unlockedAnimals } = useRescue();
-  const totalAnimals = lockedAnimals.length + unlockedAnimals.length;
+  const [showSafeOnly, setShowSafeOnly] = useState(false);
 
   return (
     <ScreenContainer>
-      <View style={styles.header}>
+      <MotionView style={styles.header}>
         <View style={styles.headerCopy}>
           <View style={styles.kickerPill}>
             <Ionicons color={theme.colors.primaryDark} name="paw" size={18} />
@@ -109,40 +117,55 @@ export default function AnimalsScreen() {
             Tap a card to see its gate, mood, and step target.
           </Text>
         </View>
-        <UiSprite spriteKey="collectionAnimalAlbum" size={142} />
-      </View>
+        <PulseView floatDistance={5} pulseScale={1.03}>
+          <UiSprite spriteKey="collectionAnimalAlbum" size={142} />
+        </PulseView>
+      </MotionView>
 
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryItem}>
+      <MotionView delay={80} style={styles.summaryRow}>
+        <Pressable
+          accessibilityLabel="Show safe animals"
+          accessibilityRole="button"
+          onPress={() => setShowSafeOnly(true)}
+          style={({ pressed }) => [
+            styles.summaryItem,
+            styles.summaryItemSingle,
+            pressed && styles.summaryPressed
+          ]}
+        >
           <UiSprite spriteKey="microHeartBubble" size={58} />
           <View>
             <Text style={styles.summaryValue}>{formatNumber(unlockedAnimals.length)}</Text>
             <Text style={styles.summaryLabel}>Safe</Text>
           </View>
-        </View>
-        <View style={styles.summaryItem}>
-          <UiSprite spriteKey="progressPawTrophy" size={58} />
-          <View>
-            <Text style={styles.summaryValue}>{formatNumber(lockedAnimals.length)}</Text>
-            <Text style={styles.summaryLabel}>Waiting</Text>
-          </View>
-        </View>
-        <View style={styles.summaryItem}>
-          <UiSprite spriteKey="microPawConfetti" size={58} />
-          <View>
-            <Text style={styles.summaryValue}>{formatNumber(totalAnimals)}</Text>
-            <Text style={styles.summaryLabel}>Total</Text>
-          </View>
-        </View>
-      </View>
+          <Ionicons color={theme.colors.primaryDark} name="chevron-forward" size={22} />
+        </Pressable>
+      </MotionView>
 
-      <AnimalSection
-        animals={lockedAnimals}
-        emptyMessage="Every waiting card is cleared."
-        emptySpriteKey="emptyAnimalWave"
-        emptyTitle="No waiting animals"
-        title="Waiting"
-      />
+      {!showSafeOnly ? (
+        <AnimalSection
+          animals={lockedAnimals}
+          emptyMessage="Every waiting card is cleared."
+          emptySpriteKey="emptyAnimalWave"
+          emptyTitle="No waiting animals"
+          title="Waiting"
+        />
+      ) : (
+        <MotionView direction="fade">
+        <Pressable
+          accessibilityLabel="Back to waiting animals"
+          accessibilityRole="button"
+          onPress={() => setShowSafeOnly(false)}
+          style={({ pressed }) => [
+            styles.backToWaitingButton,
+            pressed && styles.summaryPressed
+          ]}
+        >
+          <Ionicons color={theme.colors.primaryDark} name="arrow-back" size={18} />
+          <Text style={styles.backToWaitingText}>Waiting Animals</Text>
+        </Pressable>
+        </MotionView>
+      )}
       <AnimalSection
         animals={unlockedAnimals}
         emptyMessage="Your first rescue starts with today's pedometer count."
@@ -170,6 +193,24 @@ function createStyles(colors: AppColors) {
   headerCopy: {
     flex: 1,
     gap: spacing.xs
+  },
+  backToWaitingButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  backToWaitingText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase"
   },
   kicker: {
     color: colors.primaryDark,
@@ -230,6 +271,12 @@ function createStyles(colors: AppColors) {
     minHeight: 86,
     padding: spacing.sm
   },
+  summaryItemSingle: {
+    flex: 0,
+    justifyContent: "space-between",
+    maxWidth: 360,
+    width: "100%"
+  },
   summaryLabel: {
     color: colors.muted,
     fontSize: 13,
@@ -239,6 +286,9 @@ function createStyles(colors: AppColors) {
   summaryRow: {
     flexDirection: "row",
     gap: spacing.sm
+  },
+  summaryPressed: {
+    transform: [{ scale: 0.99 }]
   },
   summaryValue: {
     color: colors.text,

@@ -14,6 +14,7 @@ import { onboardingSlides, type OnboardingSlide } from "../../data/onboarding";
 import { useAppTheme } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { AppButton } from "../../components/AppButton";
+import { MotionView, PulseView } from "../../components/Motion";
 
 type OnboardingCarouselProps = {
   onDone: () => void;
@@ -57,7 +58,9 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
             style={[styles.slide, { width }]}
           >
             <View style={styles.imageContainer}>
-              <Image contentFit="contain" source={item.image} style={styles.image} />
+              <PulseView floatDistance={6} pulseScale={1.025} style={styles.imagePulse}>
+                <Image contentFit="contain" source={item.image} style={styles.image} />
+              </PulseView>
             </View>
           </Pressable>
         )}
@@ -65,14 +68,14 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
         showsHorizontalScrollIndicator={false}
       />
       {isLast && (
-        <View style={styles.controls}>
+        <MotionView direction="up" style={styles.controls}>
           <AppButton
             icon="heart"
             onPress={handleNext}
             title="Start Rescuing"
             variant="primary"
           />
-        </View>
+        </MotionView>
       )}
     </View>
   );
@@ -87,6 +90,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl
   },
   image: {
+    height: "100%",
+    width: "100%"
+  },
+  imagePulse: {
     height: "80%",
     width: "100%"
   },

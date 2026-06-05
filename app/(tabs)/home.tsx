@@ -13,12 +13,12 @@ import {
 
 import { AppButton } from "../../src/components/AppButton";
 import { CareEventModal } from "../../src/components/CareEventModal";
+import { MotionView, PulseView } from "../../src/components/Motion";
 import { RescueModal } from "../../src/components/RescueModal";
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { StepHeroCard } from "../../src/components/StepHeroCard";
 import { UiSprite } from "../../src/components/UiSprite";
-import type { UiSpriteKey } from "../../src/data/ui.generated";
-import { feedingMilestoneIcons, feedingMilestoneLabels } from "../../src/data/milestones";
+import { dismissUnlockNotification } from "../../src/features/notifications/unlockNotifications";
 import { useEntitlements } from "../../src/state/EntitlementProvider";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
@@ -30,17 +30,6 @@ function getGreeting() {
   if (hour < 12) return "Morning";
   if (hour < 18) return "Afternoon";
   return "Evening";
-}
-
-function getCareSprite(label: string): UiSpriteKey {
-  const n = label.toLowerCase();
-  if (n.includes("water")) return "careWaterBowl";
-  if (n.includes("food") || n.includes("meal")) return "careFoodBowl";
-  return "careMedkit";
-}
-
-function getCareNextTargetIcon(index: number): string {
-  return feedingMilestoneIcons[index + 1] ?? "key";
 }
 
 /** Pulsing glow behind the dev FAB */
@@ -109,24 +98,37 @@ export default function HomeScreen() {
   const rescuedIndex = rescuedAnimal ? animals.findIndex((a) => a.id === rescuedAnimal.id) : -1;
   const nextAnimal = rescuedIndex >= 0 ? animals[rescuedIndex + 1] : undefined;
   const nextMilestone = nextAnimal ? milestones.find((m) => m.animalId === nextAnimal.id) : undefined;
+  const nextRewardTarget = nextMilestone?.rewardTargets[0];
 
   const careMilestone = lastCareEvent
     ? milestones.find((m) => m.animalId === lastCareEvent.animalId)
     : undefined;
-  const careClaimedIndex =
+  const careNextRewardTarget =
     lastCareEvent && careMilestone
-      ? careMilestone.miniMilestones.indexOf(lastCareEvent.stepTarget)
-      : -1;
+      ? careMilestone.rewardTargets[lastCareEvent.rewardIndex + 1]
+      : undefined;
   const careNextTarget =
-    lastCareEvent && careMilestone
-      ? (careMilestone.miniMilestones[careClaimedIndex + 1] ?? careMilestone.unlockSteps)
+    careMilestone
+      ? (careNextRewardTarget?.stepTarget ?? careMilestone.unlockSteps)
       : undefined;
   const careNextLabel =
-    lastCareEvent && careMilestone
-      ? (feedingMilestoneLabels[careClaimedIndex + 1] ?? "Rescue")
-      : undefined;
+    careMilestone ? (careNextRewardTarget?.title ?? "Rescue") : undefined;
+  const visibleUnlockEventId = lastCareEvent?.id ?? lastRescueEvent?.id;
 
   const hasPermissionIssue = Boolean(steps.error || steps.permissionStatus === "denied");
+
+  useEffect(() => {
+    if (!visibleUnlockEventId) {
+      return undefined;
+    }
+
+    void dismissUnlockNotification(visibleUnlockEventId).catch(() => {});
+    const retryTimer = setTimeout(() => {
+      void dismissUnlockNotification(visibleUnlockEventId).catch(() => {});
+    }, 750);
+
+    return () => clearTimeout(retryTimer);
+  }, [visibleUnlockEventId]);
 
   // After first animal rescued, non-pro users see the paywall
   const justRescuedFirst =
@@ -154,17 +156,19 @@ export default function HomeScreen() {
   return (
     <ScreenContainer>
       {/* ── Compact header ── */}
-      <View style={styles.header}>
+      <MotionView style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerGreeting}>Good {getGreeting()} 👋</Text>
           <Text style={styles.headerTitle}>Rescue Steps</Text>
         </View>
-        <UiSprite spriteKey="progressPawTrophy" size={52} />
-      </View>
+        <PulseView floatDistance={4} pulseScale={1.04}>
+          <UiSprite spriteKey="progressPawTrophy" size={52} />
+        </PulseView>
+      </MotionView>
 
       {/* ── Pedometer status pill / warning ── */}
       {hasPermissionIssue ? (
-        <View style={styles.permissionBanner}>
+        <MotionView delay={70} style={styles.permissionBanner}>
           <Ionicons color={theme.colors.danger} name="warning" size={18} />
           <Text style={styles.permissionBannerText}>Pedometer access needed</Text>
           <View style={styles.permissionBannerActions}>
@@ -182,10 +186,12 @@ export default function HomeScreen() {
               variant="ghost"
             />
           </View>
-        </View>
+        </MotionView>
       ) : (
-        <View style={styles.trackingPill}>
-          <View style={[styles.trackingDot, devMockSteps !== undefined && styles.trackingDotMock]} />
+        <MotionView delay={70} style={styles.trackingPill}>
+          <PulseView pulseScale={1.4}>
+            <View style={[styles.trackingDot, devMockSteps !== undefined && styles.trackingDotMock]} />
+          </PulseView>
           <Text style={styles.trackingText}>
             {devMockSteps !== undefined ? `🎭 Mock • ${devMockSteps.toLocaleString()} steps` : `Live • ${steps.sourceLabel}`}
           </Text>
@@ -196,19 +202,22 @@ export default function HomeScreen() {
           ) : (
             <Text style={styles.trackingStatus}>{steps.permissionStatus}</Text>
           )}
-        </View>
+        </MotionView>
       )}
 
       {/* ── Care event modal ── */}
       {lastCareEvent ? (
         <CareEventModal
+          key={lastCareEvent.id}
           visible={Boolean(lastCareEvent)}
           animalName={lastCareEvent.animalName}
           label={lastCareEvent.label}
-          spriteKey={getCareSprite(lastCareEvent.label)}
+          title={lastCareEvent.title}
+          rewardImage={lastCareEvent.image}
+          rewardIndex={lastCareEvent.rewardIndex}
           nextTargetLabel={careNextLabel}
           nextTargetSteps={careNextTarget}
-          nextTargetIcon={careClaimedIndex >= 0 ? getCareNextTargetIcon(careClaimedIndex) : "key"}
+          nextTargetImage={careNextRewardTarget?.image}
           onDismiss={dismissCareEvent}
         />
       ) : null}
@@ -228,11 +237,14 @@ export default function HomeScreen() {
 
       {/* ── Rescue unlock modal ── */}
       <RescueModal
+        key={lastRescueEvent?.id ?? "rescue-modal"}
         animalImage={rescuedAnimal?.happyImage}
         animalName={lastRescueEvent?.animalName ?? ""}
         nextAnimalName={nextAnimal?.name}
         nextAnimalImage={nextAnimal?.sadImage}
-        nextTargetSteps={nextMilestone?.unlockSteps}
+        nextTargetImage={nextRewardTarget?.image}
+        nextTargetTitle={nextRewardTarget?.title ?? "Rescue"}
+        nextTargetSteps={nextRewardTarget?.stepTarget ?? nextMilestone?.unlockSteps}
         onNextRescue={handleRescueDismiss}
         onViewAnimals={() => {
           dismissRescueEvent();

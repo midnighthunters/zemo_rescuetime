@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "portrait",
   icon: "./assets/icon.png",
   scheme: "rescueanimals",
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "automatic",
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
@@ -29,11 +29,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#FFF8EA"
     },
-    permissions: ["ACTIVITY_RECOGNITION"]
+    permissions: ["ACTIVITY_RECOGNITION", "POST_NOTIFICATIONS"]
   },
   plugins: [
     "expo-router",
     "expo-font",
+    "expo-notifications",
     [
       "expo-sensors",
       {

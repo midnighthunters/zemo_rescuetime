@@ -1,84 +1,186 @@
-﻿import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated as RNAnimated,
+  Dimensions,
   Easing,
   Modal,
   Pressable,
   StyleSheet,
   Text,
-  View
+  View,
+  type ImageSourcePropType
 } from "react-native";
 
-import type { UiSpriteKey } from "../data/ui.generated";
+import {
+  playUnlockChime,
+  type UnlockChimeSound
+} from "../features/audio/playUnlockChime";
+import { useUnlockAudioSettings } from "../features/audio/useUnlockAudioSettings";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
-import { UiSprite } from "./UiSprite";
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const PARTICLE_COUNT = 36;
 
 type CareEventModalProps = {
   visible: boolean;
   animalName: string;
   label: string;
-  spriteKey: UiSpriteKey;
+  title: string;
+  rewardImage: ImageSourcePropType;
+  rewardIndex: number;
   nextTargetLabel?: string;
   nextTargetSteps?: number;
-  nextTargetIcon?: string;
+  nextTargetImage?: ImageSourcePropType;
   onDismiss: () => void;
 };
+
+type IconParticleProps = {
+  delay: number;
+  drift: number;
+  icon: ImageSourcePropType;
+  size: number;
+  x: number;
+};
+
+function IconParticle({ delay, drift, icon, size, x }: IconParticleProps) {
+  const anim = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    anim.setValue(0);
+    const timeout = setTimeout(() => {
+      RNAnimated.timing(anim, {
+        toValue: 1,
+        duration: 1250 + (delay % 5) * 90,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }).start();
+    }, delay);
+
+    return () => clearTimeout(timeout);
+  }, [anim, delay]);
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -(SCREEN_H * 0.62)]
+  });
+  const translateX = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, drift]
+  });
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.12, 0.78, 1],
+    outputRange: [0, 1, 0.86, 0]
+  });
+  const scale = anim.interpolate({
+    inputRange: [0, 0.2, 1],
+    outputRange: [0.35, 1, 0.58]
+  });
+  const rotate = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-14deg", "18deg"]
+  });
+
+  return (
+    <RNAnimated.View
+      pointerEvents="none"
+      style={{
+        bottom: 18,
+        left: x,
+        opacity,
+        position: "absolute",
+        transform: [{ translateX }, { translateY }, { scale }, { rotate }],
+        zIndex: 3
+      }}
+    >
+      <Image contentFit="contain" source={icon} style={{ height: size, width: size }} />
+    </RNAnimated.View>
+  );
+}
 
 export function CareEventModal({
   visible,
   animalName,
   label,
-  spriteKey,
+  title,
+  rewardImage,
+  rewardIndex,
   nextTargetLabel,
   nextTargetSteps,
-  nextTargetIcon,
+  nextTargetImage,
   onDismiss
 }: CareEventModalProps) {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
+  const {
+    isLoading: isUnlockAudioLoading,
+    unlockAudioEnabled
+  } = useUnlockAudioSettings();
 
   const backdrop = useRef(new RNAnimated.Value(0)).current;
-  const iconScale = useRef(new RNAnimated.Value(0)).current;
-  const iconRotate = useRef(new RNAnimated.Value(0)).current;
+  const rewardScale = useRef(new RNAnimated.Value(0)).current;
+  const rewardRotate = useRef(new RNAnimated.Value(0)).current;
   const textSlide = useRef(new RNAnimated.Value(24)).current;
   const textOpacity = useRef(new RNAnimated.Value(0)).current;
   const nextSlide = useRef(new RNAnimated.Value(30)).current;
   const nextOpacity = useRef(new RNAnimated.Value(0)).current;
   const glowPulse = useRef(new RNAnimated.Value(0)).current;
+  const unlockSoundRef = useRef<UnlockChimeSound | null>(null);
+  const iconParticles = useMemo(
+    () =>
+      Array.from({ length: PARTICLE_COUNT }, (_, index) => {
+        const column = index % 12;
+        const row = Math.floor(index / 12);
+
+        return {
+          delay: 90 + index * 32,
+          drift: ((index * 37) % 90) - 45,
+          size: 14 + ((index + row) % 5) * 3,
+          x: (SCREEN_W / 13) * (column + 1) - 10 + row * 8
+        };
+      }),
+    []
+  );
 
   useEffect(() => {
     if (!visible) {
-      [backdrop, iconScale, iconRotate, textSlide, textOpacity, nextSlide, nextOpacity, glowPulse].forEach(
-        (v, i) => v.setValue([0, 0, 0, 24, 0, 30, 0, 0][i])
+      [
+        backdrop,
+        rewardScale,
+        rewardRotate,
+        textSlide,
+        textOpacity,
+        nextSlide,
+        nextOpacity,
+        glowPulse
+      ].forEach((value, index) =>
+        value.setValue([0, 0, 0, 24, 0, 30, 0, 0][index])
       );
       return;
     }
 
     RNAnimated.sequence([
-      // Backdrop fades in
       RNAnimated.timing(backdrop, {
         toValue: 1,
         duration: 220,
         useNativeDriver: true
       }),
-      // Icon pops in with a spin
       RNAnimated.parallel([
-        RNAnimated.spring(iconScale, {
+        RNAnimated.spring(rewardScale, {
           toValue: 1,
           friction: 4,
-          tension: 200,
+          tension: 190,
           useNativeDriver: true
         }),
-        RNAnimated.timing(iconRotate, {
+        RNAnimated.timing(rewardRotate, {
           toValue: 1,
-          duration: 480,
-          easing: Easing.out(Easing.back(1.4)),
+          duration: 460,
+          easing: Easing.out(Easing.back(1.3)),
           useNativeDriver: true
         })
       ]),
-      // Text slides up
       RNAnimated.parallel([
         RNAnimated.spring(textSlide, {
           toValue: 0,
@@ -88,12 +190,11 @@ export function CareEventModal({
         }),
         RNAnimated.timing(textOpacity, {
           toValue: 1,
-          duration: 280,
+          duration: 260,
           useNativeDriver: true
         })
       ]),
-      RNAnimated.delay(100),
-      // Next target slides in
+      RNAnimated.delay(90),
       RNAnimated.parallel([
         RNAnimated.spring(nextSlide, {
           toValue: 0,
@@ -103,23 +204,21 @@ export function CareEventModal({
         }),
         RNAnimated.timing(nextOpacity, {
           toValue: 1,
-          duration: 300,
+          duration: 280,
           useNativeDriver: true
         })
       ]),
-      RNAnimated.delay(200),
-      // Glow pulses
       RNAnimated.loop(
         RNAnimated.sequence([
           RNAnimated.timing(glowPulse, {
             toValue: 1,
-            duration: 700,
+            duration: 680,
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true
           }),
           RNAnimated.timing(glowPulse, {
             toValue: 0,
-            duration: 700,
+            duration: 680,
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true
           })
@@ -127,13 +226,55 @@ export function CareEventModal({
         { iterations: 3 }
       )
     ]).start();
-  }, [visible, backdrop, glowPulse, iconRotate, iconScale, nextOpacity, nextSlide, textOpacity, textSlide]);
+  }, [
+    visible,
+    backdrop,
+    glowPulse,
+    nextOpacity,
+    nextSlide,
+    rewardRotate,
+    rewardScale,
+    textOpacity,
+    textSlide
+  ]);
 
-  const rotate = iconRotate.interpolate({
+  useEffect(() => {
+    if (isUnlockAudioLoading || !unlockAudioEnabled || !visible) {
+      unlockSoundRef.current?.unloadAsync().catch(() => undefined);
+      unlockSoundRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    async function playRewardChime() {
+      try {
+        const sound = await playUnlockChime(0.36);
+
+        if (cancelled) {
+          await sound.unloadAsync();
+          return;
+        }
+
+        unlockSoundRef.current = sound;
+      } catch {
+        // Target cards should still appear if celebratory audio cannot play.
+      }
+    }
+
+    playRewardChime();
+
+    return () => {
+      cancelled = true;
+      unlockSoundRef.current?.unloadAsync().catch(() => undefined);
+      unlockSoundRef.current = null;
+    };
+  }, [isUnlockAudioLoading, unlockAudioEnabled, visible]);
+
+  const rotate = rewardRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ["-30deg", "0deg"]
+    outputRange: ["-18deg", "0deg"]
   });
-
   const glowScale = glowPulse.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.08]
@@ -142,32 +283,44 @@ export function CareEventModal({
   return (
     <Modal animationType="none" transparent visible={visible}>
       <Pressable style={styles.overlay} onPress={onDismiss}>
-        <RNAnimated.View style={[styles.overlay, { opacity: backdrop }]} />
+        <RNAnimated.View style={[styles.backdrop, { opacity: backdrop }]} />
+        {iconParticles.map((particle, index) => (
+          <IconParticle
+            key={`${rewardIndex}-${index}`}
+            delay={particle.delay}
+            drift={particle.drift}
+            icon={rewardImage}
+            size={particle.size}
+            x={particle.x}
+          />
+        ))}
         <Pressable style={styles.card} onPress={() => {}}>
-          {/* Glowing icon */}
           <RNAnimated.View
             style={[
-              styles.iconGlowRing,
-              { transform: [{ scale: glowScale }], opacity: backdrop }
+              styles.rewardGlowRing,
+              { opacity: backdrop, transform: [{ scale: glowScale }] }
             ]}
           />
           <RNAnimated.View
             style={{
-              transform: [{ scale: iconScale }, { rotate }],
               alignItems: "center",
+              transform: [{ scale: rewardScale }, { rotate }],
               zIndex: 2
             }}
           >
-            <UiSprite spriteKey={spriteKey} size={110} />
+            <Image
+              contentFit="contain"
+              source={rewardImage}
+              style={styles.rewardImage}
+            />
           </RNAnimated.View>
 
-          {/* Text */}
           <RNAnimated.View
             style={{
-              transform: [{ translateY: textSlide }],
-              opacity: textOpacity,
               alignItems: "center",
-              gap: spacing.xs
+              gap: spacing.xs,
+              opacity: textOpacity,
+              transform: [{ translateY: textSlide }]
             }}
           >
             <View style={styles.badge}>
@@ -176,31 +329,36 @@ export function CareEventModal({
                 name="checkmark-circle"
                 size={16}
               />
-              <Text style={styles.badgeText}>Care Unlocked!</Text>
+              <Text style={styles.badgeText}>Reward {rewardIndex + 1} Unlocked</Text>
             </View>
-            <Text style={styles.title}>{animalName} got {label}!</Text>
+            <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>
-              Keep walking to give more care and open the gate.
+              {animalName} earned {label.toLowerCase()}.
             </Text>
           </RNAnimated.View>
 
-          {/* Next target */}
           {nextTargetLabel && nextTargetSteps !== undefined ? (
             <RNAnimated.View
               style={[
                 styles.nextPanel,
                 {
-                  transform: [{ translateY: nextSlide }],
-                  opacity: nextOpacity
+                  opacity: nextOpacity,
+                  transform: [{ translateY: nextSlide }]
                 }
               ]}
             >
               <View style={styles.nextRow}>
-                <Ionicons
-                  color="#096DD9"
-                  name={(nextTargetIcon ?? "flag") as keyof typeof Ionicons.glyphMap}
-                  size={20}
-                />
+                {nextTargetImage ? (
+                  <Image
+                    contentFit="contain"
+                    source={nextTargetImage}
+                    style={styles.nextImage}
+                  />
+                ) : (
+                  <View style={styles.nextImageFallback}>
+                    <Ionicons color="#096DD9" name="key" size={22} />
+                  </View>
+                )}
                 <View style={styles.nextCopy}>
                   <Text style={styles.nextLabel}>Next Goal</Text>
                   <Text style={styles.nextTitle}>{nextTargetLabel}</Text>
@@ -226,12 +384,20 @@ export function CareEventModal({
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
+    backdrop: {
+      backgroundColor: "rgba(10,18,28,0.78)",
+      bottom: 0,
+      left: 0,
+      position: "absolute",
+      right: 0,
+      top: 0
+    },
     badge: {
       alignItems: "center",
       alignSelf: "center",
       backgroundColor: colors.surfaceSoft,
       borderColor: colors.primary,
-      borderRadius: 20,
+      borderRadius: 8,
       borderWidth: 1.5,
       flexDirection: "row",
       gap: spacing.xs,
@@ -247,17 +413,17 @@ function createStyles(colors: AppColors, isDark: boolean) {
     card: {
       alignItems: "center",
       backgroundColor: colors.surface,
-      borderRadius: 24,
+      borderRadius: 12,
+      elevation: 20,
       gap: spacing.lg,
       margin: spacing.lg,
       maxWidth: 440,
       padding: spacing.xl,
-      width: "92%",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 12 },
       shadowOpacity: 0.32,
       shadowRadius: 28,
-      elevation: 20,
+      width: "92%",
       zIndex: 10
     },
     dismissButton: {
@@ -268,22 +434,11 @@ function createStyles(colors: AppColors, isDark: boolean) {
       fontSize: 13,
       fontWeight: "700"
     },
-    iconGlowRing: {
-      backgroundColor: colors.surfaceSoft,
-      borderColor: colors.primary,
-      borderRadius: 80,
-      borderWidth: 3,
-      height: 140,
-      position: "absolute",
-      top: spacing.xl - 10,
-      width: 140,
-      zIndex: 1
-    },
     nextBadge: {
       alignItems: "center",
       backgroundColor: isDark ? colors.surfaceElevated : "#EAF6FF",
       borderColor: isDark ? colors.border : "#48AEEF",
-      borderRadius: 10,
+      borderRadius: 8,
       borderWidth: 1,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs
@@ -292,6 +447,24 @@ function createStyles(colors: AppColors, isDark: boolean) {
       flex: 1,
       gap: 2,
       minWidth: 0
+    },
+    nextImage: {
+      backgroundColor: colors.surface,
+      borderColor: isDark ? colors.border : "#B8E3FF",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 52,
+      width: 52
+    },
+    nextImageFallback: {
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderColor: isDark ? colors.border : "#B8E3FF",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 52,
+      justifyContent: "center",
+      width: 52
     },
     nextLabel: {
       color: colors.muted,
@@ -302,7 +475,7 @@ function createStyles(colors: AppColors, isDark: boolean) {
     nextPanel: {
       backgroundColor: isDark ? colors.surfaceElevated : "#EAF6FF",
       borderColor: isDark ? colors.border : "#48AEEF",
-      borderRadius: 14,
+      borderRadius: 8,
       borderWidth: 1.5,
       padding: spacing.lg,
       width: "100%"
@@ -329,14 +502,27 @@ function createStyles(colors: AppColors, isDark: boolean) {
     },
     overlay: {
       alignItems: "center",
-      backgroundColor: "rgba(10,18,28,0.78)",
-      flex: 1,
+      bottom: 0,
       justifyContent: "center",
-      position: "absolute",
-      top: 0,
       left: 0,
+      position: "absolute",
       right: 0,
-      bottom: 0
+      top: 0
+    },
+    rewardGlowRing: {
+      backgroundColor: colors.surfaceSoft,
+      borderColor: colors.primary,
+      borderRadius: 78,
+      borderWidth: 3,
+      height: 144,
+      position: "absolute",
+      top: spacing.xl - 8,
+      width: 144,
+      zIndex: 1
+    },
+    rewardImage: {
+      height: 132,
+      width: 132
     },
     subtitle: {
       color: colors.muted,
