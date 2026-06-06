@@ -148,6 +148,14 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let mounted = true;
 
+    // Add timeout to prevent hanging in production builds
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.log('Theme loading timeout - using default theme');
+        setIsThemeLoading(false);
+      }
+    }, 3000);
+
     AsyncStorage.getItem(STORAGE_KEYS.THEME_PREFERENCE)
       .then((storedPreference) => {
         if (!mounted || !isThemePreference(storedPreference)) {
@@ -156,14 +164,19 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 
         setThemePreferenceState(storedPreference);
       })
+      .catch((error) => {
+        console.error('Failed to load theme preference:', error);
+      })
       .finally(() => {
         if (mounted) {
+          clearTimeout(timeoutId);
           setIsThemeLoading(false);
         }
       });
 
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
     };
   }, []);
 

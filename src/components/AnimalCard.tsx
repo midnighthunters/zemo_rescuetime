@@ -9,7 +9,7 @@ import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
 import { formatNumber, formatPercent } from "../utils/format";
-import { AnimatedProgressFill, MotionView, PulseView } from "./Motion";
+import { AnimatedProgressFill, PulseView } from "./Motion";
 import { ProBadge } from "./ProBadge";
 
 type AnimalCardProps = {
@@ -51,7 +51,6 @@ function AnimalCardComponent({
           : "Locked";
 
   return (
-    <MotionView direction="fade" style={styles.cardMotion}>
     <Pressable
       accessibilityLabel={
         isMysteryLocked
@@ -173,7 +172,6 @@ function AnimalCardComponent({
         ) : null}
       </View>
     </Pressable>
-    </MotionView>
   );
 }
 
@@ -201,15 +199,11 @@ function createStyles(colors: AppColors, isDark: boolean) {
       borderColor: colors.border,
       borderRadius: 8,
       borderWidth: 1,
-      flex: 1,
       gap: spacing.sm,
       minWidth: 150,
       overflow: "hidden",
       padding: spacing.sm,
       ...shadows.soft
-    },
-    cardMotion: {
-      flex: 1
     },
     copy: {
       gap: spacing.xs,

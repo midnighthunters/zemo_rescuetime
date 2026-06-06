@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { AnimalCard } from "../../src/components/AnimalCard";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -40,8 +41,46 @@ function AnimalSection({
     getMilestone
   } = useRescue();
 
+  const renderItem = useCallback(({ item, index }: { item: Animal; index: number }) => {
+    const status = getAnimalStatus(item.id);
+    const metrics = getAnimalMetrics(item.id);
+    const milestone = getMilestone(item.id);
+    const concealed = title === "Waiting" && index >= 2;
+
+    const handlePress = () => {
+      if (concealed) {
+        return;
+      }
+
+      if (status === "pro_locked") {
+        router.push("/paywall");
+        return;
+      }
+
+      router.push(`/animal/${item.id}`);
+    };
+
+    return (
+      <View style={styles.cardSlot}>
+        <AnimalCard
+          animal={item}
+          onPress={handlePress}
+          progress={metrics?.progress}
+          requiredSteps={milestone?.unlockSteps ?? 0}
+          rescuedDate={formatRescueDate(rescueProgress.rescuedDates[item.id])}
+          concealed={concealed}
+          status={status}
+        />
+      </View>
+    );
+  }, [title, getAnimalStatus, getAnimalMetrics, getMilestone, rescueProgress.rescuedDates, styles.cardSlot]);
+
   return (
-    <MotionView direction="fade" style={styles.section}>
+    <Animated.View 
+      entering={FadeIn.duration(400)} 
+      exiting={FadeOut.duration(300)}
+      style={styles.section}
+    >
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleWrap}>
           <Ionicons
@@ -60,41 +99,15 @@ function AnimalSection({
           data={animals}
           keyExtractor={(item) => item.id}
           numColumns={2}
-          renderItem={({ item, index }) => {
-            const status = getAnimalStatus(item.id);
-            const metrics = getAnimalMetrics(item.id);
-            const milestone = getMilestone(item.id);
-            const concealed = title === "Waiting" && index >= 2;
-
-            return (
-              <View style={styles.cardSlot}>
-                <AnimalCard
-                  animal={item}
-                  onPress={() => {
-                    if (concealed) {
-                      return;
-                    }
-
-                    if (status === "pro_locked") {
-                      router.push("/paywall");
-                      return;
-                    }
-
-                    router.push(`/animal/${item.id}`);
-                  }}
-                  progress={metrics?.progress}
-                  requiredSteps={milestone?.unlockSteps ?? 0}
-                  rescuedDate={formatRescueDate(rescueProgress.rescuedDates[item.id])}
-                  concealed={concealed}
-                  status={status}
-                />
-              </View>
-            );
-          }}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={5}
+          renderItem={renderItem}
           scrollEnabled={false}
+          removeClippedSubviews={false}
         />
       )}
-    </MotionView>
+    </Animated.View>
   );
 }
 
@@ -151,20 +164,23 @@ export default function AnimalsScreen() {
           title="Waiting"
         />
       ) : (
-        <MotionView direction="fade">
-        <Pressable
-          accessibilityLabel="Back to waiting animals"
-          accessibilityRole="button"
-          onPress={() => setShowSafeOnly(false)}
-          style={({ pressed }) => [
-            styles.backToWaitingButton,
-            pressed && styles.summaryPressed
-          ]}
+        <Animated.View 
+          entering={FadeIn.duration(400)} 
+          exiting={FadeOut.duration(300)}
         >
-          <Ionicons color={theme.colors.primaryDark} name="arrow-back" size={18} />
-          <Text style={styles.backToWaitingText}>Waiting Animals</Text>
-        </Pressable>
-        </MotionView>
+          <Pressable
+            accessibilityLabel="Back to waiting animals"
+            accessibilityRole="button"
+            onPress={() => setShowSafeOnly(false)}
+            style={({ pressed }) => [
+              styles.backToWaitingButton,
+              pressed && styles.summaryPressed
+            ]}
+          >
+            <Ionicons color={theme.colors.primaryDark} name="arrow-back" size={18} />
+            <Text style={styles.backToWaitingText}>Waiting Animals</Text>
+          </Pressable>
+        </Animated.View>
       )}
       <AnimalSection
         animals={unlockedAnimals}
@@ -180,7 +196,7 @@ export default function AnimalsScreen() {
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
   cardSlot: {
-    flex: 1,
+    flex: 0.5,
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.xs
   },

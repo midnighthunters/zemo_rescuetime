@@ -2,11 +2,15 @@ import "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import * as SystemUI from "expo-system-ui";
+import * as SplashScreen from "expo-splash-screen";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 import { UnlockNotificationBridge } from "../src/features/notifications/UnlockNotificationBridge";
 import { EntitlementProvider } from "../src/state/EntitlementProvider";
@@ -23,6 +27,7 @@ export default function RootLayout() {
 
 function RootLayoutShell() {
   const theme = useAppTheme();
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.colors.backgroundBottom).catch(() => {
@@ -30,8 +35,35 @@ function RootLayoutShell() {
     });
   }, [theme.colors.backgroundBottom]);
 
+  // Track when theme is loaded
+  useEffect(() => {
+    if (!theme.isThemeLoading) {
+      setAppReady(true);
+    }
+  }, [theme.isThemeLoading]);
+
+  // Failsafe: Force hide splash screen after maximum wait time
+  useEffect(() => {
+    const failsafeTimeout = setTimeout(() => {
+      console.log('Failsafe triggered: forcing splash screen to hide');
+      setAppReady(true);
+      SplashScreen.hideAsync().catch(() => {
+        // Splash screen might already be hidden
+      });
+    }, 5000); // 5 second maximum wait
+
+    return () => clearTimeout(failsafeTimeout);
+  }, []);
+
+  // Hide splash screen when app is ready
+  const onLayoutRootView = useCallback(async () => {
+    if (appReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appReady]);
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
         <EntitlementProvider>
           <RescueProvider>

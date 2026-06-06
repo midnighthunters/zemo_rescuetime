@@ -49,15 +49,15 @@ export function MotionView({
 }: MotionViewProps) {
   const entering =
     direction === "down"
-      ? FadeInUp
+      ? FadeInUp.duration(400).delay(delay).easing(Easing.bezier(0.25, 0.1, 0.25, 1))
       : direction === "fade"
-        ? FadeIn
-        : FadeInDown;
+        ? FadeIn.duration(350).delay(delay).easing(Easing.bezier(0.25, 0.1, 0.25, 1))
+        : FadeInDown.duration(400).delay(delay).easing(Easing.bezier(0.25, 0.1, 0.25, 1));
 
   return (
     <Animated.View
-      entering={entering.duration(520).delay(delay).easing(Easing.out(Easing.cubic))}
-      layout={LinearTransition.springify().damping(18).stiffness(160)}
+      entering={entering}
+      layout={LinearTransition.springify().damping(20).stiffness(180).mass(0.8)}
       style={style}
       {...props}
     >
@@ -105,7 +105,7 @@ export function PulseView({
 
   useEffect(() => {
     if (!active) {
-      pulse.value = withTiming(0, { duration: 220 });
+      pulse.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) });
       return;
     }
 
@@ -115,11 +115,11 @@ export function PulseView({
         withSequence(
           withTiming(1, {
             duration,
-            easing: Easing.inOut(Easing.sin)
+            easing: Easing.bezier(0.45, 0.05, 0.55, 0.95)
           }),
           withTiming(0, {
             duration,
-            easing: Easing.inOut(Easing.sin)
+            easing: Easing.bezier(0.45, 0.05, 0.55, 0.95)
           })
         ),
         -1,
@@ -133,7 +133,7 @@ export function PulseView({
       { translateY: -floatDistance * pulse.value },
       { scale: 1 + (pulseScale - 1) * pulse.value }
     ]
-  }));
+  }), [floatDistance, pulseScale]);
 
   return (
     <Animated.View pointerEvents={pointerEvents} style={[style, animatedStyle]}>
