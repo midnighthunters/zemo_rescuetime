@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { type AppColors, useAppTheme } from "../theme/colors";
@@ -10,7 +11,7 @@ type CircularStepProgressProps = {
 
 export function CircularStepProgress({ progress }: CircularStepProgressProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors);
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const clamped = Math.max(0, Math.min(1, progress));
 
   return (

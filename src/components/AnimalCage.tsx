@@ -1,16 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { StyleSheet, View, type ImageSourcePropType } from "react-native";
-import Animated, {
-  Easing,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming
-} from "react-native-reanimated";
 
 import { jailSprites } from "../data/assets";
 import type { AnimalCareState } from "../data/types";
@@ -30,66 +21,13 @@ export function AnimalCage({
   isRescued
 }: AnimalCageProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
-  const breathe = useSharedValue(0);
-  const glow = useSharedValue(0);
-  const shake = useSharedValue(0);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
   const warmth = Math.max(0, Math.min(1, progress));
   const needsCare = careState === "hungry" || careState === "healing";
-
-  useEffect(() => {
-    if (!isRescued && progress >= 0.9) {
-      shake.value = withRepeat(withTiming(1, { duration: 140 }), -1, true);
-      return;
-    }
-    shake.value = withTiming(0, { duration: 180 });
-  }, [isRescued, progress, shake]);
-
-  useEffect(() => {
-    breathe.value = withRepeat(
-      withSequence(
-        withTiming(1, {
-          duration: needsCare ? 1300 : 1800,
-          easing: Easing.inOut(Easing.sin)
-        }),
-        withTiming(0, {
-          duration: needsCare ? 1300 : 1800,
-          easing: Easing.inOut(Easing.sin)
-        })
-      ),
-      -1,
-      false
-    );
-
-    glow.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1700, easing: Easing.inOut(Easing.sin) })
-      ),
-      -1,
-      false
-    );
-  }, [breathe, glow, needsCare]);
-
-  const cageStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: interpolate(shake.value, [0, 1], [0, 4]) },
-      { rotate: `${interpolate(shake.value, [0, 1], [0, -2])}deg` }
-    ]
-  }));
-
-  const animalStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(breathe.value, [0, 1], needsCare ? [0.9, 1] : [0.96, 1]),
-    transform: [
-      { translateY: interpolate(breathe.value, [0, 1], isRescued ? [0, -8] : [0, -3]) },
-      { scale: interpolate(breathe.value, [0, 1], [1, isRescued ? 1.045 : 1.025]) }
-    ]
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glow.value, [0, 1], [0.22 + warmth * 0.18, 0.44 + warmth * 0.22]),
-    transform: [{ scale: interpolate(glow.value, [0, 1], [0.92, 1.08]) }]
-  }));
+  const glowOpacity = (needsCare ? 0.28 : 0.34) + warmth * 0.16;
 
   return (
     <View
@@ -108,53 +46,53 @@ export function AnimalCage({
         }
       ]}
     >
-      <Animated.View
+      <View
         pointerEvents="none"
         style={[
           styles.ambientGlow,
           { backgroundColor: isRescued ? theme.colors.primary : theme.colors.secondary },
-          glowStyle
+          { opacity: glowOpacity }
         ]}
       />
 
       {!isRescued ? (
         <>
           {/* z=2: Back cage body � behind everything */}
-          <Animated.View pointerEvents="none" style={[styles.openJailLayer, cageStyle]}>
+          <View pointerEvents="none" style={styles.openJailLayer}>
             <Image
               contentFit="contain"
               source={jailSprites.openJail}
               style={styles.layerImage}
             />
-          </Animated.View>
+          </View>
 
           {/* z=3: Platform/base � behind the animal and gate */}
-          <Animated.View pointerEvents="none" style={[styles.platformLayer, cageStyle]}>
+          <View pointerEvents="none" style={styles.platformLayer}>
             <Image
               contentFit="contain"
               source={jailSprites.platform}
               style={styles.layerImage}
             />
-          </Animated.View>
+          </View>
         </>
       ) : null}
 
       {/* z=4: Animal � in front of back body + platform, behind gate bars */}
-      <Animated.View style={[styles.animal, animalStyle]}>
+      <View style={styles.animal}>
         <Image contentFit="contain" source={animalImage} style={styles.animalImage} />
-      </Animated.View>
+      </View>
 
       {!isRescued ? (
         <>
           {/* z=6: Front gate bars � in front of the animal */}
-          <Animated.View pointerEvents="none" style={[styles.gateLayer, cageStyle]}>
+          <View pointerEvents="none" style={styles.gateLayer}>
             <Image contentFit="contain" source={jailSprites.gate} style={styles.layerImage} />
-          </Animated.View>
+          </View>
 
           {/* z=8: Top handle/lid � topmost layer */}
-          <Animated.View pointerEvents="none" style={[styles.topLayer, cageStyle]}>
+          <View pointerEvents="none" style={styles.topLayer}>
             <Image contentFit="contain" source={jailSprites.top} style={styles.layerImage} />
-          </Animated.View>
+          </View>
 
           <View pointerEvents="none" style={styles.lockBadge}>
             <Ionicons color="#FFFFFF" name="lock-closed" size={24} />

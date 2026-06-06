@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   Alert,
   Linking,
@@ -45,7 +45,7 @@ function SettingsPanel({
   children: ReactNode;
 }) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors);
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
 
   return (
     <MotionView direction="fade" style={styles.panel}>
@@ -57,7 +57,10 @@ function SettingsPanel({
 
 export default function SettingsScreen() {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
   const router = useRouter();
   const {
     isPro,

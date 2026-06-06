@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { AnimalCard } from "../../src/components/AnimalCard";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -33,7 +32,7 @@ function AnimalSection({
   emptySpriteKey
 }: AnimalSectionProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors);
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const {
     getAnimalStatus,
     getAnimalMetrics,
@@ -76,11 +75,7 @@ function AnimalSection({
   }, [title, getAnimalStatus, getAnimalMetrics, getMilestone, rescueProgress.rescuedDates, styles.cardSlot]);
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(400)} 
-      exiting={FadeOut.duration(300)}
-      style={styles.section}
-    >
+    <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleWrap}>
           <Ionicons
@@ -107,13 +102,13 @@ function AnimalSection({
           removeClippedSubviews={false}
         />
       )}
-    </Animated.View>
+    </View>
   );
 }
 
 export default function AnimalsScreen() {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors);
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const { lockedAnimals, unlockedAnimals } = useRescue();
   const [showSafeOnly, setShowSafeOnly] = useState(false);
 
@@ -164,10 +159,7 @@ export default function AnimalsScreen() {
           title="Waiting"
         />
       ) : (
-        <Animated.View 
-          entering={FadeIn.duration(400)} 
-          exiting={FadeOut.duration(300)}
-        >
+        <View>
           <Pressable
             accessibilityLabel="Back to waiting animals"
             accessibilityRole="button"
@@ -180,7 +172,7 @@ export default function AnimalsScreen() {
             <Ionicons color={theme.colors.primaryDark} name="arrow-back" size={18} />
             <Text style={styles.backToWaitingText}>Waiting Animals</Text>
           </Pressable>
-        </Animated.View>
+        </View>
       )}
       <AnimalSection
         animals={unlockedAnimals}

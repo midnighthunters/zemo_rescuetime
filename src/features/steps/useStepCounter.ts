@@ -5,6 +5,8 @@ import { AppState, Platform } from "react-native";
 import { getLocalDateKey, startOfToday } from "../../utils/date";
 import { normalizePermissionStatus, type PermissionStatus } from "./stepUtils";
 
+const LIVE_STEP_UPDATE_INTERVAL_MS = 750;
+
 export type StepCountingMode = "full-day" | "live-session" | "unavailable";
 
 export type StepCounterState = {
@@ -36,15 +38,75 @@ export function useStepCounter(): StepCounterState {
     baseline: 0,
     rolloverOffset: 0
   });
+  const liveUpdateRef = useRef<{
+    lastPublished: number;
+    lastPublishedAt: number;
+    pending?: number;
+    timer?: ReturnType<typeof setTimeout>;
+  }>({
+    lastPublished: 0,
+    lastPublishedAt: 0
+  });
 
   const resetLiveSteps = useCallback((baseline = liveRef.current.raw) => {
+    if (liveUpdateRef.current.timer) {
+      clearTimeout(liveUpdateRef.current.timer);
+    }
+    liveUpdateRef.current = {
+      lastPublished: 0,
+      lastPublishedAt: Date.now()
+    };
     liveRef.current = {
       raw: baseline,
       baseline,
       rolloverOffset: 0
     };
-    setLiveSteps(0);
+    setLiveSteps((current) => (current === 0 ? current : 0));
   }, []);
+
+  const publishLiveSteps = useCallback((steps: number) => {
+    liveUpdateRef.current.lastPublished = steps;
+    liveUpdateRef.current.lastPublishedAt = Date.now();
+    liveUpdateRef.current.pending = undefined;
+    setLiveSteps((current) => (current === steps ? current : steps));
+  }, []);
+
+  const scheduleLiveStepUpdate = useCallback(
+    (steps: number) => {
+      const updateState = liveUpdateRef.current;
+      if (steps === updateState.lastPublished && !updateState.timer) {
+        return;
+      }
+
+      updateState.pending = steps;
+      const elapsed = Date.now() - updateState.lastPublishedAt;
+
+      const flush = () => {
+        const pending = liveUpdateRef.current.pending;
+        liveUpdateRef.current.timer = undefined;
+        if (pending !== undefined) {
+          publishLiveSteps(pending);
+        }
+      };
+
+      if (elapsed >= LIVE_STEP_UPDATE_INTERVAL_MS) {
+        if (updateState.timer) {
+          clearTimeout(updateState.timer);
+          updateState.timer = undefined;
+        }
+        flush();
+        return;
+      }
+
+      if (!updateState.timer) {
+        updateState.timer = setTimeout(
+          flush,
+          LIVE_STEP_UPDATE_INTERVAL_MS - elapsed
+        );
+      }
+    },
+    [publishLiveSteps]
+  );
 
   const refreshSteps = useCallback(async () => {
     setIsLoading(true);
@@ -83,7 +145,15 @@ export function useStepCounter(): StepCounterState {
       }
 
       if (Platform.OS === "ios") {
-        const result = await Pedometer.getStepCountAsync(startOfToday(), new Date());
+        // Add timeout for pedometer call to prevent hanging
+        const pedometerPromise = Pedometer.getStepCountAsync(startOfToday(), new Date());
+        const timeoutPromise = new Promise<{steps: number}>((resolve) => {
+          setTimeout(() => {
+            resolve({ steps: 0 });
+          }, 5000);
+        });
+
+        const result = await Promise.race([pedometerPromise, timeoutPromise]);
         setHistoricalStepsToday(Math.max(0, result.steps));
         resetLiveSteps();
         setCountingMode("full-day");
@@ -128,13 +198,21 @@ export function useStepCounter(): StepCounterState {
         baseline,
         rolloverOffset
       };
-      setLiveSteps(adjusted);
+      scheduleLiveStepUpdate(adjusted);
     });
 
     return () => {
       subscription.remove();
     };
-  }, [isAvailable, permissionStatus]);
+  }, [isAvailable, permissionStatus, scheduleLiveStepUpdate]);
+
+  useEffect(() => {
+    return () => {
+      if (liveUpdateRef.current.timer) {
+        clearTimeout(liveUpdateRef.current.timer);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {

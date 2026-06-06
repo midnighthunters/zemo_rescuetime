@@ -1,5 +1,6 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AnimalMetrics } from "../state/RescueProvider";
@@ -43,7 +44,10 @@ export function StepHeroCard({
   onViewAnimal
 }: StepHeroCardProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
 
   /* ── Empty state ── */
   if (!metrics) {

@@ -17,7 +17,9 @@ export default function IndexScreen() {
     );
   }
 
-  return <Redirect href={hasOnboarded ? "/(tabs)/home" : "/onboarding"} />;
+  const redirectTarget = hasOnboarded ? "/(tabs)/home" : "/onboarding";
+
+  return <Redirect href={redirectTarget} />;
 }
 
 function createStyles(colors: AppColors) {

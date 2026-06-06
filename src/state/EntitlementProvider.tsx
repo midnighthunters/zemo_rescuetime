@@ -43,7 +43,16 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
     setError(undefined);
 
     try {
-      const result = await getCustomerEntitlement();
+      // Add timeout to prevent hanging in production builds (RevenueCat API call)
+      const timeoutPromise = new Promise<{isConfigured: boolean; isPro: boolean}>((resolve) => {
+        setTimeout(() => {
+          resolve({ isConfigured: false, isPro: false });
+        }, 5000);
+      });
+
+      const entitlementPromise = getCustomerEntitlement();
+      
+      const result = await Promise.race([entitlementPromise, timeoutPromise]);
       setIsRevenueCatConfigured(result.isConfigured);
       setIsProFromRevenueCat(result.isPro);
     } catch (caught) {
@@ -52,6 +61,8 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
           ? caught.message
           : "Could not refresh subscription status."
       );
+      setIsRevenueCatConfigured(false);
+      setIsProFromRevenueCat(false);
     } finally {
       setIsLoading(false);
     }
@@ -60,20 +71,35 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let mounted = true;
 
+    // Add timeout to prevent hanging on AsyncStorage
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        refreshEntitlements();
+      }
+    }, 3000);
+
     getDevSettings()
       .then((settings) => {
         if (mounted) {
+          clearTimeout(timeoutId);
           setDevProEnabledState(Boolean(settings.mockProEnabled));
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          clearTimeout(timeoutId);
         }
       })
       .finally(() => {
         if (mounted) {
+          clearTimeout(timeoutId);
           refreshEntitlements();
         }
       });
 
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
     };
   }, [refreshEntitlements]);
 

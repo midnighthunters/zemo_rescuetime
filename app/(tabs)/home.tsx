@@ -1,9 +1,7 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
-  Animated,
-  Easing,
   Linking,
   Pressable,
   StyleSheet,
@@ -34,36 +32,15 @@ function getGreeting() {
 
 /** Pulsing glow behind the dev FAB */
 function DevFabGlow({ color }: { color: string }) {
-  const pulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1.35,
-          duration: 800,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true
-        }),
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true
-        })
-      ])
-    ).start();
-  }, [pulse]);
-
   return (
-    <Animated.View
+    <View
       style={{
         position: "absolute",
         width: 56,
         height: 56,
         borderRadius: 28,
         backgroundColor: color,
-        opacity: 0.3,
-        transform: [{ scale: pulse }]
+        opacity: 0.24
       }}
     />
   );
@@ -71,7 +48,10 @@ function DevFabGlow({ color }: { color: string }) {
 
 export default function HomeScreen() {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
   const { isPro } = useEntitlements();
   const {
     currentAnimal,

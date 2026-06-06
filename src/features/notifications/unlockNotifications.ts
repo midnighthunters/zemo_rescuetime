@@ -87,6 +87,15 @@ async function ensureNotificationPermission() {
   return requested.granted || requested.status === "granted";
 }
 
+export async function requestStartupNotificationPermission() {
+  if (Platform.OS === "web") {
+    return false;
+  }
+
+  await configureUnlockNotifications();
+  return ensureNotificationPermission();
+}
+
 export async function presentUnlockNotification(
   payload: UnlockNotificationPayload
 ) {

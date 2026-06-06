@@ -95,6 +95,7 @@ android {
         versionCode 1
         versionName "1.0.0"
 
+        buildConfigField "boolean", "STANDALONE_JS_BUNDLE", "false"
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {
@@ -108,6 +109,12 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+        }
+        standaloneDebug {
+            initWith debug
+            matchingFallbacks = ['debug', 'release']
+            signingConfig signingConfigs.debug
+            buildConfigField "boolean", "STANDALONE_JS_BUNDLE", "true"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.

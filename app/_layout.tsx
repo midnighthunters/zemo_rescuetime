@@ -13,6 +13,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 SplashScreen.preventAutoHideAsync();
 
 import { UnlockNotificationBridge } from "../src/features/notifications/UnlockNotificationBridge";
+import { requestStartupNotificationPermission } from "../src/features/notifications/unlockNotifications";
 import { EntitlementProvider } from "../src/state/EntitlementProvider";
 import { RescueProvider } from "../src/state/RescueProvider";
 import { ThemeProvider, useAppTheme } from "../src/theme/colors";
@@ -35,6 +36,12 @@ function RootLayoutShell() {
     });
   }, [theme.colors.backgroundBottom]);
 
+  useEffect(() => {
+    void requestStartupNotificationPermission().catch(() => {
+      // Notification permission is optional; unlock cards still work in-app.
+    });
+  }, []);
+
   // Track when theme is loaded
   useEffect(() => {
     if (!theme.isThemeLoading) {
@@ -45,7 +52,6 @@ function RootLayoutShell() {
   // Failsafe: Force hide splash screen after maximum wait time
   useEffect(() => {
     const failsafeTimeout = setTimeout(() => {
-      console.log('Failsafe triggered: forcing splash screen to hide');
       setAppReady(true);
       SplashScreen.hideAsync().catch(() => {
         // Splash screen might already be hidden

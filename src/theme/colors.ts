@@ -151,7 +151,6 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     // Add timeout to prevent hanging in production builds
     const timeoutId = setTimeout(() => {
       if (mounted) {
-        console.log('Theme loading timeout - using default theme');
         setIsThemeLoading(false);
       }
     }, 3000);
@@ -164,8 +163,8 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 
         setThemePreferenceState(storedPreference);
       })
-      .catch((error) => {
-        console.error('Failed to load theme preference:', error);
+      .catch(() => {
+        // Theme persistence is optional; default to the system preference.
       })
       .finally(() => {
         if (mounted) {

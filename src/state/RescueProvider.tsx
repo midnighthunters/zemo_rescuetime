@@ -129,6 +129,7 @@ type RescueContextValue = {
 };
 
 const RescueContext = createContext<RescueContextValue | undefined>(undefined);
+const DAILY_STEP_HISTORY_WRITE_DELTA = 100;
 
 function createDefaultProgress(animals: Animal[]): RescueProgress {
   return {
@@ -140,6 +141,7 @@ function createDefaultProgress(animals: Animal[]): RescueProgress {
     pendingUnlockEvents: [],
     rescuedDates: {},
     lastKnownDate: getLocalDateKey(),
+    activeJourneyStepsToday: 0,
     dailyStepHistory: {}
   };
 }
@@ -170,6 +172,12 @@ function mergeProgress(saved: RescueProgress | null, animals: Animal[]) {
     ? saved.focusedUnlockEventId
     : undefined;
 
+  const today = getLocalDateKey();
+  const savedActiveJourneySteps =
+    typeof saved.activeJourneyStepsToday === "number"
+      ? saved.activeJourneyStepsToday
+      : saved.dailyStepHistory?.[today] ?? 0;
+
   return {
     ...fallback,
     ...saved,
@@ -181,6 +189,7 @@ function mergeProgress(saved: RescueProgress | null, animals: Animal[]) {
     pendingUnlockEvents,
     rescuedDates: saved.rescuedDates ?? {},
     lastKnownDate: saved.lastKnownDate ?? getLocalDateKey(),
+    activeJourneyStepsToday: Math.max(0, savedActiveJourneySteps),
     dailyStepHistory: saved.dailyStepHistory ?? {}
   };
 }
@@ -320,6 +329,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
     createDefaultProgress(animals)
   );
   const rescueProgressRef = useRef(rescueProgress);
+  const liveSessionBaselineRef = useRef(0);
+  const liveSessionOffsetRef = useRef(0);
   const knownPendingUnlockEventIdsRef = useRef<Set<string> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Dev-only: mock step override (undefined = use real steps)
@@ -345,11 +356,22 @@ export function RescueProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let mounted = true;
 
+    // Add timeout to prevent hanging in production builds
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        const merged = mergeProgress(null, animals);
+        setRescueProgress(merged);
+        setIsLoading(false);
+      }
+    }, 3000);
+
     getRescueProgress()
       .then((saved) => {
         if (!mounted) {
           return;
         }
+
+        clearTimeout(timeoutId);
 
         const merged = mergeProgress(saved, animals);
         const today = getLocalDateKey();
@@ -359,22 +381,36 @@ export function RescueProvider({ children }: PropsWithChildren) {
             : {
                 ...merged,
                 lastKnownDate: today,
-                stepBaselineToday: 0
+                stepBaselineToday: 0,
+                activeJourneyStepsToday: 0
               };
 
+        liveSessionBaselineRef.current = 0;
+        liveSessionOffsetRef.current = normalized.activeJourneyStepsToday;
         setRescueProgress(normalized);
         if (saved !== normalized) {
-          saveRescueProgress(normalized);
+          saveRescueProgress(normalized).catch(() => {
+            // Persistence failure should not block UI
+          });
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          clearTimeout(timeoutId);
+          const merged = mergeProgress(null, animals);
+          setRescueProgress(merged);
         }
       })
       .finally(() => {
         if (mounted) {
+          clearTimeout(timeoutId);
           setIsLoading(false);
         }
       });
 
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
     };
   }, [animals]);
 
@@ -388,11 +424,28 @@ export function RescueProvider({ children }: PropsWithChildren) {
   const currentMilestone =
     currentAnimalIndex >= 0 ? milestones[currentAnimalIndex] : undefined;
 
+  const todayKey = getLocalDateKey();
+  const progressIsForToday = rescueProgress.lastKnownDate === todayKey;
+  const rawActiveStepsToday = Math.max(
+    0,
+    steps.stepsToday - rescueProgress.stepBaselineToday
+  );
+  const liveSessionActiveStepsToday =
+    progressIsForToday
+      ? liveSessionOffsetRef.current +
+        Math.max(0, steps.stepsToday - liveSessionBaselineRef.current)
+      : 0;
+  const restoredActiveStepsToday = progressIsForToday
+    ? rescueProgress.activeJourneyStepsToday
+    : 0;
+
   // Effective steps: dev mock overrides real pedometer
   const effectiveStepsToday =
     devMockSteps !== undefined
       ? devMockSteps
-      : Math.max(0, steps.stepsToday - rescueProgress.stepBaselineToday);
+      : steps.countingMode === "live-session"
+        ? Math.max(liveSessionActiveStepsToday, restoredActiveStepsToday)
+        : Math.max(rawActiveStepsToday, restoredActiveStepsToday);
 
   const lockedAnimals = useMemo(
     () => getLockedAnimals(animals, rescueProgress),
@@ -655,11 +708,14 @@ export function RescueProvider({ children }: PropsWithChildren) {
       }
 
       const rescuedAnimalIds = [...rescueProgress.rescuedAnimalIds, animalId];
+      liveSessionBaselineRef.current = steps.stepsToday;
+      liveSessionOffsetRef.current = 0;
       const next = {
         ...rescueProgress,
         rescuedAnimalIds,
         stepBaselineToday:
           devMockSteps !== undefined ? rescueProgress.stepBaselineToday : steps.stepsToday,
+        activeJourneyStepsToday: 0,
         rescuedDates: {
           ...rescueProgress.rescuedDates,
           [animalId]: getLocalDateKey()
@@ -738,12 +794,20 @@ export function RescueProvider({ children }: PropsWithChildren) {
       );
     }
 
+    if (shouldRescue) {
+      liveSessionBaselineRef.current = steps.stepsToday;
+      liveSessionOffsetRef.current = 0;
+    }
+
     persistProgress((current) => ({
       ...current,
       stepBaselineToday:
         shouldRescue && devMockSteps === undefined
           ? steps.stepsToday
           : current.stepBaselineToday,
+      activeJourneyStepsToday: shouldRescue
+        ? 0
+        : Math.max(current.activeJourneyStepsToday ?? 0, effectiveStepsToday),
       claimedMiniMilestones: {
         ...current.claimedMiniMilestones,
         [currentAnimal.id]: [
@@ -794,9 +858,12 @@ export function RescueProvider({ children }: PropsWithChildren) {
 
     const today = getLocalDateKey();
     const recordedToday = rescueProgress.dailyStepHistory[today] ?? 0;
+    const recordedActiveSteps = rescueProgress.activeJourneyStepsToday ?? 0;
     const shouldUpdate =
       rescueProgress.lastKnownDate !== today ||
-      effectiveStepsToday - recordedToday >= 25 ||
+      effectiveStepsToday - recordedToday >= DAILY_STEP_HISTORY_WRITE_DELTA ||
+      effectiveStepsToday - recordedActiveSteps >= DAILY_STEP_HISTORY_WRITE_DELTA ||
+      (recordedActiveSteps === 0 && effectiveStepsToday > 0) ||
       (recordedToday === 0 && effectiveStepsToday > 0);
 
     if (!shouldUpdate) {
@@ -805,6 +872,11 @@ export function RescueProvider({ children }: PropsWithChildren) {
 
     persistProgress((current) => {
       const isSameRecordedDay = current.lastKnownDate === today;
+      if (!isSameRecordedDay) {
+        liveSessionBaselineRef.current = steps.stepsToday;
+        liveSessionOffsetRef.current = 0;
+      }
+
       const nextStepBaseline = isSameRecordedDay ? current.stepBaselineToday : 0;
       const nextEffectiveSteps = isSameRecordedDay
         ? effectiveStepsToday
@@ -814,16 +886,29 @@ export function RescueProvider({ children }: PropsWithChildren) {
         ...current,
         lastKnownDate: today,
         stepBaselineToday: nextStepBaseline,
+        activeJourneyStepsToday: isSameRecordedDay
+          ? Math.max(current.activeJourneyStepsToday ?? 0, effectiveStepsToday)
+          : 0,
         dailyStepHistory: {
           ...current.dailyStepHistory,
           [today]: Math.max(recordedToday, nextEffectiveSteps)
         }
       };
     });
-  }, [isLoading, persistProgress, rescueProgress, steps.stepsToday, effectiveStepsToday]);
+  }, [
+    effectiveStepsToday,
+    isLoading,
+    persistProgress,
+    rescueProgress.dailyStepHistory,
+    rescueProgress.lastKnownDate,
+    rescueProgress.activeJourneyStepsToday,
+    steps.stepsToday
+  ]);
 
   const resetProgress = useCallback(async () => {
     const next = createDefaultProgress(animals);
+    liveSessionBaselineRef.current = 0;
+    liveSessionOffsetRef.current = 0;
     await clearRescueProgress();
     await persistProgress(next);
     setDevMockSteps(undefined);
@@ -841,10 +926,13 @@ export function RescueProvider({ children }: PropsWithChildren) {
       ? rescueProgress.rescuedAnimalIds
       : [...rescueProgress.rescuedAnimalIds, firstAnimal.id];
 
+    liveSessionBaselineRef.current = steps.stepsToday;
+    liveSessionOffsetRef.current = 0;
     await persistProgress({
       ...rescueProgress,
       rescuedAnimalIds,
       stepBaselineToday: steps.stepsToday,
+      activeJourneyStepsToday: 0,
       rescuedDates: {
         ...rescueProgress.rescuedDates,
         [firstAnimal.id]: getLocalDateKey()

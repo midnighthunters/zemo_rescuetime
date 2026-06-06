@@ -1,14 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming
-} from "react-native-reanimated";
 
 import { EmptyState } from "../../src/components/EmptyState";
 import { AnimatedProgressFill, MotionView, PulseView } from "../../src/components/Motion";
@@ -80,7 +74,10 @@ function StatCard({
   value: string;
 }) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark, false);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark, false),
+    [theme.colors, theme.isDark]
+  );
 
   return (
     <MotionView delay={index * 70} style={[styles.statCard, { borderTopColor: accent }]}>
@@ -109,23 +106,10 @@ function AnimatedWeekBar({
   height: number;
   style: ReturnType<typeof createStyles>["weekBarFill"];
 }) {
-  const animatedHeight = useSharedValue(0);
-
-  useEffect(() => {
-    animatedHeight.value = withTiming(height, {
-      duration: 720,
-      easing: Easing.out(Easing.cubic)
-    });
-  }, [animatedHeight, height]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    height: animatedHeight.value
-  }));
-
   return (
-    <Animated.View style={[style, animatedStyle]}>
+    <View style={[style, { height }]}>
       <LinearGradient colors={colors} style={StyleSheet.absoluteFill} />
-    </Animated.View>
+    </View>
   );
 }
 
@@ -141,7 +125,10 @@ function WeekBars({
   weekValues: number[];
 }) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark, false);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark, false),
+    [theme.colors, theme.isDark]
+  );
 
   return (
     <View style={styles.weekBars}>
@@ -185,7 +172,10 @@ function JourneyNode({
   item: JourneyItem;
 }) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark, false);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark, false),
+    [theme.colors, theme.isDark]
+  );
   const isRevealed = item.state === "earned" || item.state === "rescued";
   const isActive = item.state === "next" || item.state === "ready";
 
@@ -283,7 +273,10 @@ export default function ProgressScreen() {
   const theme = useAppTheme();
   const { width } = useWindowDimensions();
   const isCompact = width <= 430;
-  const styles = createStyles(theme.colors, theme.isDark, isCompact);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark, isCompact),
+    [isCompact, theme.colors, theme.isDark]
+  );
   const {
     currentAnimal,
     getAnimalMetrics,

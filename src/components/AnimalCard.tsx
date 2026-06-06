@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { jailSprites } from "../data/assets";
@@ -32,7 +32,10 @@ function AnimalCardComponent({
   onPress
 }: AnimalCardProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
   const isUnlocked = status === "unlocked";
   const isProLocked = status === "pro_locked";
   const image = isUnlocked ? animal.happyImage : animal.sadImage;
@@ -49,6 +52,34 @@ function AnimalCardComponent({
         : isProLocked
           ? "Requires Pro"
           : "Locked";
+
+  if (isMysteryLocked) {
+    return (
+      <Pressable
+        accessibilityLabel="Mystery animal. Keep rescuing to reveal."
+        accessibilityRole="image"
+        disabled
+        style={[styles.card, styles.mysteryCard]}
+      >
+        <View style={[styles.imageWrap, styles.mysteryImageWrap]}>
+          <View pointerEvents="none" style={styles.mysteryOverlay}>
+            <PulseView floatDistance={3} pulseScale={1.04}>
+              <Text style={styles.mysteryMark}>?</Text>
+            </PulseView>
+          </View>
+        </View>
+
+        <View style={styles.copy}>
+          <Text numberOfLines={1} style={styles.name}>
+            Mystery rescue
+          </Text>
+          <Text numberOfLines={2} style={styles.steps}>
+            Complete earlier rescues to reveal
+          </Text>
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
@@ -304,6 +335,12 @@ function createStyles(colors: AppColors, isDark: boolean) {
       color: "#FFFFFF",
       fontSize: 54,
       fontWeight: "900"
+    },
+    mysteryCard: {
+      opacity: 0.96
+    },
+    mysteryImageWrap: {
+      backgroundColor: isDark ? "#16202A" : "#DFE8EF"
     },
     mysteryOverlay: {
       alignItems: "center",
