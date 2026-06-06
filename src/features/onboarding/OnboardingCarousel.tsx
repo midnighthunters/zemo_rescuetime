@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { onboardingSlides, type OnboardingSlide } from "../../data/onboarding";
+import { useLanguage } from "../../i18n/LanguageProvider";
 import { useAppTheme } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { AppButton } from "../../components/AppButton";
@@ -23,6 +24,7 @@ type OnboardingCarouselProps = {
 export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
   const { width } = useWindowDimensions();
   const theme = useAppTheme();
+  const { t } = useLanguage();
   const listRef = useRef<FlatList<OnboardingSlide>>(null);
   const [index, setIndex] = useState(0);
   const isLast = index === onboardingSlides.length - 1;
@@ -52,7 +54,7 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
         pagingEnabled
         renderItem={({ item }) => (
           <Pressable
-            accessibilityLabel="Onboarding image"
+            accessibilityLabel={t("a11y.onboardingImage")}
             accessibilityRole="button"
             onPress={handleNext}
             style={[styles.slide, { width }]}
@@ -72,7 +74,7 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
           <AppButton
             icon="heart"
             onPress={handleNext}
-            title="Start Rescuing"
+            title={t("onboarding.start")}
             variant="primary"
           />
         </MotionView>

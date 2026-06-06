@@ -11,14 +11,18 @@ export function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-export function formatRescueDate(dateKey?: string) {
+export function formatRescueDate(
+  dateKey?: string,
+  locale?: string,
+  todayLabel = "Today"
+) {
   if (!dateKey) {
-    return "Today";
+    return todayLabel;
   }
 
   const [year, month, day] = dateKey.split("-").map(Number);
   const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale, {
     month: "short",
     day: "numeric"
   });

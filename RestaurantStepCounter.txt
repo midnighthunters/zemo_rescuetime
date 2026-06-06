@@ -1,0 +1,22 @@
+Food Truck World Tour
+
+Users walk to unlock ingredients, dishes, and cities.
+
+Example:
+
+1,000 steps = unlock tomato
+3,000 steps = cook pizza
+7,000 steps = open food truck
+15,000 steps = unlock New York / Tokyo / Paris
+
+Why exciting: food, travel, collecting, progression.
+
+Users can build:
+
+Pizza truck
+Taco truck
+Sushi truck
+Burger truck
+Dessert truck
+
+This can become very addictive because people love unlocking food items.

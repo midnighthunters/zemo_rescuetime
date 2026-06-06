@@ -18,6 +18,7 @@ import { UiSprite } from "../../src/components/UiSprite";
 import { useUnlockAudioSettings } from "../../src/features/audio/useUnlockAudioSettings";
 import { useOnboarding } from "../../src/features/onboarding/useOnboarding";
 import { useEntitlements } from "../../src/features/purchases/useEntitlements";
+import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useRescue } from "../../src/state/RescueProvider";
 import {
   type AppColors,
@@ -26,16 +27,6 @@ import {
 } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
-import { formatNumber } from "../../src/utils/format";
-
-const themeOptions: Array<{
-  label: string;
-  value: ThemePreference;
-}> = [
-  { label: "System", value: "system" },
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" }
-];
 
 function SettingsPanel({
   title,
@@ -57,15 +48,28 @@ function SettingsPanel({
 
 export default function SettingsScreen() {
   const theme = useAppTheme();
+  const {
+    formatNumber: formatLocalizedNumber,
+    language,
+    languageLabel,
+    setLanguage,
+    speechLocale,
+    supportedLanguages,
+    t
+  } = useLanguage();
   const styles = useMemo(
     () => createStyles(theme.colors, theme.isDark),
     [theme.colors, theme.isDark]
   );
   const router = useRouter();
   const {
+    activePlanId,
     isPro,
     isLoading,
     isRevenueCatConfigured,
+    managementURL,
+    plans,
+    revenueCatDebugInfo,
     error,
     restorePurchases,
     devProEnabled,
@@ -79,19 +83,33 @@ export default function SettingsScreen() {
   } = useUnlockAudioSettings();
   const {
     resetProgress,
-    unlockFirstAnimal,
     steps,
     stepsToday
   } = useRescue();
+  const themeOptions = useMemo<Array<{
+    label: string;
+    value: ThemePreference;
+  }>>(
+    () => [
+      { label: t("settings.themeSystem"), value: "system" },
+      { label: t("settings.themeLight"), value: "light" },
+      { label: t("settings.themeDark"), value: "dark" }
+    ],
+    [t]
+  );
+  const resolvedThemeLabel =
+    theme.resolvedColorScheme === "dark"
+      ? t("settings.themeDark")
+      : t("settings.themeLight");
 
   const confirmReset = () => {
     Alert.alert(
-      "Reset local progress?",
-      "This clears rescued animals and local care milestones on this device.",
+      t("settings.resetProgressTitle"),
+      t("settings.resetProgressMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Reset",
+          text: t("common.reset"),
           style: "destructive",
           onPress: resetProgress
         }
@@ -103,10 +121,10 @@ export default function SettingsScreen() {
     <ScreenContainer>
       <MotionView style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.kicker}>Device</Text>
-          <Text style={styles.title}>Settings</Text>
+          <Text style={styles.kicker}>{t("settings.device")}</Text>
+          <Text style={styles.title}>{t("settings.title")}</Text>
           <Text style={styles.subtitle}>
-            Step data stays on your device and feeds rescue progress locally.
+            {t("settings.subtitle")}
           </Text>
         </View>
         <PulseView floatDistance={4} pulseScale={1.03}>
@@ -114,72 +132,96 @@ export default function SettingsScreen() {
         </PulseView>
       </MotionView>
 
-      <SettingsPanel title="Pro">
+      <SettingsPanel title={t("settings.pro")}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Status</Text>
+          <Text style={styles.rowLabel}>{t("settings.status")}</Text>
           <Text style={[styles.rowValue, isPro && styles.success]}>
-            {isPro ? "Pro active" : "Free"}
+            {isPro ? t("common.proActive") : t("common.free")}
           </Text>
         </View>
+        {activePlanId ? (
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Plan</Text>
+            <Text style={styles.rowValue}>{activePlanId}</Text>
+          </View>
+        ) : null}
+        <View style={styles.planSummaryGrid}>
+          {plans.map((plan) => (
+            <View key={plan.id} style={styles.planSummary}>
+              <Text style={styles.planSummaryTitle}>{plan.title}</Text>
+              <Text style={styles.planSummaryPrice}>{plan.price}</Text>
+              <Text style={styles.planSummaryNote}>{plan.periodLabel}</Text>
+            </View>
+          ))}
+        </View>
         <Text style={styles.note}>
-          RevenueCat entitlement: pro. Configured:{" "}
-          {isRevenueCatConfigured ? "yes" : "not yet"}
+          {t("settings.revenueCatEntitlement")}{" "}
+          {t("settings.configured", {
+            configured: isRevenueCatConfigured ? t("common.yes") : t("common.notYet")
+          })}
         </Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <AppButton
           icon="refresh"
           loading={isLoading}
           onPress={restorePurchases}
-          title="Restore Purchases"
+          title={t("settings.restorePurchases")}
           variant="secondary"
         />
+        {managementURL ? (
+          <AppButton
+            icon="open"
+            onPress={() => Linking.openURL(managementURL)}
+            title="Manage Subscription"
+            variant="ghost"
+          />
+        ) : null}
         {!isPro ? (
           <AppButton
             icon="sparkles"
             onPress={() => router.push("/paywall")}
-            title="Unlock Pro"
+            title={t("settings.unlockPro")}
             variant="pro"
           />
         ) : null}
       </SettingsPanel>
 
-      <SettingsPanel title="Steps">
+      <SettingsPanel title={t("settings.steps")}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Today</Text>
-          <Text style={styles.rowValue}>{formatNumber(stepsToday)}</Text>
+          <Text style={styles.rowLabel}>{t("settings.today")}</Text>
+          <Text style={styles.rowValue}>{formatLocalizedNumber(stepsToday)}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Source</Text>
+          <Text style={styles.rowLabel}>{t("settings.source")}</Text>
           <Text style={styles.rowValue}>{steps.sourceLabel}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Permission</Text>
+          <Text style={styles.rowLabel}>{t("settings.permission")}</Text>
           <Text style={styles.rowValue}>{steps.permissionStatus}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Pedometer</Text>
+          <Text style={styles.rowLabel}>{t("settings.pedometer")}</Text>
           <Text style={styles.rowValue}>
-            {steps.isAvailable ? "available" : "unavailable"}
+            {steps.isAvailable ? t("settings.available") : t("settings.unavailable")}
           </Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Mode</Text>
+          <Text style={styles.rowLabel}>{t("settings.mode")}</Text>
           <Text style={styles.rowValue}>{steps.countingMode.replace("-", " ")}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Stored today</Text>
+          <Text style={styles.rowLabel}>{t("settings.storedToday")}</Text>
           <Text style={styles.rowValue}>
-            {formatNumber(steps.historicalStepsToday)}
+            {formatLocalizedNumber(steps.historicalStepsToday)}
           </Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Live session</Text>
-          <Text style={styles.rowValue}>{formatNumber(steps.liveSteps)}</Text>
+          <Text style={styles.rowLabel}>{t("settings.liveSession")}</Text>
+          <Text style={styles.rowValue}>{formatLocalizedNumber(steps.liveSteps)}</Text>
         </View>
         {steps.countingMode === "live-session" ? (
           <Text style={styles.note}>
-            This platform reports live pedometer updates through Expo Sensors.
-            Keep the app open while walking for rescue progress.
+            {t("settings.liveSessionNote")}
           </Text>
         ) : null}
         {steps.error ? <Text style={styles.error}>{steps.error}</Text> : null}
@@ -187,27 +229,27 @@ export default function SettingsScreen() {
           icon="refresh"
           loading={steps.isLoading}
           onPress={steps.refreshSteps}
-          title="Refresh Pedometer"
+          title={t("settings.refreshPedometer")}
           variant="secondary"
         />
         <AppButton
           icon="settings"
           onPress={() => Linking.openSettings()}
-          title="Open Settings"
+          title={t("settings.openSettings")}
           variant="ghost"
         />
       </SettingsPanel>
 
-      <SettingsPanel title="Sound">
+      <SettingsPanel title={t("settings.sound")}>
         <View style={styles.row}>
           <View style={styles.rowCopy}>
-            <Text style={styles.rowLabel}>Unlock audio</Text>
+            <Text style={styles.rowLabel}>{t("settings.unlockAudio")}</Text>
             <Text style={styles.note}>
-              Play a gentle chime and spoken congratulations when an animal is rescued.
+              {t("settings.unlockAudioNote")}
             </Text>
           </View>
           <Switch
-            accessibilityLabel="Toggle unlock audio"
+            accessibilityLabel={t("settings.unlockAudioA11y")}
             disabled={isUnlockAudioLoading}
             onValueChange={setUnlockAudioEnabled}
             thumbColor={unlockAudioEnabled ? theme.colors.primary : theme.colors.white}
@@ -220,7 +262,50 @@ export default function SettingsScreen() {
         </View>
       </SettingsPanel>
 
-      <SettingsPanel title="Appearance">
+      <SettingsPanel title={t("language.panelTitle")}>
+        <Text style={styles.note}>{t("language.selectorLabel")}</Text>
+        <View style={styles.languageGrid}>
+          {supportedLanguages.map((option) => {
+            const selected = language === option.code;
+
+            return (
+              <Pressable
+                accessibilityLabel={`${t("language.selectorLabel")}: ${option.label}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                key={option.code}
+                onPress={() => {
+                  void setLanguage(option.code);
+                }}
+                style={[
+                  styles.languageOption,
+                  selected && styles.languageOptionSelected
+                ]}
+              >
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={[
+                    styles.languageLabel,
+                    selected && styles.languageLabelSelected
+                  ]}
+                >
+                  {option.nativeLabel}
+                </Text>
+                <Text style={styles.languageMeta}>{option.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.note}>
+          {t("language.currentSpeech", {
+            language: languageLabel,
+            locale: speechLocale
+          })}
+        </Text>
+      </SettingsPanel>
+
+      <SettingsPanel title={t("settings.appearance")}>
         <View style={styles.segmentedControl}>
           {themeOptions.map((option) => {
             const selected = theme.themePreference === option.value;
@@ -251,52 +336,64 @@ export default function SettingsScreen() {
           })}
         </View>
         <Text style={styles.note}>
-          Current appearance: {theme.resolvedColorScheme}.
+          {t("settings.currentAppearance", { scheme: resolvedThemeLabel })}
         </Text>
       </SettingsPanel>
 
-      <SettingsPanel title="Local Data">
+      <SettingsPanel title={t("settings.localData")}>
         <AppButton
           icon="refresh"
           onPress={async () => {
             await resetOnboarding();
             router.replace("/onboarding");
           }}
-          title="Reset Onboarding"
+          title={t("settings.resetOnboarding")}
           variant="ghost"
         />
         <AppButton
           icon="trash"
           onPress={confirmReset}
-          title="Reset Local Progress"
+          title={t("settings.resetLocalProgress")}
           variant="danger"
         />
       </SettingsPanel>
 
-      {__DEV__ ? (
-        <SettingsPanel title="Development">
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Mock Pro</Text>
-            <Switch
-              onValueChange={setDevProEnabled}
-              thumbColor={devProEnabled ? theme.colors.primary : theme.colors.white}
-              trackColor={{
-                false: theme.colors.border,
-                true: theme.isDark ? "#245A43" : "#BFE9CE"
-              }}
-              value={devProEnabled}
-            />
-          </View>
-          <AppButton
-            icon="paw"
-            onPress={unlockFirstAnimal}
-            title="Unlock First Animal"
-          />
-        </SettingsPanel>
-      ) : null}
+      <SettingsPanel title={t("settings.testing")}>
+        <Text style={styles.note}>
+          RevenueCat source: {revenueCatDebugInfo.apiKeySource}. Test store:{" "}
+          {revenueCatDebugInfo.usesTestStore ? t("common.yes") : t("common.notYet")}.
+        </Text>
+        <Text style={styles.note}>
+          Test user ID: {revenueCatDebugInfo.testAppUserId}
+        </Text>
+        <Text style={styles.note}>
+          iOS IDs: {revenueCatDebugInfo.productIds.ios.monthly} /{" "}
+          {revenueCatDebugInfo.productIds.ios.yearly}
+        </Text>
+        <Text style={styles.note}>
+          Android IDs: {revenueCatDebugInfo.productIds.android.monthly} /{" "}
+          {revenueCatDebugInfo.productIds.android.yearly}
+        </Text>
+        <Text style={styles.note}>
+          Packages: {revenueCatDebugInfo.packageIds.monthly} /{" "}
+          {revenueCatDebugInfo.packageIds.yearly}
+        </Text>
+        <AppButton
+          icon={devProEnabled ? "lock-open" : "lock-closed"}
+          onPress={() => setDevProEnabled(!devProEnabled)}
+          title={
+            devProEnabled
+              ? t("settings.disableMockPro")
+              : t("settings.enableMockPro")
+          }
+          variant="pro"
+        />
+      </SettingsPanel>
 
       <Text style={styles.version}>
-        Version {Constants.expoConfig?.version ?? "1.0.0"}
+        {t("settings.version", {
+          version: Constants.expoConfig?.version ?? "1.0.0"
+        })}
       </Text>
     </ScreenContainer>
   );
@@ -325,6 +422,40 @@ function createStyles(colors: AppColors, isDark = false) {
     fontWeight: "900",
     textTransform: "uppercase"
   },
+  languageGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm
+  },
+  languageLabel: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  languageLabelSelected: {
+    color: colors.primaryDark
+  },
+  languageMeta: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "800"
+  },
+  languageOption: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexBasis: "47%",
+    flexGrow: 1,
+    gap: 2,
+    minHeight: 58,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  languageOptionSelected: {
+    backgroundColor: colors.surface,
+    borderColor: colors.primary
+  },
   note: {
     color: colors.muted,
     fontSize: 13,
@@ -344,6 +475,36 @@ function createStyles(colors: AppColors, isDark = false) {
     color: colors.text,
     fontSize: 18,
     fontWeight: "900"
+  },
+  planSummary: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    minHeight: 76,
+    padding: spacing.md
+  },
+  planSummaryGrid: {
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  planSummaryNote: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  planSummaryPrice: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "900"
+  },
+  planSummaryTitle: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase"
   },
   row: {
     alignItems: "center",

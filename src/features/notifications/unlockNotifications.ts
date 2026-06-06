@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { STORAGE_KEYS } from "../../storage/storageKeys";
+import { dismissNativeTargetAchievementNotification } from "./targetAchievementWatcher";
 
 const UNLOCK_CHANNEL_ID = "target-unlocks";
 const UNLOCK_NOTIFICATION_KIND = "rescue-target-unlock";
@@ -165,6 +166,8 @@ export async function dismissUnlockNotification(eventId: string) {
   if (Platform.OS === "web") {
     return;
   }
+
+  await dismissNativeTargetAchievementNotification(eventId).catch(() => {});
 
   const records = await readNotificationRecords();
   const identifier = records[eventId] ?? createNotificationIdentifier(eventId);

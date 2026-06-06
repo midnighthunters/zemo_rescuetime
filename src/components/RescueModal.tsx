@@ -19,6 +19,7 @@ import {
   type UnlockChimeSound
 } from "../features/audio/playUnlockChime";
 import { useUnlockAudioSettings } from "../features/audio/useUnlockAudioSettings";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { AppButton } from "./AppButton";
@@ -35,6 +36,7 @@ type RescueModalProps = {
   nextTargetImage?: ImageSourcePropType;
   nextTargetTitle?: string;
   nextTargetSteps?: number;
+  onShareAnimal: () => void;
   onViewAnimals: () => void;
   onNextRescue: () => void;
 };
@@ -116,15 +118,25 @@ export function RescueModal({
   nextTargetImage,
   nextTargetTitle,
   nextTargetSteps,
+  onShareAnimal,
   onViewAnimals,
   onNextRescue
 }: RescueModalProps) {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
   const {
+    formatNumber: formatLocalizedNumber,
+    speechLocale,
+    t
+  } = useLanguage();
+  const {
+    defaultUnlockAudioEnabled,
     isLoading: isUnlockAudioLoading,
     unlockAudioEnabled
   } = useUnlockAudioSettings();
+  const shouldPlayUnlockAudio = isUnlockAudioLoading
+    ? defaultUnlockAudioEnabled
+    : unlockAudioEnabled;
   const unlockSoundRef = useRef<UnlockChimeSound | null>(null);
 
   // --- Animation shared values (plain RN Animated for Modal compat) ---
@@ -227,8 +239,7 @@ export function RescueModal({
     if (
       !visible ||
       !animalName ||
-      isUnlockAudioLoading ||
-      !unlockAudioEnabled
+      !shouldPlayUnlockAudio
     ) {
       Speech.stop();
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
@@ -243,8 +254,9 @@ export function RescueModal({
       }
 
       Speech.speak(
-        `Congratulations. You have successfully unlocked ${animalName}.`,
+        t("speech.rescueUnlocked", { animal: animalName }),
         {
+          language: speechLocale,
           pitch: 1.04,
           rate: 0.9,
           volume: 0.88
@@ -276,7 +288,7 @@ export function RescueModal({
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
       unlockSoundRef.current = null;
     };
-  }, [animalName, isUnlockAudioLoading, unlockAudioEnabled, visible]);
+  }, [animalName, shouldPlayUnlockAudio, speechLocale, t, visible]);
 
   // Derived animated styles
   const backdropStyle = {
@@ -421,11 +433,15 @@ export function RescueModal({
           >
             <View style={styles.rescuedBadge}>
               <Ionicons color={theme.colors.primary} name="sparkles" size={18} />
-              <Text style={styles.rescuedBadgeText}>Animal Rescued!</Text>
+              <Text style={styles.rescuedBadgeText}>
+                {t("rescueModal.animalRescued")}
+              </Text>
             </View>
-            <Text style={styles.title}>{animalName} is Free! 🎉</Text>
+            <Text style={styles.title}>
+              {t("rescueModal.isFree", { animal: animalName })}
+            </Text>
             <Text style={styles.subtitle}>
-              Your steps unlocked the gate and gave {animalName} a safe home.
+              {t("rescueModal.subtitle", { animal: animalName })}
             </Text>
           </RNAnimated.View>
 
@@ -442,7 +458,7 @@ export function RescueModal({
             >
               <View style={styles.nextPanelLabel}>
                 <Ionicons color="#096DD9" name="flag" size={14} />
-                <Text style={styles.nextPanelLabelText}>Up Next</Text>
+                <Text style={styles.nextPanelLabelText}>{t("rescueModal.upNext")}</Text>
               </View>
               <View style={styles.nextRow}>
                 {nextAnimalImage ? (
@@ -456,8 +472,10 @@ export function RescueModal({
                   <Text style={styles.nextName}>{nextAnimalName}</Text>
                   {nextTargetSteps !== undefined ? (
                     <Text style={styles.nextSteps}>
-                      {(nextTargetTitle ?? "First reward")} at{" "}
-                      {nextTargetSteps.toLocaleString()} steps
+                      {t("rescueModal.nextSteps", {
+                        target: nextTargetTitle ?? t("rescueModal.firstReward"),
+                        steps: formatLocalizedNumber(nextTargetSteps)
+                      })}
                     </Text>
                   ) : null}
                 </View>
@@ -475,17 +493,24 @@ export function RescueModal({
           ) : null}
 
           {/* ─── Actions ─── */}
+          <AppButton
+            icon="share-social"
+            onPress={onShareAnimal}
+            style={styles.shareButton}
+            title={`${t("common.share")} ${animalName}`}
+            variant="secondary"
+          />
           <View style={styles.buttonRow}>
             <AppButton
               icon="paw"
               onPress={onViewAnimals}
-              title="My Animals"
+              title={t("rescueModal.myAnimals")}
               variant="secondary"
             />
             <AppButton
               icon="arrow-forward"
               onPress={onNextRescue}
-              title="Next Rescue"
+              title={t("rescueModal.nextRescue")}
             />
           </View>
         </RNAnimated.View>
@@ -652,6 +677,9 @@ function createStyles(colors: AppColors, isDark: boolean) {
       fontSize: 12,
       fontWeight: "900",
       textTransform: "uppercase"
+    },
+    shareButton: {
+      width: "100%"
     },
     subtitle: {
       color: colors.muted,

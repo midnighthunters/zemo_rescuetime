@@ -14,6 +14,7 @@ SplashScreen.preventAutoHideAsync();
 
 import { UnlockNotificationBridge } from "../src/features/notifications/UnlockNotificationBridge";
 import { requestStartupNotificationPermission } from "../src/features/notifications/unlockNotifications";
+import { LanguageProvider } from "../src/i18n/LanguageProvider";
 import { EntitlementProvider } from "../src/state/EntitlementProvider";
 import { RescueProvider } from "../src/state/RescueProvider";
 import { ThemeProvider, useAppTheme } from "../src/theme/colors";
@@ -21,7 +22,9 @@ import { ThemeProvider, useAppTheme } from "../src/theme/colors";
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <RootLayoutShell />
+      <LanguageProvider>
+        <RootLayoutShell />
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

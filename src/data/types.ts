@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from "react-native";
+import type { AppLanguage } from "../i18n/languages";
 
 export type Animal = {
   id: string;
@@ -94,5 +95,6 @@ export type DevSettings = {
 };
 
 export type AppSettings = {
+  language?: AppLanguage;
   unlockAudioEnabled?: boolean;
 };

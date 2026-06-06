@@ -5,10 +5,11 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { jailSprites } from "../data/assets";
 import type { Animal, AnimalCardStatus } from "../data/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
-import { formatNumber, formatPercent } from "../utils/format";
+import { formatPercent } from "../utils/format";
 import { AnimatedProgressFill, PulseView } from "./Motion";
 import { ProBadge } from "./ProBadge";
 
@@ -36,27 +37,32 @@ function AnimalCardComponent({
     () => createStyles(theme.colors, theme.isDark),
     [theme.colors, theme.isDark]
   );
+  const {
+    formatNumber: formatLocalizedNumber,
+    locale,
+    t
+  } = useLanguage();
   const isUnlocked = status === "unlocked";
   const isProLocked = status === "pro_locked";
   const image = isUnlocked ? animal.happyImage : animal.sadImage;
   const isMysteryLocked = concealed && !isUnlocked;
   const statusCopy =
     isMysteryLocked
-      ? "Keep rescuing to reveal"
+      ? t("animalCard.keepRevealing")
       : status === "active"
-      ? "Current rescue"
+      ? t("animalCard.currentRescue")
       : isUnlocked
         ? rescuedDate
-          ? `Rescued ${rescuedDate}`
-          : "Rescued"
+          ? t("animalCard.rescuedDate", { date: rescuedDate })
+          : t("animalCard.rescued")
         : isProLocked
-          ? "Requires Pro"
-          : "Locked";
+          ? t("animalCard.requiresPro")
+          : t("animalCard.locked");
 
   if (isMysteryLocked) {
     return (
       <Pressable
-        accessibilityLabel="Mystery animal. Keep rescuing to reveal."
+        accessibilityLabel={t("a11y.animalCard.mystery")}
         accessibilityRole="image"
         disabled
         style={[styles.card, styles.mysteryCard]}
@@ -71,10 +77,10 @@ function AnimalCardComponent({
 
         <View style={styles.copy}>
           <Text numberOfLines={1} style={styles.name}>
-            Mystery rescue
+            {t("animalCard.mysteryRescue")}
           </Text>
           <Text numberOfLines={2} style={styles.steps}>
-            Complete earlier rescues to reveal
+            {t("animalCard.completeEarlier")}
           </Text>
         </View>
       </Pressable>
@@ -85,8 +91,12 @@ function AnimalCardComponent({
     <Pressable
       accessibilityLabel={
         isMysteryLocked
-          ? "Mystery animal. Keep rescuing to reveal."
-          : `${animal.name} ${statusCopy}. Rescue at ${requiredSteps} steps.`
+          ? t("a11y.animalCard.mystery")
+          : t("a11y.animalCard.default", {
+              animal: animal.name,
+              status: statusCopy,
+              steps: formatLocalizedNumber(requiredSteps)
+            })
       }
       accessibilityRole={isMysteryLocked ? "image" : "button"}
       disabled={isMysteryLocked}
@@ -185,8 +195,10 @@ function AnimalCardComponent({
           <>
             <Text style={styles.steps}>
               {isMysteryLocked
-                ? "Complete earlier rescues to reveal"
-                : `Unlocks at ${formatNumber(requiredSteps)} steps`}
+                ? t("animalCard.completeEarlier")
+                : t("animalCard.unlocksAt", {
+                    steps: formatLocalizedNumber(requiredSteps)
+                  })}
             </Text>
             {!isMysteryLocked ? (
               <>
@@ -196,7 +208,9 @@ function AnimalCardComponent({
                     style={styles.progressFill}
                   />
                 </View>
-                <Text style={styles.percent}>{formatPercent(progress)}</Text>
+                <Text style={styles.percent}>
+                  {formatPercent(progress, locale)}
+                </Text>
               </>
             ) : null}
           </>

@@ -12,26 +12,42 @@ import { AnimatedProgressFill, MotionView, PulseView } from "../../src/component
 import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
 import { getAnimalFunFacts } from "../../src/data/animalFacts";
+import { shareAnimalUnlock } from "../../src/features/animals/shareAnimal";
+import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 import { formatRescueDate } from "../../src/utils/date";
-import { formatNumber } from "../../src/utils/format";
 
 export default function AnimalDetailScreen() {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
+  const {
+    formatNumber: formatLocalizedNumber,
+    language,
+    locale,
+    t
+  } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { animals, getAnimalMetrics, rescueProgress, stepsToday } = useRescue();
+  const {
+    activeStepsToday,
+    animals,
+    getAnimalMetrics,
+    rescueProgress
+  } = useRescue();
   const animal = animals.find((item) => item.id === id);
   const metrics = animal ? getAnimalMetrics(animal.id) : undefined;
 
   if (!animal || !metrics) {
     return (
       <ScreenContainer>
-        <Text style={styles.title}>Animal not found</Text>
-        <AppButton onPress={() => router.back()} title="Back" variant="ghost" />
+        <Text style={styles.title}>{t("animalDetail.notFound")}</Text>
+        <AppButton
+          onPress={() => router.back()}
+          title={t("common.back")}
+          variant="ghost"
+        />
       </ScreenContainer>
     );
   }
@@ -39,11 +55,20 @@ export default function AnimalDetailScreen() {
   const proLocked = metrics.status === "pro_locked";
   const image = metrics.isRescued ? animal.happyImage : animal.sadImage;
   const displayedProgress = metrics.isRescued ? 1 : metrics.progress;
-  const displayedSteps = metrics.isRescued ? metrics.milestone.unlockSteps : stepsToday;
+  const displayedSteps = metrics.isRescued
+    ? metrics.milestone.unlockSteps
+    : activeStepsToday;
   const nextRewardTarget = metrics.nextRewardTarget;
   const nextCareTarget = nextRewardTarget?.stepTarget ?? metrics.milestone.unlockSteps;
-  const nextTargetLabel = nextRewardTarget?.title ?? "Rescue";
+  const nextTargetLabel = nextRewardTarget?.title ?? t("common.rescue");
   const funFacts = getAnimalFunFacts(animal.name);
+  const handleShareAnimal = () => {
+    void shareAnimalUnlock({
+      animalName: animal.name,
+      happyImage: animal.happyImage,
+      language
+    });
+  };
 
   return (
     <ScreenContainer>
@@ -51,7 +76,7 @@ export default function AnimalDetailScreen() {
         <AppButton
           icon="arrow-back"
           onPress={() => router.back()}
-          title="Back"
+          title={t("common.back")}
           variant="ghost"
         />
         <View style={styles.titleWrap}>
@@ -61,7 +86,9 @@ export default function AnimalDetailScreen() {
           <View style={styles.activePill}>
             <Ionicons color={theme.colors.primaryDark} name="paw" size={16} />
             <Text style={styles.activePillText}>
-              {metrics.isRescued ? "Safe Friend" : "Active Rescue"}
+              {metrics.isRescued
+                ? t("animalDetail.safeFriend")
+                : t("animalDetail.activeRescue")}
             </Text>
           </View>
         </View>
@@ -83,7 +110,7 @@ export default function AnimalDetailScreen() {
         <View style={styles.rewardsPanel}>
           <View style={styles.rewardsHeader}>
             <Ionicons color={theme.colors.primary} name="gift" size={22} />
-            <Text style={styles.panelTitle}>Rewards Earned</Text>
+            <Text style={styles.panelTitle}>{t("animalDetail.rewardsEarned")}</Text>
           </View>
           <CareMilestoneRow
             claimedMiniMilestones={metrics.claimedMiniMilestones}
@@ -98,17 +125,23 @@ export default function AnimalDetailScreen() {
         <View style={styles.progressHeader}>
           <View style={styles.progressTitleRow}>
             <Ionicons color={theme.colors.muted} name="paw" size={22} />
-            <Text style={styles.panelTitle}>Rescue Progress</Text>
+            <Text style={styles.panelTitle}>{t("animalDetail.rescueProgress")}</Text>
           </View>
-          <Text style={styles.percentText}>{Math.round(displayedProgress * 100)}% Complete</Text>
+          <Text style={styles.percentText}>
+            {t("animalDetail.percentComplete", {
+              percent: formatLocalizedNumber(Math.round(displayedProgress * 100))
+            })}
+          </Text>
         </View>
         <View style={styles.track}>
           <AnimatedProgressFill progress={displayedProgress} style={styles.fill} />
         </View>
         <View style={styles.trackLabels}>
-          <Text style={styles.smallStat}>{formatNumber(displayedSteps)}</Text>
+          <Text style={styles.smallStat}>{formatLocalizedNumber(displayedSteps)}</Text>
           <Text style={styles.smallStat}>
-            {formatNumber(metrics.milestone.unlockSteps)} Steps
+            {t("common.stepsToTarget", {
+              steps: formatLocalizedNumber(metrics.milestone.unlockSteps)
+            })}
           </Text>
         </View>
       </MotionView>
@@ -120,12 +153,36 @@ export default function AnimalDetailScreen() {
               <UiSprite spriteKey="microHeartBubble" size={58} />
             </PulseView>
             <View style={styles.safeCopy}>
-              <Text style={styles.safeTitle}>{animal.name} is safe now</Text>
+              <Text style={styles.safeTitle}>
+                {t("animalDetail.safeNow", { animal: animal.name })}
+              </Text>
               <Text style={styles.copy}>
-                Rescued {formatRescueDate(rescueProgress.rescuedDates[animal.id])}
-                . Your steps opened this gate.
+                {t("animalDetail.rescuedDateCopy", {
+                  date: formatRescueDate(
+                    rescueProgress.rescuedDates[animal.id],
+                    locale,
+                    t("common.today")
+                  )
+                })}
               </Text>
             </View>
+          </MotionView>
+
+          <MotionView delay={195} style={styles.sharePanel}>
+            <Image contentFit="contain" source={animal.happyImage} style={styles.shareImage} />
+            <View style={styles.shareCopy}>
+              <Text style={styles.shareTitle}>{t("animalDetail.shareTitle")}</Text>
+              <Text style={styles.shareText}>
+                {t("animalDetail.shareText", { animal: animal.name })}
+              </Text>
+            </View>
+            <AppButton
+              icon="share-social"
+              onPress={handleShareAnimal}
+              style={styles.shareButton}
+              title={t("common.share")}
+              variant="secondary"
+            />
           </MotionView>
 
           <MotionView delay={220} style={styles.factsSection}>
@@ -134,8 +191,10 @@ export default function AnimalDetailScreen() {
                 <Ionicons color={theme.colors.primaryDark} name="sparkles" size={20} />
               </View>
               <View style={styles.factsTitleBlock}>
-                <Text style={styles.factsEyebrow}>Fun facts</Text>
-                <Text style={styles.factsTitle}>Meet your new safe friend</Text>
+                <Text style={styles.factsEyebrow}>{t("animalDetail.funFacts")}</Text>
+                <Text style={styles.factsTitle}>
+                  {t("animalDetail.meetSafeFriend")}
+                </Text>
               </View>
             </View>
             {funFacts.map((fact, index) => (
@@ -166,17 +225,21 @@ export default function AnimalDetailScreen() {
             <View style={styles.infoTile}>
               <Ionicons color={theme.colors.primary} name="flag" size={34} />
               <View>
-                <Text style={styles.tileLabel}>Next Target</Text>
-                <Text style={styles.tileValue}>{formatNumber(nextCareTarget)}</Text>
-                <Text style={styles.tileUnit}>steps</Text>
+                <Text style={styles.tileLabel}>{t("animalDetail.nextTarget")}</Text>
+                <Text style={styles.tileValue}>
+                  {formatLocalizedNumber(nextCareTarget)}
+                </Text>
+                <Text style={styles.tileUnit}>{t("common.steps")}</Text>
               </View>
             </View>
             <View style={styles.infoTile}>
               <Ionicons color={theme.colors.coral} name="timer" size={34} />
               <View>
-                <Text style={styles.tileLabel}>Remaining</Text>
-                <Text style={styles.tileValue}>{formatNumber(metrics.remainingSteps)}</Text>
-                <Text style={styles.tileUnit}>steps left</Text>
+                <Text style={styles.tileLabel}>{t("animalDetail.remaining")}</Text>
+                <Text style={styles.tileValue}>
+                  {formatLocalizedNumber(metrics.remainingSteps)}
+                </Text>
+                <Text style={styles.tileUnit}>{t("common.steps")}</Text>
               </View>
             </View>
           </MotionView>
@@ -202,17 +265,18 @@ export default function AnimalDetailScreen() {
                   name={nextRewardTarget ? "gift" : "key"}
                   size={16}
                 />
-                <Text style={styles.targetPillText}>Next Target</Text>
+                <Text style={styles.targetPillText}>
+                  {t("animalDetail.nextTarget")}
+                </Text>
               </View>
               <Text adjustsFontSizeToFit numberOfLines={2} style={styles.targetTitle}>
                 {nextTargetLabel}
               </Text>
               <Text style={styles.targetSubtitle}>
-                {animal.name} unlocks this at{" "}
-                <Text style={{ fontWeight: "900", color: "#0D55B8" }}>
-                  {formatNumber(nextCareTarget)}
-                </Text>
-                {" "}steps
+                {t("animalDetail.targetSubtitle", {
+                  animal: animal.name,
+                  steps: formatLocalizedNumber(nextCareTarget)
+                })}
               </Text>
             </View>
             <PulseView floatDistance={3} pulseScale={1.03}>
@@ -232,7 +296,7 @@ export default function AnimalDetailScreen() {
             claimedMiniMilestones={metrics.claimedMiniMilestones}
             milestone={metrics.milestone}
             proLocked={proLocked}
-            stepsToday={stepsToday}
+            stepsToday={activeStepsToday}
           />
 
           <MotionView delay={350} style={styles.actionRow}>
@@ -244,7 +308,7 @@ export default function AnimalDetailScreen() {
                 icon="sparkles"
                 onPress={() => router.push("/paywall")}
                 style={styles.primaryAction}
-                title="Unlock Pro To Rescue"
+                title={t("animalDetail.unlockProToRescue")}
                 variant="pro"
               />
             ) : (
@@ -252,7 +316,7 @@ export default function AnimalDetailScreen() {
                 icon="footsteps"
                 onPress={() => router.back()}
                 style={styles.primaryAction}
-                title="Keep Walking"
+                title={t("animalDetail.keepWalking")}
                 variant="primary"
               />
             )}
@@ -513,6 +577,45 @@ function createStyles(colors: AppColors, isDark: boolean) {
     safeTitle: {
       color: colors.primaryDark,
       fontSize: 20,
+      fontWeight: "900"
+    },
+    shareButton: {
+      minWidth: 104
+    },
+    shareCopy: {
+      flex: 1,
+      gap: spacing.xs,
+      minWidth: 0
+    },
+    shareImage: {
+      backgroundColor: colors.surface,
+      borderColor: isDark ? colors.border : "#BFE9CE",
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 64,
+      width: 64
+    },
+    sharePanel: {
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 8,
+      borderWidth: 1,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.md,
+      padding: spacing.lg,
+      ...shadows.soft
+    },
+    shareText: {
+      color: colors.muted,
+      fontSize: 14,
+      fontWeight: "700",
+      lineHeight: 20
+    },
+    shareTitle: {
+      color: colors.text,
+      fontSize: 17,
       fontWeight: "900"
     },
     smallStat: {

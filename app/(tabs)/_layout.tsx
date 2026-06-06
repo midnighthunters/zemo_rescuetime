@@ -2,11 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useAppTheme } from "../../src/theme/colors";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const theme = useAppTheme();
+  const { t } = useLanguage();
 
   return (
     <Tabs
@@ -44,7 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: "Home",
+          title: t("tabs.home"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons color={color} name="home" size={size} />
           )
@@ -53,7 +55,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="animals"
         options={{
-          title: "Animals",
+          title: t("tabs.animals"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons color={color} name="paw" size={size} />
           )
@@ -62,7 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="progress"
         options={{
-          title: "Progress",
+          title: t("tabs.progress"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons color={color} name="trail-sign" size={size} />
           )
@@ -71,7 +73,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: t("tabs.settings"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons color={color} name="settings" size={size} />
           )

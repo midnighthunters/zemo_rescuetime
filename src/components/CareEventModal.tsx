@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import * as Speech from "expo-speech";
 import { useEffect, useMemo, useRef } from "react";
 import {
   Animated as RNAnimated,
@@ -18,6 +19,7 @@ import {
   type UnlockChimeSound
 } from "../features/audio/playUnlockChime";
 import { useUnlockAudioSettings } from "../features/audio/useUnlockAudioSettings";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 
@@ -115,9 +117,18 @@ export function CareEventModal({
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
   const {
+    formatNumber: formatLocalizedNumber,
+    speechLocale,
+    t
+  } = useLanguage();
+  const {
+    defaultUnlockAudioEnabled,
     isLoading: isUnlockAudioLoading,
     unlockAudioEnabled
   } = useUnlockAudioSettings();
+  const shouldPlayUnlockAudio = isUnlockAudioLoading
+    ? defaultUnlockAudioEnabled
+    : unlockAudioEnabled;
 
   const backdrop = useRef(new RNAnimated.Value(0)).current;
   const rewardScale = useRef(new RNAnimated.Value(0)).current;
@@ -239,13 +250,32 @@ export function CareEventModal({
   ]);
 
   useEffect(() => {
-    if (isUnlockAudioLoading || !unlockAudioEnabled || !visible) {
+    if (!shouldPlayUnlockAudio || !visible) {
+      Speech.stop();
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
       unlockSoundRef.current = null;
       return;
     }
 
     let cancelled = false;
+    const speechDelay = setTimeout(() => {
+      if (cancelled) {
+        return;
+      }
+
+      Speech.speak(
+        t("speech.careUnlocked", {
+          animal: animalName,
+          reward: title
+        }),
+        {
+          language: speechLocale,
+          pitch: 1.02,
+          rate: 0.92,
+          volume: 0.84
+        }
+      );
+    }, 620);
 
     async function playRewardChime() {
       try {
@@ -266,10 +296,19 @@ export function CareEventModal({
 
     return () => {
       cancelled = true;
+      clearTimeout(speechDelay);
+      Speech.stop();
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
       unlockSoundRef.current = null;
     };
-  }, [isUnlockAudioLoading, unlockAudioEnabled, visible]);
+  }, [
+    animalName,
+    shouldPlayUnlockAudio,
+    speechLocale,
+    t,
+    title,
+    visible
+  ]);
 
   const rotate = rewardRotate.interpolate({
     inputRange: [0, 1],
@@ -329,11 +368,13 @@ export function CareEventModal({
                 name="checkmark-circle"
                 size={16}
               />
-              <Text style={styles.badgeText}>Reward {rewardIndex + 1} Unlocked</Text>
+              <Text style={styles.badgeText}>
+                {t("careEvent.rewardUnlocked", { number: rewardIndex + 1 })}
+              </Text>
             </View>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>
-              {animalName} earned {label.toLowerCase()}.
+              {t("careEvent.earned", { animal: animalName, reward: label })}
             </Text>
           </RNAnimated.View>
 
@@ -360,21 +401,21 @@ export function CareEventModal({
                   </View>
                 )}
                 <View style={styles.nextCopy}>
-                  <Text style={styles.nextLabel}>Next Goal</Text>
+                  <Text style={styles.nextLabel}>{t("careEvent.nextGoal")}</Text>
                   <Text style={styles.nextTitle}>{nextTargetLabel}</Text>
                 </View>
                 <View style={styles.nextBadge}>
                   <Text style={styles.nextSteps}>
-                    {nextTargetSteps.toLocaleString()}
+                    {formatLocalizedNumber(nextTargetSteps)}
                   </Text>
-                  <Text style={styles.nextStepsUnit}>steps</Text>
+                  <Text style={styles.nextStepsUnit}>{t("common.steps")}</Text>
                 </View>
               </View>
             </RNAnimated.View>
           ) : null}
 
           <Pressable onPress={onDismiss} style={styles.dismissButton}>
-            <Text style={styles.dismissText}>Tap anywhere to continue</Text>
+            <Text style={styles.dismissText}>{t("careEvent.tapContinue")}</Text>
           </Pressable>
         </Pressable>
       </Pressable>

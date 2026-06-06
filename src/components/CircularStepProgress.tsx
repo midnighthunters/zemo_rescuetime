@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { formatPercent } from "../utils/format";
 import { MotionView, PulseView } from "./Motion";
@@ -11,6 +12,7 @@ type CircularStepProgressProps = {
 
 export function CircularStepProgress({ progress }: CircularStepProgressProps) {
   const theme = useAppTheme();
+  const { locale, t } = useLanguage();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const clamped = Math.max(0, Math.min(1, progress));
 
@@ -23,8 +25,8 @@ export function CircularStepProgress({ progress }: CircularStepProgressProps) {
             { borderColor: clamped > 0.7 ? theme.colors.primary : theme.colors.secondary }
           ]}
         >
-          <Text style={styles.percent}>{formatPercent(clamped)}</Text>
-          <Text style={styles.label}>Rescue</Text>
+          <Text style={styles.percent}>{formatPercent(clamped, locale)}</Text>
+          <Text style={styles.label}>{t("common.rescue")}</Text>
         </View>
       </PulseView>
     </MotionView>

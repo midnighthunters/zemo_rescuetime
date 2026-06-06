@@ -10,12 +10,13 @@ import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
 import type { RescueRewardTarget } from "../../src/data/types";
 import type { UiSpriteKey } from "../../src/data/ui.generated";
+import { useLanguage } from "../../src/i18n/LanguageProvider";
+import type { TranslateFn } from "../../src/i18n/translations";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 import { getCurrentWeekDateKeys, getLocalDateKey } from "../../src/utils/date";
-import { formatNumber } from "../../src/utils/format";
 
 type JourneyState = "earned" | "next" | "locked" | "rescued" | "ready";
 
@@ -28,18 +29,18 @@ type JourneyItem = {
   image?: RescueRewardTarget["image"];
 };
 
-function getStateCopy(state: JourneyState) {
+function getStateCopy(state: JourneyState, t: TranslateFn) {
   switch (state) {
     case "earned":
-      return "Earned";
+      return t("state.earned");
     case "next":
-      return "Next";
+      return t("state.next");
     case "ready":
-      return "Ready";
+      return t("state.ready");
     case "rescued":
-      return "Complete";
+      return t("state.complete");
     case "locked":
-      return "Locked";
+      return t("state.locked");
   }
 }
 
@@ -125,6 +126,7 @@ function WeekBars({
   weekValues: number[];
 }) {
   const theme = useAppTheme();
+  const { locale } = useLanguage();
   const styles = useMemo(
     () => createStyles(theme.colors, theme.isDark, false),
     [theme.colors, theme.isDark]
@@ -153,7 +155,7 @@ function WeekBars({
               />
             </View>
             <Text style={[styles.weekDay, isToday && styles.weekDayToday]}>
-              {date.toLocaleDateString(undefined, { weekday: "narrow" })}
+              {date.toLocaleDateString(locale, { weekday: "narrow" })}
             </Text>
           </View>
         );
@@ -172,6 +174,7 @@ function JourneyNode({
   item: JourneyItem;
 }) {
   const theme = useAppTheme();
+  const { formatNumber: formatLocalizedNumber, t } = useLanguage();
   const styles = useMemo(
     () => createStyles(theme.colors, theme.isDark, false),
     [theme.colors, theme.isDark]
@@ -237,7 +240,9 @@ function JourneyNode({
 
         <View style={styles.journeyCopy}>
           <View style={styles.journeyMetaRow}>
-            <Text style={styles.journeyStep}>Stage {index + 1}</Text>
+            <Text style={styles.journeyStep}>
+              {t("progress.stage", { number: index + 1 })}
+            </Text>
             <View
               style={[
                 styles.statePill,
@@ -252,7 +257,7 @@ function JourneyNode({
                   isRevealed && styles.stateTextEarned
                 ]}
               >
-                {getStateCopy(item.state)}
+                {getStateCopy(item.state, t)}
               </Text>
             </View>
           </View>
@@ -261,7 +266,9 @@ function JourneyNode({
           </Text>
           <Text style={styles.journeyText}>{item.copy}</Text>
           <Text selectable style={styles.journeyTarget}>
-            {formatNumber(item.stepTarget)} steps
+            {t("common.stepsToTarget", {
+              steps: formatLocalizedNumber(item.stepTarget)
+            })}
           </Text>
         </View>
       </View>
@@ -271,6 +278,7 @@ function JourneyNode({
 
 export default function ProgressScreen() {
   const theme = useAppTheme();
+  const { formatNumber: formatLocalizedNumber, t } = useLanguage();
   const { width } = useWindowDimensions();
   const isCompact = width <= 430;
   const styles = useMemo(
@@ -278,6 +286,7 @@ export default function ProgressScreen() {
     [isCompact, theme.colors, theme.isDark]
   );
   const {
+    activeStepsToday,
     currentAnimal,
     getAnimalMetrics,
     rescueProgress,
@@ -299,10 +308,10 @@ export default function ProgressScreen() {
   const nextTarget = metrics?.nextRewardTarget;
   const nextTargetStep = nextTarget?.stepTarget ?? metrics?.milestone.unlockSteps ?? 0;
   const nextTargetRemaining = metrics
-    ? Math.max(0, nextTargetStep - stepsToday)
+    ? Math.max(0, nextTargetStep - activeStepsToday)
     : 0;
   const nextTargetProgress =
-    nextTargetStep > 0 ? Math.min(1, stepsToday / nextTargetStep) : 1;
+    nextTargetStep > 0 ? Math.min(1, activeStepsToday / nextTargetStep) : 1;
 
   const timeline: JourneyItem[] = metrics
     ? [
@@ -318,13 +327,22 @@ export default function ProgressScreen() {
             title: isEarned
               ? target.title
               : isNext
-                ? "Next care reward"
-                : "Locked reward",
+                ? t("progress.nextCareReward")
+                : t("progress.lockedReward"),
             copy: isEarned
-              ? `${target.label} unlocked for ${metrics.animal.name}`
+              ? t("progress.rewardUnlockedFor", {
+                  reward: target.label,
+                  animal: metrics.animal.name
+                })
               : isNext
-                ? `${formatNumber(Math.max(0, target.stepTarget - stepsToday))} steps to reveal this reward`
-                : `Reveals at ${formatNumber(target.stepTarget)} steps`,
+                ? t("progress.stepsToReveal", {
+                    steps: formatLocalizedNumber(
+                      Math.max(0, target.stepTarget - activeStepsToday)
+                    )
+                  })
+                : t("progress.revealsAt", {
+                    steps: formatLocalizedNumber(target.stepTarget)
+                  }),
             image: isEarned ? target.image : undefined
           };
         }),
@@ -337,15 +355,17 @@ export default function ProgressScreen() {
               : "locked",
           stepTarget: metrics.milestone.unlockSteps,
           title: metrics.isRescued
-            ? `${metrics.animal.name} rescued`
+            ? t("progress.animalRescued", { animal: metrics.animal.name })
             : metrics.remainingSteps === 0
-              ? "Rescue ready"
-              : "Final rescue gate",
+              ? t("progress.rescueReady")
+              : t("progress.finalRescueGate"),
           copy: metrics.isRescued
-            ? "Safe and complete"
+            ? t("common.safeAndComplete")
             : metrics.remainingSteps === 0
-              ? "The final step target is complete"
-              : `${formatNumber(metrics.remainingSteps)} steps left`,
+              ? t("progress.finalStepComplete")
+              : t("common.stepsLeft", {
+                  steps: formatLocalizedNumber(metrics.remainingSteps)
+                }),
           image: undefined
         }
       ]
@@ -365,13 +385,16 @@ export default function ProgressScreen() {
         <View style={styles.heroCopy}>
           <View style={styles.kickerRow}>
             <Ionicons color={theme.colors.primaryDark} name="trail-sign" size={16} />
-            <Text style={styles.kicker}>Progress</Text>
+            <Text style={styles.kicker}>{t("progress.kicker")}</Text>
           </View>
-          <Text style={styles.title}>Step Journey</Text>
+          <Text style={styles.title}>{t("progress.stepJourney")}</Text>
           <Text style={styles.subtitle}>
             {metrics
-              ? `${metrics.animal.name} has ${formatNumber(metrics.remainingSteps)} steps left.`
-              : "Every active journey is complete."}
+              ? t("progress.stepsLeftForAnimal", {
+                  animal: metrics.animal.name,
+                  steps: formatLocalizedNumber(metrics.remainingSteps)
+                })
+              : t("progress.everyJourneyComplete")}
           </Text>
         </View>
         <View style={styles.heroArt}>
@@ -382,7 +405,7 @@ export default function ProgressScreen() {
             <Text selectable style={styles.heroBadgeValue}>
               {progressPercent}%
             </Text>
-            <Text style={styles.heroBadgeLabel}>done</Text>
+            <Text style={styles.heroBadgeLabel}>{t("common.done")}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -391,16 +414,20 @@ export default function ProgressScreen() {
       <MotionView delay={90} style={styles.todayPanel}>
         <View style={styles.todayTop}>
           <View style={styles.todayCopy}>
-            <Text style={styles.panelEyebrow}>Today</Text>
+            <Text style={styles.panelEyebrow}>{t("common.today")}</Text>
             <Text selectable style={styles.todayValue}>
-              {formatNumber(stepsToday)}
+              {formatLocalizedNumber(stepsToday)}
             </Text>
             <Text style={styles.todayText}>
               {metrics
                 ? nextTarget
-                  ? `${formatNumber(nextTargetRemaining)} steps to the next reveal`
-                  : `${formatNumber(metrics.remainingSteps)} steps to the rescue gate`
-                : "No active target"}
+                  ? t("progress.stepsToNextReveal", {
+                      steps: formatLocalizedNumber(nextTargetRemaining)
+                    })
+                  : t("progress.stepsToRescueGate", {
+                      steps: formatLocalizedNumber(metrics.remainingSteps)
+                    })
+                : t("common.noActiveTarget")}
             </Text>
           </View>
           <PulseView floatDistance={3} pulseScale={1.04}>
@@ -410,10 +437,12 @@ export default function ProgressScreen() {
         <View style={styles.targetMeter}>
           <View style={styles.targetMeterTop}>
             <Text style={styles.targetMeterLabel}>
-              {nextTarget ? "Next reveal" : "Current target"}
+              {nextTarget ? t("progress.nextReveal") : t("common.currentTarget")}
             </Text>
             <Text selectable style={styles.targetMeterValue}>
-              {formatNumber(nextTargetStep)} steps
+              {t("common.stepsToTarget", {
+                steps: formatLocalizedNumber(nextTargetStep)
+              })}
             </Text>
           </View>
           <View style={styles.progressTrack}>
@@ -430,11 +459,13 @@ export default function ProgressScreen() {
       <MotionView delay={160} style={styles.weekPanel}>
         <View style={styles.panelHeader}>
           <View>
-            <Text style={styles.panelEyebrow}>Week Pulse</Text>
-            <Text style={styles.panelTitle}>Daily movement</Text>
+            <Text style={styles.panelEyebrow}>{t("progress.weekPulse")}</Text>
+            <Text style={styles.panelTitle}>{t("progress.dailyMovement")}</Text>
           </View>
           <Text selectable style={styles.weekTotal}>
-            {formatNumber(visibleWeeklySteps)} steps
+            {t("common.stepsToTarget", {
+              steps: formatLocalizedNumber(visibleWeeklySteps)
+            })}
           </Text>
         </View>
         <WeekBars
@@ -450,42 +481,42 @@ export default function ProgressScreen() {
           accent={theme.colors.primary}
           icon="shield-checkmark"
           index={0}
-          label="Rescued"
+          label={t("progress.rescuedStat")}
           spriteKey="progressPawTrophy"
-          value={formatNumber(unlockedAnimals.length)}
+          value={formatLocalizedNumber(unlockedAnimals.length)}
         />
         <StatCard
           accent={theme.colors.coral}
           icon="footsteps"
           index={1}
-          label="Today"
+          label={t("progress.todayStat")}
           spriteKey="microWalkingShoe"
-          value={formatNumber(stepsToday)}
+          value={formatLocalizedNumber(stepsToday)}
         />
         <StatCard
           accent={theme.colors.secondary}
           icon="gift"
           index={2}
-          label="Rewards earned"
+          label={t("progress.rewardsEarned")}
           spriteKey="careRewardChest"
-          value={formatNumber(careMilestonesCompleted)}
+          value={formatLocalizedNumber(careMilestonesCompleted)}
         />
         <StatCard
           accent={theme.colors.primaryDark}
           icon="calendar"
           index={3}
-          label="This week"
+          label={t("common.thisWeek")}
           spriteKey="progressWeeklyCalendar"
-          value={formatNumber(visibleWeeklySteps)}
+          value={formatLocalizedNumber(visibleWeeklySteps)}
         />
       </View>
 
       <MotionView delay={220} style={styles.journeyPanel}>
         <View style={styles.panelHeader}>
           <View>
-            <Text style={styles.panelEyebrow}>Milestone Path</Text>
+            <Text style={styles.panelEyebrow}>{t("progress.milestonePath")}</Text>
             <Text style={styles.panelTitle}>
-              {metrics ? metrics.animal.name : "Journey complete"}
+              {metrics ? metrics.animal.name : t("progress.journeyComplete")}
             </Text>
           </View>
           <PulseView floatDistance={3} pulseScale={1.03}>
@@ -495,8 +526,8 @@ export default function ProgressScreen() {
 
         {timeline.length === 0 ? (
           <EmptyState
-            message="Future rescue paths can start here."
-            title="No active journey"
+            message={t("progress.emptyJourneyMessage")}
+            title={t("progress.emptyJourneyTitle")}
           />
         ) : (
           <View style={styles.journeyList}>

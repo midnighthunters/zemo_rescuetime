@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import type { AnimalMood } from "../data/types";
 import { getMoodMeta } from "../data/milestones";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { formatPercent } from "../utils/format";
@@ -14,6 +15,36 @@ type AnimalMoodMeterProps = {
   proLocked?: boolean;
 };
 
+function getMoodText(mood: AnimalMood, t: ReturnType<typeof useLanguage>["t"]) {
+  switch (mood) {
+    case "very_sad":
+      return {
+        label: t("mood.verySad.label"),
+        helper: t("mood.verySad.helper")
+      };
+    case "sad":
+      return {
+        label: t("mood.sad.label"),
+        helper: t("mood.sad.helper")
+      };
+    case "hopeful":
+      return {
+        label: t("mood.hopeful.label"),
+        helper: t("mood.hopeful.helper")
+      };
+    case "happy":
+      return {
+        label: t("mood.happy.label"),
+        helper: t("mood.happy.helper")
+      };
+    case "rescued":
+      return {
+        label: t("mood.rescued.label"),
+        helper: t("mood.rescued.helper")
+      };
+  }
+}
+
 export function AnimalMoodMeter({
   mood,
   progress,
@@ -21,7 +52,9 @@ export function AnimalMoodMeter({
 }: AnimalMoodMeterProps) {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors);
+  const { t } = useLanguage();
   const meta = getMoodMeta(mood);
+  const moodText = getMoodText(mood, t);
   const clampedProgress = Math.max(0, Math.min(1, progress));
 
   if (proLocked) {
@@ -31,10 +64,10 @@ export function AnimalMoodMeter({
           <PulseView pulseScale={1.08}>
             <Ionicons color={theme.colors.pro} name="lock-closed" size={18} />
           </PulseView>
-          <Text style={styles.title}>Mood locked in Pro</Text>
+          <Text style={styles.title}>{t("mood.locked.title")}</Text>
         </View>
         <Text style={styles.helper}>
-          Upgrade to rescue and care for more animals.
+          {t("mood.locked.helper")}
         </Text>
         <View style={styles.track}>
           <AnimatedProgressFill
@@ -56,7 +89,9 @@ export function AnimalMoodMeter({
             size={19}
           />
         </PulseView>
-        <Text style={styles.title}>Mood: {meta.label}</Text>
+        <Text style={styles.title}>
+          {t("mood.prefix", { mood: moodText.label })}
+        </Text>
         <Text style={styles.percent}>{formatPercent(progress)}</Text>
       </View>
       <View style={styles.track}>
@@ -65,7 +100,7 @@ export function AnimalMoodMeter({
           style={[styles.fill, { backgroundColor: meta.tint }]}
         />
       </View>
-      <Text style={styles.helper}>{meta.helper}</Text>
+      <Text style={styles.helper}>{moodText.helper}</Text>
     </MotionView>
   );
 }

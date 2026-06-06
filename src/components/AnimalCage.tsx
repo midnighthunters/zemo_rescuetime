@@ -5,6 +5,7 @@ import { StyleSheet, View, type ImageSourcePropType } from "react-native";
 
 import { jailSprites } from "../data/assets";
 import type { AnimalCareState } from "../data/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 
 type AnimalCageProps = {
@@ -21,6 +22,7 @@ export function AnimalCage({
   isRescued
 }: AnimalCageProps) {
   const theme = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(
     () => createStyles(theme.colors, theme.isDark),
     [theme.colors, theme.isDark]
@@ -31,7 +33,11 @@ export function AnimalCage({
 
   return (
     <View
-      accessibilityLabel={isRescued ? "Rescued animal" : "Animal waiting in cage"}
+      accessibilityLabel={
+        isRescued
+          ? t("a11y.animalCage.rescued")
+          : t("a11y.animalCage.waiting")
+      }
       style={[
         styles.root,
         {

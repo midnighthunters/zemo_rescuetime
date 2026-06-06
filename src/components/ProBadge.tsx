@@ -1,20 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { PulseView } from "./Motion";
 
 export function ProBadge() {
   const theme = useAppTheme();
+  const { t } = useLanguage();
   const styles = createStyles(theme.colors);
 
   return (
-    <View accessibilityLabel="Requires Pro" style={styles.badge}>
+    <View accessibilityLabel={t("a11y.requiresPro")} style={styles.badge}>
       <PulseView pulseScale={1.16}>
         <Ionicons color="#172033" name="star" size={12} />
       </PulseView>
-      <Text style={styles.text}>PRO</Text>
+      <Text style={styles.text}>{t("common.pro")}</Text>
     </View>
   );
 }

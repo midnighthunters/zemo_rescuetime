@@ -3,9 +3,9 @@ import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { RescueMilestone } from "../data/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { spacing } from "../theme/spacing";
-import { formatNumber } from "../utils/format";
 import { MotionView, PulseView } from "./Motion";
 
 type CareMilestoneRowProps = {
@@ -23,6 +23,7 @@ export function CareMilestoneRow({
 }: CareMilestoneRowProps) {
   const theme = useAppTheme();
   const styles = createStyles(theme.colors, theme.isDark);
+  const { formatNumber: formatLocalizedNumber, t } = useLanguage();
   const items = [
     ...milestone.rewardTargets.map((target) => ({
       key: target.id,
@@ -36,7 +37,7 @@ export function CareMilestoneRow({
     })),
     {
       key: "rescue",
-      label: "Rescue",
+      label: t("common.rescue"),
       stepTarget: milestone.unlockSteps,
       image: undefined,
       complete: stepsToday >= milestone.unlockSteps,
@@ -51,7 +52,10 @@ export function CareMilestoneRow({
           key={item.key}
           delay={index * 70}
           direction="fade"
-          accessibilityLabel={`${item.label} at ${item.stepTarget} steps`}
+          accessibilityLabel={t("rescueModal.nextSteps", {
+            target: item.label,
+            steps: formatLocalizedNumber(item.stepTarget)
+          })}
           style={[
             styles.item,
             item.complete && styles.itemComplete,
@@ -95,7 +99,11 @@ export function CareMilestoneRow({
           >
             {item.label}
           </Text>
-          <Text style={styles.target}>{formatNumber(item.stepTarget)} steps</Text>
+          <Text style={styles.target}>
+            {t("common.stepsToTarget", {
+              steps: formatLocalizedNumber(item.stepTarget)
+            })}
+          </Text>
         </MotionView>
       ))}
     </View>

@@ -10,14 +10,15 @@ import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { UiSprite } from "../../src/components/UiSprite";
 import type { UiSpriteKey } from "../../src/data/ui.generated";
 import type { Animal } from "../../src/data/types";
+import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { formatRescueDate } from "../../src/utils/date";
-import { formatNumber } from "../../src/utils/format";
 
 type AnimalSectionProps = {
   title: string;
+  sectionKind: "waiting" | "safe";
   animals: Animal[];
   emptyTitle: string;
   emptyMessage: string;
@@ -26,6 +27,7 @@ type AnimalSectionProps = {
 
 function AnimalSection({
   title,
+  sectionKind,
   animals,
   emptyTitle,
   emptyMessage,
@@ -33,6 +35,7 @@ function AnimalSection({
 }: AnimalSectionProps) {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
+  const { locale, t } = useLanguage();
   const {
     getAnimalStatus,
     getAnimalMetrics,
@@ -44,7 +47,7 @@ function AnimalSection({
     const status = getAnimalStatus(item.id);
     const metrics = getAnimalMetrics(item.id);
     const milestone = getMilestone(item.id);
-    const concealed = title === "Waiting" && index >= 2;
+    const concealed = sectionKind === "waiting" && index >= 2;
 
     const handlePress = () => {
       if (concealed) {
@@ -66,13 +69,26 @@ function AnimalSection({
           onPress={handlePress}
           progress={metrics?.progress}
           requiredSteps={milestone?.unlockSteps ?? 0}
-          rescuedDate={formatRescueDate(rescueProgress.rescuedDates[item.id])}
+          rescuedDate={formatRescueDate(
+            rescueProgress.rescuedDates[item.id],
+            locale,
+            t("common.today")
+          )}
           concealed={concealed}
           status={status}
         />
       </View>
     );
-  }, [title, getAnimalStatus, getAnimalMetrics, getMilestone, rescueProgress.rescuedDates, styles.cardSlot]);
+  }, [
+    sectionKind,
+    getAnimalStatus,
+    getAnimalMetrics,
+    getMilestone,
+    locale,
+    rescueProgress.rescuedDates,
+    styles.cardSlot,
+    t
+  ]);
 
   return (
     <View style={styles.section}>
@@ -80,7 +96,7 @@ function AnimalSection({
         <View style={styles.sectionTitleWrap}>
           <Ionicons
             color={theme.colors.primary}
-            name={title === "Waiting" ? "time" : "heart"}
+            name={sectionKind === "waiting" ? "time" : "heart"}
             size={24}
           />
           <Text style={styles.sectionTitle}>{title}</Text>
@@ -109,6 +125,7 @@ function AnimalSection({
 export default function AnimalsScreen() {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
+  const { formatNumber: formatLocalizedNumber, t } = useLanguage();
   const { lockedAnimals, unlockedAnimals } = useRescue();
   const [showSafeOnly, setShowSafeOnly] = useState(false);
 
@@ -118,11 +135,11 @@ export default function AnimalsScreen() {
         <View style={styles.headerCopy}>
           <View style={styles.kickerPill}>
             <Ionicons color={theme.colors.primaryDark} name="paw" size={18} />
-            <Text style={styles.kicker}>Collection</Text>
+            <Text style={styles.kicker}>{t("animals.collection")}</Text>
           </View>
-          <Text style={styles.title}>Rescue Album</Text>
+          <Text style={styles.title}>{t("animals.rescueAlbum")}</Text>
           <Text style={styles.subtitle}>
-            Tap a card to see its gate, mood, and step target.
+            {t("animals.subtitle")}
           </Text>
         </View>
         <PulseView floatDistance={5} pulseScale={1.03}>
@@ -132,7 +149,7 @@ export default function AnimalsScreen() {
 
       <MotionView delay={80} style={styles.summaryRow}>
         <Pressable
-          accessibilityLabel="Show safe animals"
+            accessibilityLabel={t("animals.showSafe")}
           accessibilityRole="button"
           onPress={() => setShowSafeOnly(true)}
           style={({ pressed }) => [
@@ -143,8 +160,10 @@ export default function AnimalsScreen() {
         >
           <UiSprite spriteKey="microHeartBubble" size={58} />
           <View>
-            <Text style={styles.summaryValue}>{formatNumber(unlockedAnimals.length)}</Text>
-            <Text style={styles.summaryLabel}>Safe</Text>
+            <Text style={styles.summaryValue}>
+              {formatLocalizedNumber(unlockedAnimals.length)}
+            </Text>
+            <Text style={styles.summaryLabel}>{t("animals.safe")}</Text>
           </View>
           <Ionicons color={theme.colors.primaryDark} name="chevron-forward" size={22} />
         </Pressable>
@@ -153,15 +172,16 @@ export default function AnimalsScreen() {
       {!showSafeOnly ? (
         <AnimalSection
           animals={lockedAnimals}
-          emptyMessage="Every waiting card is cleared."
+          emptyMessage={t("animals.emptyWaitingMessage")}
           emptySpriteKey="emptyAnimalWave"
-          emptyTitle="No waiting animals"
-          title="Waiting"
+          emptyTitle={t("animals.emptyWaitingTitle")}
+          sectionKind="waiting"
+          title={t("animals.waiting")}
         />
       ) : (
         <View>
           <Pressable
-            accessibilityLabel="Back to waiting animals"
+            accessibilityLabel={t("animals.backToWaiting")}
             accessibilityRole="button"
             onPress={() => setShowSafeOnly(false)}
             style={({ pressed }) => [
@@ -170,16 +190,19 @@ export default function AnimalsScreen() {
             ]}
           >
             <Ionicons color={theme.colors.primaryDark} name="arrow-back" size={18} />
-            <Text style={styles.backToWaitingText}>Waiting Animals</Text>
+            <Text style={styles.backToWaitingText}>
+              {t("animals.backToWaiting")}
+            </Text>
           </Pressable>
         </View>
       )}
       <AnimalSection
         animals={unlockedAnimals}
-        emptyMessage="Your first rescue starts with today's pedometer count."
+        emptyMessage={t("animals.emptySafeMessage")}
         emptySpriteKey="emptySanctuaryNest"
-        emptyTitle="Safe home is waiting"
-        title="Safe Home"
+        emptyTitle={t("animals.emptySafeTitle")}
+        sectionKind="safe"
+        title={t("animals.safeHome")}
       />
     </ScreenContainer>
   );

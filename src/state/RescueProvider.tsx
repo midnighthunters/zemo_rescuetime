@@ -9,7 +9,7 @@ import {
   useState,
   type PropsWithChildren
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import { generatedAnimals } from "../data/animals.generated";
 import {
@@ -46,9 +46,18 @@ import {
   type UnlockNotificationPayload
 } from "../features/notifications/unlockNotifications";
 import {
+  getNativeTargetAchievementEvents,
+  getNativeTargetAchievementStepSnapshot,
+  markNativeTargetAchievementEventsConsumed,
+  syncTargetAchievementWatcher,
+  type NativeStepSnapshot
+} from "../features/notifications/targetAchievementWatcher";
+import {
   useStepCounter,
   type StepCounterState
 } from "../features/steps/useStepCounter";
+import { useLanguage } from "../i18n/LanguageProvider";
+import type { TranslateFn } from "../i18n/translations";
 import {
   clearRescueProgress,
   getRescueProgress,
@@ -109,10 +118,10 @@ type RescueContextValue = {
   unlockedAnimals: Animal[];
   steps: StepCounterState;
   stepsToday: number;
+  activeStepsToday: number;
   weeklySteps: number;
   lastRescueEvent?: RescueEvent;
   lastCareEvent?: CareEvent;
-  devMockSteps?: number;
   canAccessAnimal: (animalId: string) => boolean;
   getAnimalStatus: (animalId: string) => AnimalCardStatus;
   getMilestone: (animalId: string) => RescueMilestone | undefined;
@@ -120,9 +129,6 @@ type RescueContextValue = {
   claimMiniMilestone: (animalId: string, stepTarget: number) => Promise<void>;
   rescueAnimal: (animalId: string, unlockedAtSteps?: number) => Promise<void>;
   resetProgress: () => Promise<void>;
-  unlockFirstAnimal: () => Promise<void>;
-  advanceMockSteps: () => void;
-  resetMockSteps: () => void;
   focusUnlockEvent: (eventId: string) => void;
   dismissRescueEvent: () => void;
   dismissCareEvent: () => void;
@@ -268,7 +274,9 @@ function createRescueUnlockEvent(
 function createUnlockNotificationPayload(
   event: PendingUnlockEvent,
   animals: Animal[],
-  milestones: RescueMilestone[]
+  milestones: RescueMilestone[],
+  t: TranslateFn,
+  formatNumber: (value: number) => string
 ): UnlockNotificationPayload | undefined {
   const animal = animals.find((item) => item.id === event.animalId);
   if (!animal) {
@@ -278,10 +286,12 @@ function createUnlockNotificationPayload(
   if (event.type === "rescue") {
     return {
       animalId: event.animalId,
-      body: `${event.stepTarget.toLocaleString()} steps complete. Tap to view the rescue card.`,
+      body: t("notifications.rescueBody", {
+        steps: formatNumber(event.stepTarget)
+      }),
       eventId: event.id,
       eventType: "rescue",
-      title: `${animal.name} rescue unlocked`
+      title: t("notifications.rescueTitle", { animal: animal.name })
     };
   }
 
@@ -296,10 +306,107 @@ function createUnlockNotificationPayload(
 
   return {
     animalId: event.animalId,
-    body: `${animal.name} reached ${event.stepTarget.toLocaleString()} steps. Tap to view the unlock card.`,
+    body: t("notifications.rewardBody", {
+      animal: animal.name,
+      steps: formatNumber(event.stepTarget)
+    }),
     eventId: event.id,
     eventType: "reward",
-    title: `${target.title} unlocked`
+    title: t("notifications.rewardTitle", { reward: target.title })
+  };
+}
+
+function mergeNativeUnlockEvents(
+  progress: RescueProgress,
+  events: PendingUnlockEvent[],
+  animals: Animal[],
+  milestones: RescueMilestone[]
+) {
+  const validEvents = events.filter((event) =>
+    isValidPendingUnlockEvent(event, animals, milestones)
+  );
+
+  if (validEvents.length === 0) {
+    return progress;
+  }
+
+  return validEvents.reduce((current, event) => {
+    const claimed = current.claimedMiniMilestones[event.animalId] ?? [];
+    const nextClaimed =
+      event.type === "reward" && !claimed.includes(event.stepTarget)
+        ? {
+            ...current.claimedMiniMilestones,
+            [event.animalId]: [...claimed, event.stepTarget].sort((a, b) => a - b)
+          }
+        : current.claimedMiniMilestones;
+
+    const rescuedAnimalIds =
+      event.type === "rescue" &&
+      !current.rescuedAnimalIds.includes(event.animalId)
+        ? [...current.rescuedAnimalIds, event.animalId]
+        : current.rescuedAnimalIds;
+
+    return {
+      ...current,
+      activeJourneyStepsToday:
+        event.type === "rescue" ? 0 : current.activeJourneyStepsToday,
+      claimedMiniMilestones: nextClaimed,
+      currentAnimalId:
+        event.type === "rescue"
+          ? nextUnrescuedAnimalId(animals, rescuedAnimalIds)
+          : current.currentAnimalId,
+      pendingUnlockEvents: appendPendingUnlockEvents(
+        current.pendingUnlockEvents,
+        [event]
+      ),
+      rescuedAnimalIds,
+      rescuedDates:
+        event.type === "rescue"
+          ? {
+              ...current.rescuedDates,
+              [event.animalId]: current.rescuedDates[event.animalId] ?? getLocalDateKey()
+            }
+          : current.rescuedDates
+    };
+  }, progress);
+}
+
+function mergeNativeStepSnapshot(
+  progress: RescueProgress,
+  snapshot?: NativeStepSnapshot
+) {
+  const today = getLocalDateKey();
+  if (!snapshot || snapshot.dateKey !== today) {
+    return progress;
+  }
+
+  const nativeStepsToday = Math.max(0, snapshot.stepsToday);
+  const nativeActiveSteps = Math.max(0, snapshot.activeStepsToday);
+  const recordedStepsToday = progress.dailyStepHistory[today] ?? 0;
+  const canApplyActiveSteps =
+    snapshot.currentAnimalId === progress.currentAnimalId &&
+    !progress.rescuedAnimalIds.includes(snapshot.currentAnimalId);
+  const nextActiveSteps = canApplyActiveSteps
+    ? Math.max(progress.activeJourneyStepsToday ?? 0, nativeActiveSteps)
+    : progress.activeJourneyStepsToday;
+  const nextStepsToday = Math.max(recordedStepsToday, nativeStepsToday);
+
+  if (
+    progress.lastKnownDate === today &&
+    nextActiveSteps === progress.activeJourneyStepsToday &&
+    nextStepsToday === recordedStepsToday
+  ) {
+    return progress;
+  }
+
+  return {
+    ...progress,
+    activeJourneyStepsToday: nextActiveSteps,
+    dailyStepHistory: {
+      ...progress.dailyStepHistory,
+      [today]: nextStepsToday
+    },
+    lastKnownDate: today
   };
 }
 
@@ -325,16 +432,17 @@ export function RescueProvider({ children }: PropsWithChildren) {
   const milestones = useMemo(() => generateMilestones(animals), [animals]);
   const steps = useStepCounter();
   const { isPro } = useEntitlements();
+  const { formatNumber: formatLocalizedNumber, t } = useLanguage();
   const [rescueProgress, setRescueProgress] = useState<RescueProgress>(() =>
     createDefaultProgress(animals)
   );
   const rescueProgressRef = useRef(rescueProgress);
   const liveSessionBaselineRef = useRef(0);
   const liveSessionOffsetRef = useRef(0);
+  const liveDailyBaselineRef = useRef(0);
+  const liveDailyOffsetRef = useRef(0);
   const knownPendingUnlockEventIdsRef = useRef<Set<string> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Dev-only: mock step override (undefined = use real steps)
-  const [devMockSteps, setDevMockSteps] = useState<number | undefined>();
 
   useEffect(() => {
     rescueProgressRef.current = rescueProgress;
@@ -366,7 +474,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
     }, 3000);
 
     getRescueProgress()
-      .then((saved) => {
+      .then(async (saved) => {
         if (!mounted) {
           return;
         }
@@ -385,11 +493,34 @@ export function RescueProvider({ children }: PropsWithChildren) {
                 activeJourneyStepsToday: 0
               };
 
+        const [nativeEvents, nativeStepSnapshot] = await Promise.all([
+          getNativeTargetAchievementEvents().catch(() => []),
+          getNativeTargetAchievementStepSnapshot().catch(() => undefined)
+        ]);
+        const imported = mergeNativeStepSnapshot(
+          mergeNativeUnlockEvents(
+            normalized,
+            nativeEvents,
+            animals,
+            milestones
+          ),
+          nativeStepSnapshot
+        );
+
         liveSessionBaselineRef.current = 0;
-        liveSessionOffsetRef.current = normalized.activeJourneyStepsToday;
-        setRescueProgress(normalized);
-        if (saved !== normalized) {
-          saveRescueProgress(normalized).catch(() => {
+        liveSessionOffsetRef.current = imported.activeJourneyStepsToday;
+        liveDailyBaselineRef.current = 0;
+        liveDailyOffsetRef.current =
+          imported.lastKnownDate === today
+            ? imported.dailyStepHistory[today] ?? 0
+            : 0;
+        rescueProgressRef.current = imported;
+        setRescueProgress(imported);
+        if (saved !== imported || nativeEvents.length > 0 || nativeStepSnapshot) {
+          saveRescueProgress(imported).then(() => {
+            const eventIds = nativeEvents.map((event) => event.id);
+            return markNativeTargetAchievementEventsConsumed(eventIds);
+          }).catch(() => {
             // Persistence failure should not block UI
           });
         }
@@ -412,7 +543,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
       mounted = false;
       clearTimeout(timeoutId);
     };
-  }, [animals]);
+  }, [animals, milestones]);
 
   const currentAnimal = useMemo(
     () => getCurrentAnimal(animals, rescueProgress),
@@ -426,26 +557,41 @@ export function RescueProvider({ children }: PropsWithChildren) {
 
   const todayKey = getLocalDateKey();
   const progressIsForToday = rescueProgress.lastKnownDate === todayKey;
+  const rawStepsToday = Math.max(0, steps.stepsToday);
+  const rawStepsTodayRef = useRef(rawStepsToday);
+  const recordedStepsToday = progressIsForToday
+    ? rescueProgress.dailyStepHistory[todayKey] ?? 0
+    : 0;
+  const liveSessionTotalStepsToday = progressIsForToday
+    ? liveDailyOffsetRef.current +
+      Math.max(0, rawStepsToday - liveDailyBaselineRef.current)
+    : rawStepsToday;
+  const measuredStepsToday =
+    steps.countingMode === "live-session"
+      ? liveSessionTotalStepsToday
+      : rawStepsToday;
+  const totalStepsToday = Math.max(measuredStepsToday, recordedStepsToday);
   const rawActiveStepsToday = Math.max(
     0,
-    steps.stepsToday - rescueProgress.stepBaselineToday
+    rawStepsToday - rescueProgress.stepBaselineToday
   );
   const liveSessionActiveStepsToday =
     progressIsForToday
       ? liveSessionOffsetRef.current +
-        Math.max(0, steps.stepsToday - liveSessionBaselineRef.current)
+        Math.max(0, rawStepsToday - liveSessionBaselineRef.current)
       : 0;
   const restoredActiveStepsToday = progressIsForToday
     ? rescueProgress.activeJourneyStepsToday
     : 0;
 
-  // Effective steps: dev mock overrides real pedometer
   const effectiveStepsToday =
-    devMockSteps !== undefined
-      ? devMockSteps
-      : steps.countingMode === "live-session"
-        ? Math.max(liveSessionActiveStepsToday, restoredActiveStepsToday)
-        : Math.max(rawActiveStepsToday, restoredActiveStepsToday);
+    steps.countingMode === "live-session"
+      ? Math.max(liveSessionActiveStepsToday, restoredActiveStepsToday)
+      : Math.max(rawActiveStepsToday, restoredActiveStepsToday);
+
+  useEffect(() => {
+    rawStepsTodayRef.current = rawStepsToday;
+  }, [rawStepsToday]);
 
   const lockedAnimals = useMemo(
     () => getLockedAnimals(animals, rescueProgress),
@@ -535,12 +681,25 @@ export function RescueProvider({ children }: PropsWithChildren) {
     knownPendingUnlockEventIdsRef.current = currentIds;
 
     newlyAddedEvents.forEach((event) => {
-      const payload = createUnlockNotificationPayload(event, animals, milestones);
+      const payload = createUnlockNotificationPayload(
+        event,
+        animals,
+        milestones,
+        t,
+        formatLocalizedNumber
+      );
       if (payload) {
         void presentUnlockNotification(payload).catch(() => {});
       }
     });
-  }, [animals, isLoading, milestones, rescueProgress.pendingUnlockEvents]);
+  }, [
+    animals,
+    formatLocalizedNumber,
+    isLoading,
+    milestones,
+    rescueProgress.pendingUnlockEvents,
+    t
+  ]);
 
   const canAccessAnimal = useCallback(
     (animalId: string) => {
@@ -574,6 +733,132 @@ export function RescueProvider({ children }: PropsWithChildren) {
     [milestones]
   );
 
+  const importNativeProgress = useCallback(async () => {
+    const [nativeEvents, nativeStepSnapshot] = await Promise.all([
+      getNativeTargetAchievementEvents().catch(() => []),
+      getNativeTargetAchievementStepSnapshot().catch(() => undefined)
+    ]);
+
+    if (nativeEvents.length === 0 && !nativeStepSnapshot) {
+      return;
+    }
+
+    const current = rescueProgressRef.current;
+    const withEvents = mergeNativeUnlockEvents(
+      current,
+      nativeEvents,
+      animals,
+      milestones
+    );
+    const next = mergeNativeStepSnapshot(withEvents, nativeStepSnapshot);
+
+    if (nativeEvents.length > 0) {
+      knownPendingUnlockEventIdsRef.current = new Set(
+        next.pendingUnlockEvents.map((event) => event.id)
+      );
+    }
+
+    if (nativeStepSnapshot) {
+      const today = getLocalDateKey();
+      const rawSteps = rawStepsTodayRef.current;
+      liveSessionBaselineRef.current = rawSteps;
+      liveSessionOffsetRef.current =
+        next.lastKnownDate === today ? next.activeJourneyStepsToday : 0;
+      liveDailyBaselineRef.current = rawSteps;
+      liveDailyOffsetRef.current =
+        next.lastKnownDate === today ? next.dailyStepHistory[today] ?? 0 : 0;
+    }
+
+    if (next !== current) {
+      await persistProgress(next);
+    }
+
+    if (nativeEvents.length > 0) {
+      await markNativeTargetAchievementEventsConsumed(
+        nativeEvents.map((event) => event.id)
+      ).catch(() => {});
+    }
+  }, [animals, milestones, persistProgress]);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    void importNativeProgress();
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void importNativeProgress();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [importNativeProgress, isLoading]);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    const claimedTargetSteps = currentAnimal
+      ? rescueProgress.claimedMiniMilestones[currentAnimal.id] ?? []
+      : [];
+    const canTrack =
+      !!currentAnimal &&
+      !!currentMilestone &&
+      canAccessAnimal(currentAnimal.id) &&
+      !rescueProgress.rescuedAnimalIds.includes(currentAnimal.id);
+
+    void syncTargetAchievementWatcher({
+      activeStepsToday: Math.max(0, effectiveStepsToday),
+      stepsToday: Math.max(0, totalStepsToday),
+      claimedTargetSteps,
+      currentAnimal:
+        canTrack && currentAnimal && currentMilestone
+          ? {
+              id: currentAnimal.id,
+              name: currentAnimal.name,
+              rescueNotificationBody: t("notifications.rescueBody", {
+                steps: formatLocalizedNumber(currentMilestone.unlockSteps)
+              }),
+              rescueNotificationTitle: t("notifications.rescueTitle", {
+                animal: currentAnimal.name
+              }),
+              rescued: rescueProgress.rescuedAnimalIds.includes(currentAnimal.id),
+              rewardTargets: currentMilestone.rewardTargets.map((target) => ({
+                notificationBody: t("notifications.rewardBody", {
+                  animal: currentAnimal.name,
+                  steps: formatLocalizedNumber(target.stepTarget)
+                }),
+                notificationTitle: t("notifications.rewardTitle", {
+                  reward: target.title
+                }),
+                rewardId: target.rewardId,
+                stepTarget: target.stepTarget,
+                title: target.title
+              })),
+              unlockSteps: currentMilestone.unlockSteps
+            }
+          : undefined,
+      dateKey: getLocalDateKey(),
+      enabled: canTrack,
+      pendingEventIds: rescueProgress.pendingUnlockEvents.map((event) => event.id)
+    }).catch(() => {});
+  }, [
+    canAccessAnimal,
+    currentAnimal,
+    currentMilestone,
+    effectiveStepsToday,
+    formatLocalizedNumber,
+    isLoading,
+    rescueProgress.claimedMiniMilestones,
+    rescueProgress.pendingUnlockEvents,
+    rescueProgress.rescuedAnimalIds,
+    t,
+    totalStepsToday
+  ]);
+
   const getAnimalMetrics = useCallback(
     (animalId: string): AnimalMetrics | undefined => {
       const index = animals.findIndex((animal) => animal.id === animalId);
@@ -585,7 +870,13 @@ export function RescueProvider({ children }: PropsWithChildren) {
       }
 
       const isRescued = rescueProgress.rescuedAnimalIds.includes(animalId);
-      const metricSteps = isRescued ? milestone.unlockSteps : effectiveStepsToday;
+      const status = getAnimalStatus(animalId);
+      const canAccess = canAccessAnimal(animalId);
+      const metricSteps = isRescued
+        ? milestone.unlockSteps
+        : status === "active" && canAccess
+          ? effectiveStepsToday
+          : 0;
       const progress = getProgressToMilestone(
         metricSteps,
         milestone,
@@ -623,14 +914,14 @@ export function RescueProvider({ children }: PropsWithChildren) {
         claimedMiniMilestones,
         completedRewardTargets,
         claimedRewardTargets,
-        nextMiniMilestone: getNextMiniMilestone(effectiveStepsToday, milestone),
+        nextMiniMilestone: getNextMiniMilestone(metricSteps, milestone),
         nextRewardTarget,
         careState: getCareState(mood),
         mood,
         moodMeta: getMoodMeta(mood),
         isRescued,
-        canAccess: canAccessAnimal(animalId),
-        status: getAnimalStatus(animalId)
+        canAccess,
+        status
       };
     },
     [
@@ -708,17 +999,30 @@ export function RescueProvider({ children }: PropsWithChildren) {
       }
 
       const rescuedAnimalIds = [...rescueProgress.rescuedAnimalIds, animalId];
-      liveSessionBaselineRef.current = steps.stepsToday;
+      const today = getLocalDateKey();
+      const storedStepsToday = Math.max(
+        rescueProgress.dailyStepHistory[today] ?? 0,
+        totalStepsToday
+      );
+      liveSessionBaselineRef.current = rawStepsToday;
       liveSessionOffsetRef.current = 0;
+      if (steps.countingMode === "live-session") {
+        liveDailyBaselineRef.current = rawStepsToday;
+        liveDailyOffsetRef.current = storedStepsToday;
+      }
       const next = {
         ...rescueProgress,
         rescuedAnimalIds,
         stepBaselineToday:
-          devMockSteps !== undefined ? rescueProgress.stepBaselineToday : steps.stepsToday,
+          rawStepsToday,
         activeJourneyStepsToday: 0,
+        dailyStepHistory: {
+          ...rescueProgress.dailyStepHistory,
+          [today]: storedStepsToday
+        },
         rescuedDates: {
           ...rescueProgress.rescuedDates,
-          [animalId]: getLocalDateKey()
+          [animalId]: today
         },
         currentAnimalId: nextUnrescuedAnimalId(animals, rescuedAnimalIds),
         pendingUnlockEvents: appendPendingUnlockEvents(
@@ -734,9 +1038,6 @@ export function RescueProvider({ children }: PropsWithChildren) {
       };
 
       await persistProgress(next);
-      if (devMockSteps !== undefined) {
-        setDevMockSteps(0);
-      }
       triggerHaptic("rescue");
     },
     [
@@ -745,8 +1046,9 @@ export function RescueProvider({ children }: PropsWithChildren) {
       getMilestone,
       persistProgress,
       rescueProgress,
-      devMockSteps,
-      steps.stepsToday,
+      rawStepsToday,
+      steps.countingMode,
+      totalStepsToday,
       effectiveStepsToday
     ]
   );
@@ -777,6 +1079,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
     }
 
     const createdAt = new Date().toISOString();
+    const today = getLocalDateKey();
     const pendingEvents = newlyCompletedTargets.map((target) =>
       createRewardUnlockEvent(currentAnimal.id, target, createdAt)
     );
@@ -795,44 +1098,59 @@ export function RescueProvider({ children }: PropsWithChildren) {
     }
 
     if (shouldRescue) {
-      liveSessionBaselineRef.current = steps.stepsToday;
+      liveSessionBaselineRef.current = rawStepsToday;
       liveSessionOffsetRef.current = 0;
     }
 
-    persistProgress((current) => ({
-      ...current,
-      stepBaselineToday:
-        shouldRescue && devMockSteps === undefined
-          ? steps.stepsToday
-          : current.stepBaselineToday,
-      activeJourneyStepsToday: shouldRescue
-        ? 0
-        : Math.max(current.activeJourneyStepsToday ?? 0, effectiveStepsToday),
-      claimedMiniMilestones: {
-        ...current.claimedMiniMilestones,
-        [currentAnimal.id]: [
-          ...(current.claimedMiniMilestones[currentAnimal.id] ?? []),
-          ...newlyCompletedTargets.map((target) => target.stepTarget)
-        ].sort((a, b) => a - b)
-      },
-      rescuedAnimalIds,
-      rescuedDates: shouldRescue
-        ? {
-            ...current.rescuedDates,
-            [currentAnimal.id]: getLocalDateKey()
-          }
-        : current.rescuedDates,
-      currentAnimalId: shouldRescue
-        ? nextUnrescuedAnimalId(animals, rescuedAnimalIds)
-        : current.currentAnimalId,
-      pendingUnlockEvents: appendPendingUnlockEvents(
-        current.pendingUnlockEvents,
-        pendingEvents
-      )
-    }));
-    if (shouldRescue && devMockSteps !== undefined) {
-      setDevMockSteps(0);
-    }
+    persistProgress((current) => {
+      const storedStepsToday = Math.max(
+        current.dailyStepHistory[today] ?? 0,
+        totalStepsToday
+      );
+
+      if (shouldRescue && steps.countingMode === "live-session") {
+        liveDailyBaselineRef.current = rawStepsToday;
+        liveDailyOffsetRef.current = storedStepsToday;
+      }
+
+      return {
+        ...current,
+        stepBaselineToday:
+          shouldRescue
+            ? rawStepsToday
+            : current.stepBaselineToday,
+        activeJourneyStepsToday: shouldRescue
+          ? 0
+          : Math.max(current.activeJourneyStepsToday ?? 0, effectiveStepsToday),
+        dailyStepHistory: shouldRescue
+          ? {
+              ...current.dailyStepHistory,
+              [today]: storedStepsToday
+            }
+          : current.dailyStepHistory,
+        claimedMiniMilestones: {
+          ...current.claimedMiniMilestones,
+          [currentAnimal.id]: [
+            ...(current.claimedMiniMilestones[currentAnimal.id] ?? []),
+            ...newlyCompletedTargets.map((target) => target.stepTarget)
+          ].sort((a, b) => a - b)
+        },
+        rescuedAnimalIds,
+        rescuedDates: shouldRescue
+          ? {
+              ...current.rescuedDates,
+              [currentAnimal.id]: today
+            }
+          : current.rescuedDates,
+        currentAnimalId: shouldRescue
+          ? nextUnrescuedAnimalId(animals, rescuedAnimalIds)
+          : current.currentAnimalId,
+        pendingUnlockEvents: appendPendingUnlockEvents(
+          current.pendingUnlockEvents,
+          pendingEvents
+        )
+      };
+    });
     triggerHaptic(shouldRescue ? "rescue" : "care");
   }, [
     animals,
@@ -846,8 +1164,9 @@ export function RescueProvider({ children }: PropsWithChildren) {
     rescueProgress.rescuedDates,
     rescueProgress.rescuedAnimalIds,
     persistProgress,
-    devMockSteps,
-    steps.stepsToday,
+    rawStepsToday,
+    steps.countingMode,
+    totalStepsToday,
     effectiveStepsToday
   ]);
 
@@ -861,10 +1180,10 @@ export function RescueProvider({ children }: PropsWithChildren) {
     const recordedActiveSteps = rescueProgress.activeJourneyStepsToday ?? 0;
     const shouldUpdate =
       rescueProgress.lastKnownDate !== today ||
-      effectiveStepsToday - recordedToday >= DAILY_STEP_HISTORY_WRITE_DELTA ||
+      totalStepsToday - recordedToday >= DAILY_STEP_HISTORY_WRITE_DELTA ||
       effectiveStepsToday - recordedActiveSteps >= DAILY_STEP_HISTORY_WRITE_DELTA ||
       (recordedActiveSteps === 0 && effectiveStepsToday > 0) ||
-      (recordedToday === 0 && effectiveStepsToday > 0);
+      (recordedToday === 0 && totalStepsToday > 0);
 
     if (!shouldUpdate) {
       return;
@@ -873,14 +1192,21 @@ export function RescueProvider({ children }: PropsWithChildren) {
     persistProgress((current) => {
       const isSameRecordedDay = current.lastKnownDate === today;
       if (!isSameRecordedDay) {
-        liveSessionBaselineRef.current = steps.stepsToday;
+        liveSessionBaselineRef.current = rawStepsToday;
         liveSessionOffsetRef.current = 0;
       }
 
       const nextStepBaseline = isSameRecordedDay ? current.stepBaselineToday : 0;
-      const nextEffectiveSteps = isSameRecordedDay
-        ? effectiveStepsToday
-        : steps.stepsToday;
+      const nextDailySteps = isSameRecordedDay
+        ? totalStepsToday
+        : rawStepsToday;
+      const currentRecordedToday = current.dailyStepHistory[today] ?? 0;
+      const nextRecordedToday = Math.max(currentRecordedToday, nextDailySteps);
+
+      if (steps.countingMode === "live-session") {
+        liveDailyBaselineRef.current = rawStepsToday;
+        liveDailyOffsetRef.current = nextRecordedToday;
+      }
 
       return {
         ...current,
@@ -891,7 +1217,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
           : 0,
         dailyStepHistory: {
           ...current.dailyStepHistory,
-          [today]: Math.max(recordedToday, nextEffectiveSteps)
+          [today]: nextRecordedToday
         }
       };
     });
@@ -902,81 +1228,20 @@ export function RescueProvider({ children }: PropsWithChildren) {
     rescueProgress.dailyStepHistory,
     rescueProgress.lastKnownDate,
     rescueProgress.activeJourneyStepsToday,
-    steps.stepsToday
+    rawStepsToday,
+    steps.countingMode,
+    totalStepsToday
   ]);
 
   const resetProgress = useCallback(async () => {
     const next = createDefaultProgress(animals);
     liveSessionBaselineRef.current = 0;
     liveSessionOffsetRef.current = 0;
+    liveDailyBaselineRef.current = 0;
+    liveDailyOffsetRef.current = 0;
     await clearRescueProgress();
     await persistProgress(next);
-    setDevMockSteps(undefined);
   }, [animals, persistProgress]);
-
-  const unlockFirstAnimal = useCallback(async () => {
-    const firstAnimal = animals[0];
-    if (!firstAnimal) {
-      return;
-    }
-
-    const rescuedAnimalIds = rescueProgress.rescuedAnimalIds.includes(
-      firstAnimal.id
-    )
-      ? rescueProgress.rescuedAnimalIds
-      : [...rescueProgress.rescuedAnimalIds, firstAnimal.id];
-
-    liveSessionBaselineRef.current = steps.stepsToday;
-    liveSessionOffsetRef.current = 0;
-    await persistProgress({
-      ...rescueProgress,
-      rescuedAnimalIds,
-      stepBaselineToday: steps.stepsToday,
-      activeJourneyStepsToday: 0,
-      rescuedDates: {
-        ...rescueProgress.rescuedDates,
-        [firstAnimal.id]: getLocalDateKey()
-      },
-      currentAnimalId: nextUnrescuedAnimalId(animals, rescuedAnimalIds),
-      pendingUnlockEvents: appendPendingUnlockEvents(
-        rescueProgress.pendingUnlockEvents,
-        [
-          createRescueUnlockEvent(
-            firstAnimal.id,
-            milestones[0]?.unlockSteps ?? 0,
-            new Date().toISOString()
-          )
-        ]
-      )
-    });
-    setDevMockSteps(0);
-  }, [animals, milestones, persistProgress, rescueProgress, steps.stepsToday]);
-
-  // DEV: advance mock steps to the next unclaimed target for the current animal
-  const advanceMockSteps = useCallback(() => {
-    if (!currentAnimal || !currentMilestone) return;
-    const claimed = rescueProgress.claimedMiniMilestones[currentAnimal.id] ?? [];
-    const current = devMockSteps !== undefined
-      ? devMockSteps
-      : Math.max(0, steps.stepsToday - rescueProgress.stepBaselineToday);
-    // find the next target that hasn't been hit yet
-    const allTargets = [...currentMilestone.miniMilestones, currentMilestone.unlockSteps];
-    const nextTarget = allTargets.find((t) => current < t);
-    if (nextTarget !== undefined) {
-      setDevMockSteps(nextTarget);
-    }
-  }, [
-    currentAnimal,
-    currentMilestone,
-    devMockSteps,
-    rescueProgress.claimedMiniMilestones,
-    rescueProgress.stepBaselineToday,
-    steps.stepsToday
-  ]);
-
-  const resetMockSteps = useCallback(() => {
-    setDevMockSteps(undefined);
-  }, []);
 
   const focusUnlockEvent = useCallback(
     (eventId: string) => {
@@ -1039,11 +1304,11 @@ export function RescueProvider({ children }: PropsWithChildren) {
       lockedAnimals,
       unlockedAnimals,
       steps,
-      stepsToday: effectiveStepsToday,
+      stepsToday: totalStepsToday,
+      activeStepsToday: effectiveStepsToday,
       weeklySteps,
       lastRescueEvent,
       lastCareEvent,
-      devMockSteps,
       canAccessAnimal,
       getAnimalStatus,
       getMilestone,
@@ -1051,23 +1316,17 @@ export function RescueProvider({ children }: PropsWithChildren) {
       claimMiniMilestone,
       rescueAnimal,
       resetProgress,
-      unlockFirstAnimal,
-      advanceMockSteps,
-      resetMockSteps,
       focusUnlockEvent,
       dismissRescueEvent: dismissUnlockEvent,
       dismissCareEvent: dismissUnlockEvent
     }),
     [
       animals,
-      advanceMockSteps,
-      resetMockSteps,
       canAccessAnimal,
       claimMiniMilestone,
       currentAnimal,
       currentAnimalIndex,
       currentMilestone,
-      devMockSteps,
       dismissUnlockEvent,
       focusUnlockEvent,
       getAnimalMetrics,
@@ -1082,9 +1341,9 @@ export function RescueProvider({ children }: PropsWithChildren) {
       rescueProgress,
       resetProgress,
       steps,
-      unlockFirstAnimal,
       unlockedAnimals,
       weeklySteps,
+      totalStepsToday,
       effectiveStepsToday
     ]
   );

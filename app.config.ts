@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+const boolFromEnv = (value: string | undefined) => value === "true";
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Rescue Animals Steps",
@@ -29,7 +31,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#FFF8EA"
     },
-    permissions: ["ACTIVITY_RECOGNITION", "POST_NOTIFICATIONS"]
+    permissions: [
+      "ACTIVITY_RECOGNITION",
+      "POST_NOTIFICATIONS",
+      "com.android.vending.BILLING"
+    ]
   },
   plugins: [
     "expo-router",
@@ -48,6 +54,34 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "pro",
     revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? "",
     revenueCatAndroidApiKey:
-      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? ""
+      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? "",
+    revenueCatUseTestStore: boolFromEnv(
+      process.env.EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE
+    ),
+    revenueCatTestApiKey:
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ?? "",
+    revenueCatTestIosApiKey:
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_IOS_API_KEY ?? "",
+    revenueCatTestAndroidApiKey:
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_ANDROID_API_KEY ?? "",
+    revenueCatTestAppUserId:
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_APP_USER_ID ??
+      "rescue-animals-test-user",
+    revenueCatMonthlyPackageId:
+      process.env.EXPO_PUBLIC_REVENUECAT_MONTHLY_PACKAGE_ID ?? "$rc_monthly",
+    revenueCatYearlyPackageId:
+      process.env.EXPO_PUBLIC_REVENUECAT_YEARLY_PACKAGE_ID ?? "$rc_annual",
+    revenueCatIosMonthlyProductId:
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_MONTHLY_PRODUCT_ID ??
+      "com.annusmirabilis.rescueanimalssteps.pro.monthly",
+    revenueCatIosYearlyProductId:
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_YEARLY_PRODUCT_ID ??
+      "com.annusmirabilis.rescueanimalssteps.pro.yearly",
+    revenueCatAndroidMonthlyProductId:
+      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_MONTHLY_PRODUCT_ID ??
+      "rescue_animals_pro_monthly",
+    revenueCatAndroidYearlyProductId:
+      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_YEARLY_PRODUCT_ID ??
+      "rescue_animals_pro_yearly"
   }
 });

@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { useEffect, useMemo } from "react";
 import {
   Linking,
-  Pressable,
   StyleSheet,
   Text,
   View
@@ -17,33 +16,19 @@ import { ScreenContainer } from "../../src/components/ScreenContainer";
 import { StepHeroCard } from "../../src/components/StepHeroCard";
 import { UiSprite } from "../../src/components/UiSprite";
 import { dismissUnlockNotification } from "../../src/features/notifications/unlockNotifications";
+import { shareAnimalUnlock } from "../../src/features/animals/shareAnimal";
+import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useEntitlements } from "../../src/state/EntitlementProvider";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
 
-function getGreeting() {
+function getGreetingKey() {
   const hour = new Date().getHours();
-  if (hour < 12) return "Morning";
-  if (hour < 18) return "Afternoon";
-  return "Evening";
-}
-
-/** Pulsing glow behind the dev FAB */
-function DevFabGlow({ color }: { color: string }) {
-  return (
-    <View
-      style={{
-        position: "absolute",
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: color,
-        opacity: 0.24
-      }}
-    />
-  );
+  if (hour < 12) return "greeting.morning" as const;
+  if (hour < 18) return "greeting.afternoon" as const;
+  return "greeting.evening" as const;
 }
 
 export default function HomeScreen() {
@@ -52,6 +37,7 @@ export default function HomeScreen() {
     () => createStyles(theme.colors, theme.isDark),
     [theme.colors, theme.isDark]
   );
+  const { language, t } = useLanguage();
   const { isPro } = useEntitlements();
   const {
     currentAnimal,
@@ -62,10 +48,6 @@ export default function HomeScreen() {
     lastRescueEvent,
     animals,
     milestones,
-    unlockedAnimals,
-    devMockSteps,
-    advanceMockSteps,
-    resetMockSteps,
     dismissCareEvent,
     dismissRescueEvent
   } = useRescue();
@@ -92,7 +74,7 @@ export default function HomeScreen() {
       ? (careNextRewardTarget?.stepTarget ?? careMilestone.unlockSteps)
       : undefined;
   const careNextLabel =
-    careMilestone ? (careNextRewardTarget?.title ?? "Rescue") : undefined;
+    careMilestone ? (careNextRewardTarget?.title ?? t("common.rescue")) : undefined;
   const visibleUnlockEventId = lastCareEvent?.id ?? lastRescueEvent?.id;
 
   const hasPermissionIssue = Boolean(steps.error || steps.permissionStatus === "denied");
@@ -124,22 +106,15 @@ export default function HomeScreen() {
     }
   };
 
-  // What the next dev mock target label is
-  const allTargets = metrics
-    ? [...(metrics.milestone.miniMilestones), metrics.milestone.unlockSteps]
-    : [];
-  const nextMockTarget = allTargets.find((t) => stepsToday < t);
-  const mockIsAtUnlock =
-    metrics !== undefined &&
-    nextMockTarget === metrics.milestone.unlockSteps;
-
   return (
     <ScreenContainer>
       {/* ── Compact header ── */}
       <MotionView style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerGreeting}>Good {getGreeting()} 👋</Text>
-          <Text style={styles.headerTitle}>Rescue Steps</Text>
+          <Text style={styles.headerGreeting}>
+            {t("home.greeting", { period: t(getGreetingKey()) })}
+          </Text>
+          <Text style={styles.headerTitle}>{t("home.title")}</Text>
         </View>
         <PulseView floatDistance={4} pulseScale={1.04}>
           <UiSprite spriteKey="progressPawTrophy" size={52} />
@@ -150,19 +125,21 @@ export default function HomeScreen() {
       {hasPermissionIssue ? (
         <MotionView delay={70} style={styles.permissionBanner}>
           <Ionicons color={theme.colors.danger} name="warning" size={18} />
-          <Text style={styles.permissionBannerText}>Pedometer access needed</Text>
+          <Text style={styles.permissionBannerText}>
+            {t("home.permissionNeeded")}
+          </Text>
           <View style={styles.permissionBannerActions}>
             <AppButton
               icon="refresh"
               loading={steps.isLoading}
               onPress={steps.refreshSteps}
-              title="Retry"
+              title={t("home.retry")}
               variant="secondary"
             />
             <AppButton
               icon="settings"
               onPress={() => Linking.openSettings()}
-              title="Settings"
+              title={t("common.settings")}
               variant="ghost"
             />
           </View>
@@ -170,18 +147,12 @@ export default function HomeScreen() {
       ) : (
         <MotionView delay={70} style={styles.trackingPill}>
           <PulseView pulseScale={1.4}>
-            <View style={[styles.trackingDot, devMockSteps !== undefined && styles.trackingDotMock]} />
+            <View style={styles.trackingDot} />
           </PulseView>
           <Text style={styles.trackingText}>
-            {devMockSteps !== undefined ? `🎭 Mock • ${devMockSteps.toLocaleString()} steps` : `Live • ${steps.sourceLabel}`}
+            {t("home.tracking", { source: steps.sourceLabel })}
           </Text>
-          {devMockSteps !== undefined ? (
-            <Pressable onPress={resetMockSteps}>
-              <Text style={styles.trackingReset}>✕ Reset</Text>
-            </Pressable>
-          ) : (
-            <Text style={styles.trackingStatus}>{steps.permissionStatus}</Text>
-          )}
+          <Text style={styles.trackingStatus}>{steps.permissionStatus}</Text>
         </MotionView>
       )}
 
@@ -223,9 +194,18 @@ export default function HomeScreen() {
         nextAnimalName={nextAnimal?.name}
         nextAnimalImage={nextAnimal?.sadImage}
         nextTargetImage={nextRewardTarget?.image}
-        nextTargetTitle={nextRewardTarget?.title ?? "Rescue"}
+        nextTargetTitle={nextRewardTarget?.title ?? t("common.rescue")}
         nextTargetSteps={nextRewardTarget?.stepTarget ?? nextMilestone?.unlockSteps}
         onNextRescue={handleRescueDismiss}
+        onShareAnimal={() => {
+          if (rescuedAnimal) {
+            void shareAnimalUnlock({
+              animalName: rescuedAnimal.name,
+              happyImage: rescuedAnimal.happyImage,
+              language
+            });
+          }
+        }}
         onViewAnimals={() => {
           dismissRescueEvent();
           router.push("/(tabs)/animals");
@@ -233,71 +213,12 @@ export default function HomeScreen() {
         visible={Boolean(lastRescueEvent)}
       />
 
-      {/* ── DEV: Floating mock-advance button ── */}
-      {__DEV__ && metrics && !metrics.isRescued ? (
-        <View style={styles.devFab} pointerEvents="box-none">
-          <DevFabGlow
-            color={mockIsAtUnlock ? theme.colors.secondary : theme.colors.primary}
-          />
-          <Pressable
-            accessibilityLabel="Dev: advance to next target"
-            onPress={advanceMockSteps}
-            style={[
-              styles.devFabBtn,
-              mockIsAtUnlock && styles.devFabBtnUnlock
-            ]}
-          >
-            <Text style={styles.devFabIcon}>{mockIsAtUnlock ? "🔑" : "⚡"}</Text>
-            <Text style={styles.devFabLabel} numberOfLines={1}>
-              {mockIsAtUnlock
-                ? "Unlock"
-                : nextMockTarget
-                  ? `→ ${nextMockTarget.toLocaleString()}`
-                  : "Done"}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
     </ScreenContainer>
   );
 }
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
-    devFab: {
-      alignItems: "center",
-      bottom: 100,
-      justifyContent: "center",
-      position: "absolute",
-      right: 20,
-      zIndex: 999
-    },
-    devFabBtn: {
-      alignItems: "center",
-      backgroundColor: colors.primary,
-      borderRadius: 28,
-      elevation: 8,
-      flexDirection: "row",
-      gap: 6,
-      paddingHorizontal: 16,
-      paddingVertical: 13,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 10,
-      zIndex: 2
-    },
-    devFabBtnUnlock: {
-      backgroundColor: colors.secondary
-    },
-    devFabIcon: {
-      fontSize: 18
-    },
-    devFabLabel: {
-      color: "#fff",
-      fontSize: 13,
-      fontWeight: "900"
-    },
     header: {
       alignItems: "center",
       flexDirection: "row",
@@ -346,9 +267,6 @@ function createStyles(colors: AppColors, isDark: boolean) {
       height: 8,
       width: 8
     },
-    trackingDotMock: {
-      backgroundColor: colors.secondary
-    },
     trackingPill: {
       alignItems: "center",
       alignSelf: "flex-start",
@@ -360,11 +278,6 @@ function createStyles(colors: AppColors, isDark: boolean) {
       gap: spacing.xs,
       paddingHorizontal: spacing.md,
       paddingVertical: 5
-    },
-    trackingReset: {
-      color: colors.danger,
-      fontSize: 11,
-      fontWeight: "900"
     },
     trackingStatus: {
       color: colors.primaryDark,

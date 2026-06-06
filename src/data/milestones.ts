@@ -7,21 +7,21 @@ import type {
 import { getGeneratedRewardsForAnimal } from "./rewards.generated";
 
 const unlockStepTargets = [
-  5000,
-  8000,
-  12000,
-  14000,
-  18000,
-  20000,
-  22000,
-  24000,
-  26000,
-  28000,
-  30000
+  500,
+  800,
+  1200,
+  1400,
+  1800,
+  2000,
+  2200,
+  2400,
+  2600,
+  2800,
+  3000
 ];
 
 function getUnlockStepTarget(index: number) {
-  return unlockStepTargets[index] ?? 30000;
+  return unlockStepTargets[index] ?? 3000;
 }
 
 export function generateMilestones(animals: Animal[]): RescueMilestone[] {

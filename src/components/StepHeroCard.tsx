@@ -4,10 +4,12 @@ import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AnimalMetrics } from "../state/RescueProvider";
+import { useLanguage } from "../i18n/LanguageProvider";
+import type { TranslateFn } from "../i18n/translations";
 import { type AppColors, useAppTheme } from "../theme/colors";
 import { shadows } from "../theme/shadows";
 import { spacing } from "../theme/spacing";
-import { formatNumber, formatPercent } from "../utils/format";
+import { formatPercent } from "../utils/format";
 import { AnimalCage } from "./AnimalCage";
 import { AnimalMoodMeter } from "./AnimalMoodMeter";
 import { AppButton } from "./AppButton";
@@ -26,13 +28,13 @@ type StepHeroCardProps = {
   onViewAnimal: () => void;
 };
 
-function getStatusCopy(metrics: AnimalMetrics) {
-  if (metrics.status === "pro_locked") return "Unlock Pro to rescue";
-  if (metrics.progress <= 0.25) return "Waiting for you…";
-  if (metrics.progress <= 0.5) return "Needs your care";
-  if (metrics.progress <= 0.75) return "Almost safe!";
-  if (metrics.progress < 1) return "Gate nearly open! 🔑";
-  return "Safe & free! 🎉";
+function getStatusCopy(metrics: AnimalMetrics, t: TranslateFn) {
+  if (metrics.status === "pro_locked") return t("stepHero.unlockProToRescue");
+  if (metrics.progress <= 0.25) return t("stepHero.waitingForYou");
+  if (metrics.progress <= 0.5) return t("stepHero.needsCare");
+  if (metrics.progress <= 0.75) return t("stepHero.almostSafe");
+  if (metrics.progress < 1) return t("stepHero.gateNearlyOpen");
+  return t("stepHero.safeAndFree");
 }
 
 export function StepHeroCard({
@@ -48,6 +50,11 @@ export function StepHeroCard({
     () => createStyles(theme.colors, theme.isDark),
     [theme.colors, theme.isDark]
   );
+  const {
+    formatNumber: formatLocalizedNumber,
+    locale,
+    t
+  } = useLanguage();
 
   /* ── Empty state ── */
   if (!metrics) {
@@ -57,17 +64,17 @@ export function StepHeroCard({
           <UiSprite spriteKey="emptySanctuaryNest" size={96} />
         </PulseView>
         <View style={styles.emptyCopy}>
-          <Text style={styles.emptyTitle}>All friends are safe 🎉</Text>
+          <Text style={styles.emptyTitle}>{t("stepHero.allSafe")}</Text>
           <Text selectable style={styles.emptySteps}>
-            {formatNumber(stepsToday)}
+            {formatLocalizedNumber(stepsToday)}
           </Text>
-          <Text style={styles.emptySubtitle}>steps today</Text>
+          <Text style={styles.emptySubtitle}>{t("stepHero.stepsToday")}</Text>
         </View>
         <AppButton
           icon="refresh"
           loading={isRefreshing}
           onPress={onRefreshSteps}
-          title="Refresh Steps"
+          title={t("stepHero.refreshSteps")}
           variant="secondary"
         />
       </MotionView>
@@ -78,12 +85,17 @@ export function StepHeroCard({
   const image = metrics.isRescued ? metrics.animal.happyImage : metrics.animal.sadImage;
   const nextRewardTarget = metrics.nextRewardTarget;
   const nextTarget = nextRewardTarget?.stepTarget ?? metrics.milestone.unlockSteps;
-  const targetLabel = nextRewardTarget && !proLocked ? "Next Reward" : "Target";
+  const targetLabel =
+    nextRewardTarget && !proLocked
+      ? t("stepHero.nextReward")
+      : t("stepHero.target");
   const remainingLabel = proLocked
-    ? "Pro required"
+    ? t("stepHero.proRequired")
     : metrics.remainingSteps > 0
-      ? `${formatNumber(metrics.remainingSteps)} left`
-      : "Ready!";
+      ? t("common.stepsLeft", {
+          steps: formatLocalizedNumber(metrics.remainingSteps)
+        })
+      : t("stepHero.ready");
 
   return (
     <View style={styles.root}>
@@ -91,9 +103,9 @@ export function StepHeroCard({
       {/* ── Step counter hero row ── */}
       <MotionView style={styles.stepHero}>
         <View style={styles.stepHeroLeft}>
-          <Text style={styles.stepHeroLabel}>Today's Steps</Text>
+          <Text style={styles.stepHeroLabel}>{t("stepHero.todaySteps")}</Text>
           <Text selectable style={styles.stepHeroNumber}>
-            {formatNumber(stepsToday)}
+            {formatLocalizedNumber(stepsToday)}
           </Text>
           <View style={styles.progressBarWrap}>
             <View style={styles.progressBarTrack}>
@@ -102,7 +114,9 @@ export function StepHeroCard({
                 style={styles.progressBarFill}
               />
             </View>
-            <Text style={styles.progressBarPct}>{formatPercent(metrics.progress)}</Text>
+            <Text style={styles.progressBarPct}>
+              {formatPercent(metrics.progress, locale)}
+            </Text>
           </View>
         </View>
         <PulseView active={metrics.progress > 0} floatDistance={3} pulseScale={1.02}>
@@ -117,12 +131,12 @@ export function StepHeroCard({
           <View style={styles.animalHeaderLeft}>
             <View style={styles.rescuingBadge}>
               <Ionicons color={theme.colors.primaryDark} name="paw" size={12} />
-              <Text style={styles.rescuingBadgeText}>Rescuing</Text>
+              <Text style={styles.rescuingBadgeText}>{t("stepHero.rescuing")}</Text>
             </View>
             <Text numberOfLines={1} style={styles.animalName}>
               {metrics.animal.name}
             </Text>
-            <Text style={styles.animalStatus}>{getStatusCopy(metrics)}</Text>
+            <Text style={styles.animalStatus}>{getStatusCopy(metrics, t)}</Text>
           </View>
           <View style={styles.animalHeaderRight}>
             {proLocked ? (
@@ -134,7 +148,7 @@ export function StepHeroCard({
             )}
             <Pressable onPress={onViewAnimal} style={styles.viewBtn}>
               <Ionicons color={theme.colors.primaryDark} name="eye-outline" size={15} />
-              <Text style={styles.viewBtnText}>View</Text>
+              <Text style={styles.viewBtnText}>{t("stepHero.view")}</Text>
             </Pressable>
           </View>
         </View>
@@ -166,12 +180,14 @@ export function StepHeroCard({
               />
             </PulseView>
             <View style={styles.nextRewardCopy}>
-              <Text style={styles.nextRewardLabel}>Next Reward</Text>
+              <Text style={styles.nextRewardLabel}>{t("stepHero.nextReward")}</Text>
               <Text numberOfLines={2} style={styles.nextRewardTitle}>
                 {nextRewardTarget.title}
               </Text>
               <Text style={styles.nextRewardSteps}>
-                {formatNumber(nextRewardTarget.stepTarget)} steps
+                {t("common.stepsToTarget", {
+                  steps: formatLocalizedNumber(nextRewardTarget.stepTarget)
+                })}
               </Text>
             </View>
           </MotionView>
@@ -183,14 +199,14 @@ export function StepHeroCard({
             <Ionicons color={theme.colors.primary} name="flag-outline" size={16} />
             <View style={styles.chipText}>
               <Text style={styles.chipLabel}>{targetLabel}</Text>
-              <Text style={styles.chipValue}>{formatNumber(nextTarget)}</Text>
+              <Text style={styles.chipValue}>{formatLocalizedNumber(nextTarget)}</Text>
             </View>
           </View>
           <View style={[styles.chip, styles.chipDivider]} />
           <View style={styles.chip}>
             <Ionicons color={theme.colors.coral} name="timer-outline" size={16} />
             <View style={styles.chipText}>
-              <Text style={styles.chipLabel}>Remaining</Text>
+              <Text style={styles.chipLabel}>{t("stepHero.remaining")}</Text>
               <Text style={[styles.chipValue, metrics.remainingSteps === 0 && styles.chipValueReady]}>
                 {remainingLabel}
               </Text>
@@ -205,7 +221,7 @@ export function StepHeroCard({
             loading={isRefreshing}
             onPress={onRefreshSteps}
             style={styles.actionBtn}
-            title="Refresh"
+            title={t("common.refresh")}
             variant="secondary"
           />
           {proLocked ? (
@@ -213,7 +229,7 @@ export function StepHeroCard({
               icon="sparkles"
               onPress={onOpenPaywall}
               style={styles.actionBtn}
-              title="Unlock Pro"
+              title={t("stepHero.unlockPro")}
               variant="pro"
             />
           ) : (
@@ -221,7 +237,7 @@ export function StepHeroCard({
               icon="paw"
               onPress={onViewAnimal}
               style={styles.actionBtn}
-              title="View Animal"
+              title={t("stepHero.viewAnimal")}
               variant="primary"
             />
           )}

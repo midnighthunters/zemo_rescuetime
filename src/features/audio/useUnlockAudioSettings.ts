@@ -44,6 +44,7 @@ export function useUnlockAudioSettings() {
   }, []);
 
   return {
+    defaultUnlockAudioEnabled: DEFAULT_UNLOCK_AUDIO_ENABLED,
     isLoading,
     unlockAudioEnabled,
     setUnlockAudioEnabled
