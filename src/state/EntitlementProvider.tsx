@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { getDevSettings, saveDevSettings } from "../storage/rescueStorage";
+import { useSubscriptionStore } from "../store/subscriptionStore";
 import {
   getCustomerEntitlement,
   getFallbackRevenueCatPlans,
@@ -193,6 +194,12 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
       removeListener?.();
     };
   }, [applyEntitlementState]);
+
+  const isPro = isProFromRevenueCat || devProEnabled;
+
+  useEffect(() => {
+    useSubscriptionStore.getState().setPro(isPro);
+  }, [isPro]);
 
   const setDevProEnabled = useCallback(async (enabled: boolean) => {
     const settings = await getDevSettings();

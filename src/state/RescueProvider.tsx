@@ -104,6 +104,7 @@ type CareEvent = {
   rewardId: string;
   rewardIndex: number;
   image: RescueRewardTarget["image"];
+  remoteAssetId?: string;
 };
 
 type RescueContextValue = {
@@ -640,7 +641,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
       title: target.title,
       rewardId: target.rewardId,
       rewardIndex: target.rewardIndex,
-      image: target.image
+      image: target.image,
+      remoteAssetId: target.remoteAssetId
     };
   }, [activeUnlockEvent, animals, milestones]);
   const lastRescueEvent = useMemo<RescueEvent | undefined>(() => {

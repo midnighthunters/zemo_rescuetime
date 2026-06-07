@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { AnimalCage } from "../../src/components/AnimalCage";
+import { getAnimalImageSource, getRewardTargetImageSource } from "../../src/services/assets/getAppAssetSource";
 import { AnimalMoodMeter } from "../../src/components/AnimalMoodMeter";
 import { AppButton } from "../../src/components/AppButton";
 import { CareMilestoneRow } from "../../src/components/CareMilestoneRow";
@@ -53,7 +54,7 @@ export default function AnimalDetailScreen() {
   }
 
   const proLocked = metrics.status === "pro_locked";
-  const image = metrics.isRescued ? animal.happyImage : animal.sadImage;
+  const image = getAnimalImageSource(animal, metrics.isRescued ? "happy" : "sad");
   const displayedProgress = metrics.isRescued ? 1 : metrics.progress;
   const displayedSteps = metrics.isRescued
     ? metrics.milestone.unlockSteps
@@ -65,7 +66,7 @@ export default function AnimalDetailScreen() {
   const handleShareAnimal = () => {
     void shareAnimalUnlock({
       animalName: animal.name,
-      happyImage: animal.happyImage,
+      happyImage: getAnimalImageSource(animal, "happy"),
       language
     });
   };
@@ -169,7 +170,7 @@ export default function AnimalDetailScreen() {
           </MotionView>
 
           <MotionView delay={195} style={styles.sharePanel}>
-            <Image contentFit="contain" source={animal.happyImage} style={styles.shareImage} />
+            <Image contentFit="contain" source={getAnimalImageSource(animal, "happy")} style={styles.shareImage} />
             <View style={styles.shareCopy}>
               <Text style={styles.shareTitle}>{t("animalDetail.shareTitle")}</Text>
               <Text style={styles.shareText}>
@@ -249,7 +250,7 @@ export default function AnimalDetailScreen() {
               <PulseView floatDistance={3} pulseScale={1.04}>
                 <Image
                   contentFit="contain"
-                  source={nextRewardTarget.image}
+                  source={getRewardTargetImageSource(nextRewardTarget)}
                   style={styles.nextRewardImage}
                 />
               </PulseView>

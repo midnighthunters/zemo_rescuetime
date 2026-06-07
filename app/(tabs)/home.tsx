@@ -1,4 +1,4 @@
-﻿import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useMemo } from "react";
 import {
@@ -23,6 +23,7 @@ import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
+import { getAnimalImageSource, getRewardTargetImageSource } from "../../src/services/assets/getAppAssetSource";
 
 function getGreetingKey() {
   const hour = new Date().getHours();
@@ -164,11 +165,11 @@ export default function HomeScreen() {
           animalName={lastCareEvent.animalName}
           label={lastCareEvent.label}
           title={lastCareEvent.title}
-          rewardImage={lastCareEvent.image}
+          rewardImage={getRewardTargetImageSource({ image: lastCareEvent.image, remoteAssetId: lastCareEvent.remoteAssetId } as any)}
           rewardIndex={lastCareEvent.rewardIndex}
           nextTargetLabel={careNextLabel}
           nextTargetSteps={careNextTarget}
-          nextTargetImage={careNextRewardTarget?.image}
+          nextTargetImage={careNextRewardTarget ? getRewardTargetImageSource(careNextRewardTarget) : undefined}
           onDismiss={dismissCareEvent}
         />
       ) : null}
@@ -189,11 +190,11 @@ export default function HomeScreen() {
       {/* ── Rescue unlock modal ── */}
       <RescueModal
         key={lastRescueEvent?.id ?? "rescue-modal"}
-        animalImage={rescuedAnimal?.happyImage}
+        animalImage={rescuedAnimal ? getAnimalImageSource(rescuedAnimal, "happy") : undefined}
         animalName={lastRescueEvent?.animalName ?? ""}
         nextAnimalName={nextAnimal?.name}
-        nextAnimalImage={nextAnimal?.sadImage}
-        nextTargetImage={nextRewardTarget?.image}
+        nextAnimalImage={nextAnimal ? getAnimalImageSource(nextAnimal, "sad") : undefined}
+        nextTargetImage={nextRewardTarget ? getRewardTargetImageSource(nextRewardTarget) : undefined}
         nextTargetTitle={nextRewardTarget?.title ?? t("common.rescue")}
         nextTargetSteps={nextRewardTarget?.stepTarget ?? nextMilestone?.unlockSteps}
         onNextRescue={handleRescueDismiss}
@@ -201,7 +202,7 @@ export default function HomeScreen() {
           if (rescuedAnimal) {
             void shareAnimalUnlock({
               animalName: rescuedAnimal.name,
-              happyImage: rescuedAnimal.happyImage,
+              happyImage: getAnimalImageSource(rescuedAnimal, "happy"),
               language
             });
           }

@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
   Linking,
@@ -20,6 +20,8 @@ import { useOnboarding } from "../../src/features/onboarding/useOnboarding";
 import { useEntitlements } from "../../src/features/purchases/useEntitlements";
 import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useRescue } from "../../src/state/RescueProvider";
+import { useRemoteAssetDownloadStore } from "../../src/services/assets/remoteAssetDownloadStore";
+import { ProAssetDownloadModal } from "../../src/features/assets/components/ProAssetDownloadModal";
 import {
   type AppColors,
   type ThemePreference,
@@ -86,6 +88,9 @@ export default function SettingsScreen() {
     steps,
     stepsToday
   } = useRescue();
+  const [downloadModalVisible, setDownloadModalVisible] = useState(false);
+  const { proPackStatus, clearDownloadedProAssets, getFormattedProgress } = useRemoteAssetDownloadStore();
+  const { downloaded, total, label } = getFormattedProgress();
   const themeOptions = useMemo<Array<{
     label: string;
     value: ThemePreference;
@@ -185,6 +190,48 @@ export default function SettingsScreen() {
           />
         ) : null}
       </SettingsPanel>
+
+      {isPro ? (
+        <SettingsPanel title="Pro Rescue Pack">
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Status</Text>
+            <Text style={[styles.rowValue, proPackStatus === "downloaded" && styles.success]}>
+              {proPackStatus.replace(/_/g, " ")}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Size</Text>
+            <Text style={styles.rowValue}>
+              {downloaded} / {total}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Files</Text>
+            <Text style={styles.rowValue}>{label}</Text>
+          </View>
+
+          {proPackStatus !== "downloaded" ? (
+            <AppButton
+              icon="cloud-download-outline"
+              onPress={() => setDownloadModalVisible(true)}
+              title={proPackStatus === "needs_download" ? "Resume Download" : proPackStatus === "failed" ? "Retry Download" : "Download Pack"}
+              variant="pro"
+            />
+          ) : (
+            <AppButton
+              icon="trash-outline"
+              onPress={clearDownloadedProAssets}
+              title="Clear Downloaded Pack"
+              variant="danger"
+            />
+          )}
+          
+          <ProAssetDownloadModal
+            visible={downloadModalVisible}
+            onClose={() => setDownloadModalVisible(false)}
+          />
+        </SettingsPanel>
+      ) : null}
 
       <SettingsPanel title={t("settings.steps")}>
         <View style={styles.row}>

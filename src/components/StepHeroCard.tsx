@@ -1,4 +1,4 @@
-﻿import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -17,6 +17,7 @@ import { CircularStepProgress } from "./CircularStepProgress";
 import { AnimatedProgressFill, MotionView, PulseView } from "./Motion";
 import { ProBadge } from "./ProBadge";
 import { UiSprite } from "./UiSprite";
+import { getAnimalImageSource, getRewardTargetImageSource } from "../services/assets/getAppAssetSource";
 
 type StepHeroCardProps = {
   metrics?: AnimalMetrics;
@@ -82,7 +83,7 @@ export function StepHeroCard({
   }
 
   const proLocked = metrics.status === "pro_locked";
-  const image = metrics.isRescued ? metrics.animal.happyImage : metrics.animal.sadImage;
+  const image = getAnimalImageSource(metrics.animal, metrics.isRescued ? "happy" : "sad");
   const nextRewardTarget = metrics.nextRewardTarget;
   const nextTarget = nextRewardTarget?.stepTarget ?? metrics.milestone.unlockSteps;
   const targetLabel =
@@ -175,7 +176,7 @@ export function StepHeroCard({
             <PulseView floatDistance={3} pulseScale={1.04}>
               <Image
                 contentFit="contain"
-                source={nextRewardTarget.image}
+                source={getRewardTargetImageSource(nextRewardTarget)}
                 style={styles.nextRewardImage}
               />
             </PulseView>

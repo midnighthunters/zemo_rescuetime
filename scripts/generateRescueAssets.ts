@@ -32,10 +32,17 @@ const happySourceDir = path.join(publicDataDir, "happy");
 const sadSourceDir = path.join(publicDataDir, "sad");
 const packsSourceDir = path.join(publicDataDir, "packs");
 const generatedDir = path.join(publicDataDir, "generated");
-const generatedAnimalDir = path.join(generatedDir, "animals");
-const generatedRewardDir = path.join(generatedDir, "rewards");
 const packsGeneratedDir = path.join(packsSourceDir, "generated");
 const srcDataDir = path.join(rootDir, "src", "data");
+
+const freeGeneratedDir = path.join(publicDataDir, "generated-free");
+const freeAnimalDir = path.join(freeGeneratedDir, "animals");
+const freeRewardDir = path.join(freeGeneratedDir, "rewards");
+
+const remoteAssetsDir = path.join(rootDir, "remote-assets-source");
+const remoteGeneratedDir = path.join(remoteAssetsDir, "data", "generated");
+const remoteAnimalDir = path.join(remoteGeneratedDir, "animals");
+const remoteRewardDir = path.join(remoteGeneratedDir, "rewards");
 
 const promptPaths = [
   process.env.REWARD_PROMPT_PACK_1 ??
@@ -63,7 +70,9 @@ function assertGeneratedPath(targetPath: string) {
   const allowedRoots = [
     path.resolve(generatedDir),
     path.resolve(packsGeneratedDir),
-    path.resolve(srcDataDir)
+    path.resolve(srcDataDir),
+    path.resolve(freeGeneratedDir),
+    path.resolve(remoteAssetsDir)
   ];
 
   const isInWorkspace = resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`);
@@ -382,10 +391,16 @@ async function writeAnimalAssets(animals: AnimalAsset[]) {
     );
   }
 
-  await resetDir(path.join(generatedAnimalDir, "happy"));
-  await resetDir(path.join(generatedAnimalDir, "sad"));
+  await resetDir(path.join(freeAnimalDir, "happy"));
+  await resetDir(path.join(freeAnimalDir, "sad"));
+  await resetDir(path.join(remoteAnimalDir, "happy"));
+  await resetDir(path.join(remoteAnimalDir, "sad"));
 
-  for (const animal of animals) {
+  for (let index = 0; index < animals.length; index++) {
+    const animal = animals[index];
+    const isFree = index === 0;
+    const targetDir = isFree ? freeAnimalDir : remoteAnimalDir;
+
     const happySheet = happySheets[animal.sourceSheet - 1];
     const sadSheet = sadSheets[animal.sourceSheet - 1];
     const cellIndex = animal.sourceSheetCell - 1;
@@ -413,19 +428,20 @@ async function writeAnimalAssets(animals: AnimalAsset[]) {
 
     await Promise.all([
       fs.writeFile(
-        path.join(generatedAnimalDir, "happy", animal.fileName),
+        path.join(targetDir, "happy", animal.fileName),
         happyBuffer
       ),
       fs.writeFile(
-        path.join(generatedAnimalDir, "sad", animal.fileName),
+        path.join(targetDir, "sad", animal.fileName),
         sadBuffer
       )
     ]);
   }
 }
 
-async function writeRewardAssets(concepts: RewardConcept[]) {
-  await resetDir(generatedRewardDir);
+async function writeRewardAssets(concepts: RewardConcept[], freeAnimalName: string) {
+  await resetDir(freeRewardDir);
+  await resetDir(remoteRewardDir);
   await resetDir(packsGeneratedDir);
 
   const sheetsByPack = new Map<number, string[]>();
@@ -460,8 +476,12 @@ async function writeRewardAssets(concepts: RewardConcept[]) {
     );
 
     await ensureDir(sheetDir);
+
+    const isFree = concept.animalName === freeAnimalName;
+    const targetRewardDir = isFree ? freeRewardDir : remoteRewardDir;
+
     await Promise.all([
-      fs.writeFile(path.join(generatedRewardDir, concept.fileName), buffer),
+      fs.writeFile(path.join(targetRewardDir, concept.fileName), buffer),
       fs.writeFile(path.join(sheetDir, concept.fileName), buffer)
     ]);
   }
@@ -469,12 +489,26 @@ async function writeRewardAssets(concepts: RewardConcept[]) {
 
 async function writeAnimalManifest(animals: AnimalAsset[]) {
   const entries = animals
-    .map((animal) => `  {
+    .map((animal, index) => {
+      const isFree = index === 0;
+      if (isFree) {
+        return `  {
     id: "${animal.id}",
     name: "${animal.name}",
-    sadImage: require("../../public/data/generated/animals/sad/${animal.fileName}"),
-    happyImage: require("../../public/data/generated/animals/happy/${animal.fileName}")
-  }`)
+    sadImage: require("../../public/data/generated-free/animals/sad/${animal.fileName}"),
+    happyImage: require("../../public/data/generated-free/animals/happy/${animal.fileName}")
+  }`;
+      } else {
+        const sadId = `animal-${animal.id.replace(/_/g, "-")}-sad`;
+        const happyId = `animal-${animal.id.replace(/_/g, "-")}-happy`;
+        return `  {
+    id: "${animal.id}",
+    name: "${animal.name}",
+    sadRemoteAssetId: "${sadId}",
+    happyRemoteAssetId: "${happyId}"
+  }`;
+      }
+    })
     .join(",\n");
 
   const content = `import type { Animal } from "./types";
@@ -487,19 +521,37 @@ ${entries}
   await fs.writeFile(path.join(srcDataDir, "animals.generated.ts"), content);
 }
 
-async function writeRewardManifest(concepts: RewardConcept[]) {
+async function writeRewardManifest(concepts: RewardConcept[], freeAnimalName: string) {
   const entries = concepts
-    .map((concept) => `  {
+    .map((concept) => {
+      const isFree = concept.animalName === freeAnimalName;
+      if (isFree) {
+        return `  {
     id: "${concept.id}",
     animalName: "${concept.animalName}",
     label: "${concept.label}",
     title: "${concept.title}",
-    image: require("../../public/data/generated/rewards/${concept.fileName}"),
+    image: require("../../public/data/generated-free/rewards/${concept.fileName}"),
     globalIndex: ${concept.globalIndex},
     pack: ${concept.pack},
     sheet: ${concept.sheetInPack},
     cell: ${concept.cell}
-  }`)
+  }`;
+      } else {
+        const rewardSlugId = `reward-${concept.id.replace(/_/g, "-")}-${slugify(concept.animalName).replace(/_/g, "-")}-${slugify(concept.label).replace(/_/g, "-")}`;
+        return `  {
+    id: "${concept.id}",
+    animalName: "${concept.animalName}",
+    label: "${concept.label}",
+    title: "${concept.title}",
+    remoteAssetId: "${rewardSlugId}",
+    globalIndex: ${concept.globalIndex},
+    pack: ${concept.pack},
+    sheet: ${concept.sheetInPack},
+    cell: ${concept.cell}
+  }`;
+      }
+    })
     .join(",\n");
 
   const content = `import type { RewardImage } from "./types";
@@ -555,13 +607,13 @@ async function writeVerificationManifest(
   };
 
   await fs.writeFile(
-    path.join(generatedDir, "manifest.json"),
+    path.join(freeGeneratedDir, "manifest.json"),
     JSON.stringify(manifest, null, 2)
   );
 }
 
 async function main() {
-  await resetDir(generatedDir);
+  await fs.rm(generatedDir, { recursive: true, force: true }).catch(() => {});
   const concepts = await readRewardConcepts();
   const animals = buildAnimalAssets(getAnimalNamesFromRewards(concepts));
 
@@ -569,15 +621,17 @@ async function main() {
     throw new Error(`Expected 79 animal reward groups, found ${animals.length}.`);
   }
 
+  const freeAnimalName = animals[0].name;
+
   await writeAnimalAssets(animals);
-  await writeRewardAssets(concepts);
+  await writeRewardAssets(concepts, freeAnimalName);
   await writeAnimalManifest(animals);
-  await writeRewardManifest(concepts);
+  await writeRewardManifest(concepts, freeAnimalName);
   await writeVerificationManifest(animals, concepts);
 
   console.log(`Generated ${animals.length} animal pairs.`);
   console.log(`Generated ${concepts.length} reward images.`);
-  console.log("Wrote public/data/generated/manifest.json.");
+  console.log("Wrote public/data/generated-free/manifest.json.");
 }
 
 main().catch((error) => {

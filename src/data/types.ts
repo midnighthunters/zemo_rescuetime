@@ -4,8 +4,10 @@ import type { AppLanguage } from "../i18n/languages";
 export type Animal = {
   id: string;
   name: string;
-  sadImage: ImageSourcePropType;
-  happyImage: ImageSourcePropType;
+  sadImage?: ImageSourcePropType;
+  happyImage?: ImageSourcePropType;
+  sadRemoteAssetId?: string;
+  happyRemoteAssetId?: string;
 };
 
 export type RewardImage = {
@@ -13,7 +15,8 @@ export type RewardImage = {
   animalName: string;
   label: string;
   title: string;
-  image: ImageSourcePropType;
+  image?: ImageSourcePropType;
+  remoteAssetId?: string;
   globalIndex: number;
   pack: number;
   sheet: number;
@@ -48,7 +51,8 @@ export type RescueRewardTarget = {
   rewardId: string;
   label: string;
   title: string;
-  image: ImageSourcePropType;
+  image?: ImageSourcePropType;
+  remoteAssetId?: string;
   stepTarget: number;
   rewardIndex: number;
 };

@@ -18,6 +18,9 @@ import { LanguageProvider } from "../src/i18n/LanguageProvider";
 import { EntitlementProvider } from "../src/state/EntitlementProvider";
 import { RescueProvider } from "../src/state/RescueProvider";
 import { ThemeProvider, useAppTheme } from "../src/theme/colors";
+import { useRemoteAssetDownloadStore } from "../src/services/assets/remoteAssetDownloadStore";
+import { ProAssetDownloadModal } from "../src/features/assets/components/ProAssetDownloadModal";
+import { useSubscriptionStore } from "../src/store/subscriptionStore";
 
 export default function RootLayout() {
   return (
@@ -32,6 +35,18 @@ export default function RootLayout() {
 function RootLayoutShell() {
   const theme = useAppTheme();
   const [appReady, setAppReady] = useState(false);
+
+  useEffect(() => {
+    const initRemoteAssets = async () => {
+      await useRemoteAssetDownloadStore.getState().hydrate();
+      const isPro = useSubscriptionStore.getState().isPro;
+      if (isPro) {
+        useRemoteAssetDownloadStore.getState().markProPackAvailable();
+        await useRemoteAssetDownloadStore.getState().checkProPackIntegrity();
+      }
+    };
+    void initRemoteAssets();
+  }, []);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.colors.backgroundBottom).catch(() => {
@@ -58,6 +73,7 @@ function RootLayoutShell() {
       setAppReady(true);
       SplashScreen.hideAsync().catch(() => {
         // Splash screen might already be hidden
+        // Splash screen might already be hidden
       });
     }, 5000); // 5 second maximum wait
 
@@ -77,6 +93,7 @@ function RootLayoutShell() {
         <EntitlementProvider>
           <RescueProvider>
             <UnlockNotificationBridge />
+            <ProAssetDownloadModal />
             <StatusBar
               backgroundColor={theme.colors.backgroundBottom}
               style={theme.statusBarStyle}

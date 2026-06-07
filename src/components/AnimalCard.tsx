@@ -12,6 +12,7 @@ import { spacing } from "../theme/spacing";
 import { formatPercent } from "../utils/format";
 import { AnimatedProgressFill, PulseView } from "./Motion";
 import { ProBadge } from "./ProBadge";
+import { getAnimalImageSource } from "../services/assets/getAppAssetSource";
 
 type AnimalCardProps = {
   animal: Animal;
@@ -44,7 +45,7 @@ function AnimalCardComponent({
   } = useLanguage();
   const isUnlocked = status === "unlocked";
   const isProLocked = status === "pro_locked";
-  const image = isUnlocked ? animal.happyImage : animal.sadImage;
+  const image = getAnimalImageSource(animal, isUnlocked ? "happy" : "sad");
   const isMysteryLocked = concealed && !isUnlocked;
   const statusCopy =
     isMysteryLocked
