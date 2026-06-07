@@ -14,5 +14,4 @@ yarn-error.log*
 
 public/
 assets/*
-!assets/audio/
-!assets/audio/unlock-chime.wav
+remote-assets-source/
