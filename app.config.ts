@@ -20,9 +20,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.annusmirabilis.rescueanimalssteps",
+    requireFullScreen: false,
     infoPlist: {
       NSMotionUsageDescription:
-        "Your steps help feed, care for, and rescue animals in the app."
+        "Your steps help feed, care for, and rescue animals in the app.",
+      UIRequiresFullScreen: false
     }
   },
   android: {
