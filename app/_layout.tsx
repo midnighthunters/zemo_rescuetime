@@ -60,32 +60,31 @@ function RootLayoutShell() {
     });
   }, []);
 
-  // Track when theme is loaded
+  // Hide splash screen as soon as the theme is ready
   useEffect(() => {
     if (!theme.isThemeLoading) {
       setAppReady(true);
+      SplashScreen.hideAsync().catch(() => {
+        // Splash screen might already be hidden
+      });
     }
   }, [theme.isThemeLoading]);
 
-  // Failsafe: Force hide splash screen after maximum wait time
+  // Failsafe: force hide splash screen after maximum wait time
   useEffect(() => {
     const failsafeTimeout = setTimeout(() => {
       setAppReady(true);
       SplashScreen.hideAsync().catch(() => {
         // Splash screen might already be hidden
-        // Splash screen might already be hidden
       });
-    }, 5000); // 5 second maximum wait
+    }, 5000);
 
     return () => clearTimeout(failsafeTimeout);
   }, []);
 
-  // Hide splash screen when app is ready
-  const onLayoutRootView = useCallback(async () => {
-    if (appReady) {
-      await SplashScreen.hideAsync();
-    }
-  }, [appReady]);
+  // onLayout is kept as a no-op callback so the GestureHandlerRootView prop
+  // signature is unchanged, but splash hiding no longer depends on it firing.
+  const onLayoutRootView = useCallback(() => {}, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>

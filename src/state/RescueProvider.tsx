@@ -516,7 +516,12 @@ export function RescueProvider({ children }: PropsWithChildren) {
             ? imported.dailyStepHistory[today] ?? 0
             : 0;
         rescueProgressRef.current = imported;
+        // Set both state updates together so React batches them in one render.
+        // This prevents a frame where isLoading=false but rescueProgress still
+        // has the default empty dailyStepHistory, which would cause the step
+        // history write effect to persist 0 and wipe saved steps on Android.
         setRescueProgress(imported);
+        setIsLoading(false);
         if (saved !== imported || nativeEvents.length > 0 || nativeStepSnapshot) {
           saveRescueProgress(imported).then(() => {
             const eventIds = nativeEvents.map((event) => event.id);
@@ -531,9 +536,12 @@ export function RescueProvider({ children }: PropsWithChildren) {
           clearTimeout(timeoutId);
           const merged = mergeProgress(null, animals);
           setRescueProgress(merged);
+          setIsLoading(false);
         }
       })
       .finally(() => {
+        // isLoading is already set to false in .then() and .catch() above,
+        // but we keep this as a safety net for any unhandled edge cases.
         if (mounted) {
           clearTimeout(timeoutId);
           setIsLoading(false);
