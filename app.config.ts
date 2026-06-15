@@ -52,6 +52,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ]
   ],
   extra: {
+    eas: {
+      projectId: "41d8c626-78f9-4b01-a6f0-90ae40bee098"
+    },
     revenueCatEntitlementId:
       process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "pro",
     revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? "",
