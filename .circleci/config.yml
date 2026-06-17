@@ -1,0 +1,262 @@
+version: 2.1
+
+parameters:
+  build_type:
+    type: enum
+    enum: [preview, production]
+    default: preview
+
+jobs:
+  build-ios:
+    macos:
+      xcode: "26.4.1"
+    resource_class: m4pro.medium
+    environment:
+      APP_SCHEME: RescueAnimalsSteps
+      APP_WORKSPACE: ios/RescueAnimalsSteps.xcworkspace
+      APP_BUNDLE_ID: com.zemolabs.rescuetime
+
+    steps:
+      - checkout
+
+      - run:
+          name: Initialize environment
+          command: touch "$BASH_ENV"
+
+      - run:
+          name: Setup Node.js
+          command: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install 22
+            nvm use 22
+            nvm alias default 22
+            node --version
+            npm --version
+
+      - restore_cache:
+          keys:
+            - npm-deps-v1-{{ checksum "package-lock.json" }}
+            - npm-deps-v1-
+
+      - run:
+          name: Install npm dependencies
+          command: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm use 22
+            npm ci
+
+      - save_cache:
+          key: npm-deps-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+
+      - restore_cache:
+          keys:
+            - cocoapods-v1-{{ checksum "ios/Podfile.lock" }}
+            - cocoapods-v1-
+
+      - run:
+          name: Install CocoaPods dependencies
+          command: |
+            cd ios
+            pod install --repo-update
+
+      - save_cache:
+          key: cocoapods-v1-{{ checksum "ios/Podfile.lock" }}
+          paths:
+            - ios/Pods
+            - ~/.cocoapods
+
+      - run:
+          name: Import signing certificate
+          command: |
+            KEYCHAIN_PATH=$TMPDIR/build.keychain
+            KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            CERTIFICATE_PATH=$TMPDIR/certificate.p12
+
+            # Decode certificate - strip any whitespace/newlines from base64 value first
+            echo "$IOS_CERTIFICATE_BASE64" | tr -d ' \n\r' | base64 --decode > "$CERTIFICATE_PATH"
+
+            # Debug: verify the decoded file is a valid PKCS12
+            echo "Certificate file size: $(wc -c < "$CERTIFICATE_PATH") bytes"
+            openssl pkcs12 -in "$CERTIFICATE_PATH" -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD" && echo "PKCS12 verified OK" || echo "PKCS12 verification FAILED"
+
+            security import "$CERTIFICATE_PATH" -k "$KEYCHAIN_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security list-keychains -d user -s "$KEYCHAIN_PATH"
+            security default-keychain -s "$KEYCHAIN_PATH"
+            echo "export KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $BASH_ENV
+            echo "export KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $BASH_ENV
+
+      - run:
+          name: Import provisioning profile
+          command: |
+            PROFILE_PATH=$TMPDIR/profile.mobileprovision
+            echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            security cms -D -i "$PROFILE_PATH" > $TMPDIR/profile.plist
+            PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' $TMPDIR/profile.plist)
+            cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID.mobileprovision"
+
+      - run:
+          name: Pin Node path for Xcode bundling phase
+          command: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm use 22
+            # The Xcode "Bundle React Native code and images" phase sources
+            # ios/.xcode.env, which calls nvm with --no-use (selects NO version),
+            # so command -v node can resolve to nothing and the JS bundle silently
+            # fails to embed -> app crashes at launch with no JS bundle.
+            # Pin the absolute node path so react-native-xcode.sh always finds it.
+            NODE_PATH_RESOLVED="$(command -v node)"
+            echo "Resolved NODE_BINARY: $NODE_PATH_RESOLVED"
+            echo "export NODE_BINARY=$NODE_PATH_RESOLVED" > ios/.xcode.env.local
+            cat ios/.xcode.env.local
+
+      - run:
+          name: Build iOS archive
+          command: |
+            ARCHIVE_PATH=$TMPDIR/RescueAnimalsSteps.xcarchive
+            echo "export ARCHIVE_PATH=$ARCHIVE_PATH" >> $BASH_ENV
+            xcodebuild clean archive \
+              -workspace "$APP_WORKSPACE" \
+              -scheme "$APP_SCHEME" \
+              -configuration Release \
+              -archivePath "$ARCHIVE_PATH" \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGN_STYLE=Manual \
+              DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+              PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
+              CODE_SIGN_IDENTITY="Apple Distribution"
+
+      - run:
+          name: Verify JS bundle embedded in archive
+          command: |
+            source $BASH_ENV
+            APP_PATH="$ARCHIVE_PATH/Products/Applications/RescueAnimalsSteps.app"
+            BUNDLE_PATH="$APP_PATH/main.jsbundle"
+            echo "Looking for JS bundle at: $BUNDLE_PATH"
+            if [ ! -f "$BUNDLE_PATH" ]; then
+              echo "ERROR: main.jsbundle is MISSING from the archive."
+              echo "The app will crash at launch (AppDelegate returns a nil bundle URL)."
+              echo "This usually means the Xcode bundling phase could not find Node (NODE_BINARY)."
+              echo "App bundle contents:"
+              ls -la "$APP_PATH" || true
+              exit 1
+            fi
+            BUNDLE_SIZE=$(wc -c < "$BUNDLE_PATH")
+            echo "main.jsbundle found, size: $BUNDLE_SIZE bytes"
+            # A real Hermes/JS bundle is well over 100KB; anything tiny is a failed bundle.
+            if [ "$BUNDLE_SIZE" -lt 100000 ]; then
+              echo "ERROR: main.jsbundle is suspiciously small ($BUNDLE_SIZE bytes) — likely a failed bundle."
+              exit 1
+            fi
+
+      - run:
+          name: Export IPA
+          command: |
+            source $BASH_ENV
+            EXPORT_METHOD="ad-hoc"
+            EXPORT_PATH=$TMPDIR/export
+            mkdir -p $EXPORT_PATH
+            PLIST_PATH=$TMPDIR/ExportOptions.plist
+
+            # Debug: confirm archive exists
+            echo "Archive path: $ARCHIVE_PATH"
+            ls -la "$ARCHIVE_PATH" || echo "WARNING: Archive not found at $ARCHIVE_PATH"
+
+            printf '%s\n' \
+              '<?xml version="1.0" encoding="UTF-8"?>' \
+              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+              '<plist version="1.0">' \
+              '<dict>' \
+              '  <key>method</key>' \
+              "  <string>$EXPORT_METHOD</string>" \
+              '  <key>teamID</key>' \
+              "  <string>$APPLE_TEAM_ID</string>" \
+              '  <key>uploadBitcode</key>' \
+              '  <false/>' \
+              '  <key>compileBitcode</key>' \
+              '  <false/>' \
+              '  <key>uploadSymbols</key>' \
+              '  <true/>' \
+              '  <key>signingStyle</key>' \
+              '  <string>manual</string>' \
+              '  <key>provisioningProfiles</key>' \
+              '  <dict>' \
+              "    <key>$APP_BUNDLE_ID</key>" \
+              "    <string>$IOS_PROVISIONING_PROFILE_NAME</string>" \
+              '  </dict>' \
+              '</dict>' \
+              '</plist>' > "$PLIST_PATH"
+
+            echo "Export options plist:"
+            cat "$PLIST_PATH"
+
+            xcodebuild -exportArchive \
+              -archivePath "$ARCHIVE_PATH" \
+              -exportPath "$EXPORT_PATH" \
+              -exportOptionsPlist "$PLIST_PATH"
+
+            # Find the IPA and store its path
+            IPA_PATH=$(find "$EXPORT_PATH" -name "*.ipa" | head -1)
+            echo "IPA path: $IPA_PATH"
+            echo "export IPA_PATH=$IPA_PATH" >> $BASH_ENV
+
+            # Copy to fixed path for artifact upload
+            mkdir -p /tmp/ipa_export
+            cp -R "$EXPORT_PATH"/. /tmp/ipa_export/
+
+            echo "Export directory contents:"
+            ls -la /tmp/ipa_export
+
+      - store_artifacts:
+          path: /tmp/ipa_export
+          destination: ipa
+
+      # NOTE: TestFlight upload is temporarily commented out.
+      # The provisioning profile must be an App Store distribution profile (not Ad Hoc)
+      # before re-enabling this step. Update IOS_PROVISIONING_PROFILE_BASE64 and
+      # IOS_PROVISIONING_PROFILE_NAME in CircleCI env vars with the App Store profile,
+      # then uncomment the block below.
+      #
+      # - run:
+      #     name: Upload to TestFlight
+      #     command: |
+      #       source $BASH_ENV
+      #
+      #       echo "=== Setting up App Store Connect API key ==="
+      #       mkdir -p ~/.appstoreconnect/private_keys
+      #       API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+      #       echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$API_KEY_PATH"
+      #       chmod 600 "$API_KEY_PATH"
+      #
+      #       echo "=== Uploading to TestFlight ==="
+      #       xcrun altool --upload-app \
+      #         -f "$IPA_PATH" \
+      #         -t ios \
+      #         --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+      #         --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
+      #         --verbose 2>&1
+      #
+      #       echo "=== Upload complete — build will appear in TestFlight within ~5 minutes ==="
+
+      - run:
+          name: Cleanup keychain
+          when: always
+          command: |
+            [ -f "$BASH_ENV" ] && source "$BASH_ENV" || true
+            [ -n "$KEYCHAIN_PATH" ] && security delete-keychain "$KEYCHAIN_PATH" || true
+
+workflows:
+  ios-build:
+    when:
+      equal: [api, << pipeline.trigger_source >>]
+    jobs:
+      - build-ios

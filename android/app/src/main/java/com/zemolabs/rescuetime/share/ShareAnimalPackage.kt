@@ -1,13 +1,13 @@
-package com.annusmirabilis.rescueanimalssteps.target
+package com.zemolabs.rescuetime.share
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
 
-class TargetAchievementPackage : ReactPackage {
+class ShareAnimalPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return listOf(TargetAchievementModule(reactContext))
+    return listOf(ShareAnimalModule(reactContext))
   }
 
   override fun createViewManagers(

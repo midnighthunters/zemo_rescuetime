@@ -1,4 +1,4 @@
-package com.annusmirabilis.rescueanimalssteps.target
+package com.zemolabs.rescuetime.target
 
 import android.content.Context
 import org.json.JSONArray

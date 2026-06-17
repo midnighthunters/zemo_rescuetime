@@ -19,7 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   assetBundlePatterns: ["**/*"],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.annusmirabilis.rescueanimalssteps",
+    bundleIdentifier: "com.zemolabs.rescuetime",
     requireFullScreen: false,
     infoPlist: {
       NSMotionUsageDescription:
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     }
   },
   android: {
-    package: "com.annusmirabilis.rescueanimalssteps",
+    package: "com.zemolabs.rescuetime",
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#FFF8EA"
@@ -78,10 +78,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.EXPO_PUBLIC_REVENUECAT_YEARLY_PACKAGE_ID ?? "$rc_annual",
     revenueCatIosMonthlyProductId:
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_MONTHLY_PRODUCT_ID ??
-      "com.annusmirabilis.rescueanimalssteps.pro.monthly",
+      "com.zemolabs.rescuetime.pro.monthly",
     revenueCatIosYearlyProductId:
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_YEARLY_PRODUCT_ID ??
-      "com.annusmirabilis.rescueanimalssteps.pro.yearly",
+      "com.zemolabs.rescuetime.pro.yearly",
     revenueCatAndroidMonthlyProductId:
       process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_MONTHLY_PRODUCT_ID ??
       "rescue_animals_pro_monthly",

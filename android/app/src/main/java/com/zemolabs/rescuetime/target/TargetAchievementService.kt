@@ -1,4 +1,4 @@
-package com.annusmirabilis.rescueanimalssteps.target
+package com.zemolabs.rescuetime.target
 
 import android.app.Service
 import android.content.Context

@@ -14,4 +14,16 @@ yarn-error.log*
 
 public/
 assets/*
+!assets/icon.png
+!assets/adaptive-icon.png
+!assets/splash-icon.png
 remote-assets-source/
+
+# iOS build artifacts — track source files but not generated outputs
+ios/Pods/
+ios/build/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/.xcode.env.local
+ios/Podfile.lock

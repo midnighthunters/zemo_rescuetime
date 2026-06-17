@@ -1,4 +1,4 @@
-package com.annusmirabilis.rescueanimalssteps
+package com.zemolabs.rescuetime
 
 import android.app.Application
 import android.content.res.Configuration
@@ -15,8 +15,8 @@ import com.facebook.react.defaults.DefaultReactNativeHost
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import com.annusmirabilis.rescueanimalssteps.share.ShareAnimalPackage
-import com.annusmirabilis.rescueanimalssteps.target.TargetAchievementPackage
+import com.zemolabs.rescuetime.share.ShareAnimalPackage
+import com.zemolabs.rescuetime.target.TargetAchievementPackage
 
 class MainApplication : Application(), ReactApplication {
 

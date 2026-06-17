@@ -1,4 +1,4 @@
-package com.annusmirabilis.rescueanimalssteps.share
+package com.zemolabs.rescuetime.share
 
 import android.content.ClipData
 import android.content.Intent

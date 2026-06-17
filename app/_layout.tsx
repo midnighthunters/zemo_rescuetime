@@ -1,3 +1,7 @@
+// Crash prevention — must be the very first import so global error handlers
+// are registered before any other module code runs. See src/bootstrap/crashGuard.ts
+import "../src/bootstrap/crashGuard";
+
 import "react-native-gesture-handler";
 import "react-native-reanimated";
 

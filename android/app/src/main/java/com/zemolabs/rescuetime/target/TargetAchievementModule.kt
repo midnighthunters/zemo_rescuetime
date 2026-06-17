@@ -1,4 +1,4 @@
-package com.annusmirabilis.rescueanimalssteps.target
+package com.zemolabs.rescuetime.target
 
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext

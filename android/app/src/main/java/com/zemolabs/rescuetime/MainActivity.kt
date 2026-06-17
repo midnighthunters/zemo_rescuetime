@@ -1,4 +1,4 @@
-package com.annusmirabilis.rescueanimalssteps
+package com.zemolabs.rescuetime
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

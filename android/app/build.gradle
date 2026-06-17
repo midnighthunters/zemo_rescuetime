@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.annusmirabilis.rescueanimalssteps'
+    namespace 'com.zemolabs.rescuetime'
     defaultConfig {
-        applicationId 'com.annusmirabilis.rescueanimalssteps'
+        applicationId 'com.zemolabs.rescuetime'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
