@@ -3,8 +3,8 @@ import type { Animal, RewardImage, RescueRewardTarget } from "../../data/types";
 import type { RemoteAsset } from "./remoteAssetTypes";
 import { useRemoteAssetDownloadStore } from "./remoteAssetDownloadStore";
 
-const ANIMAL_PLACEHOLDER = require("../../../public/data/placeholders/animal-placeholder.png") as ImageSourcePropType;
-const REWARD_PLACEHOLDER = require("../../../public/data/placeholders/reward-placeholder.png") as ImageSourcePropType;
+const ANIMAL_PLACEHOLDER = require("../../../public/data/placeholders/animal-placeholder.webp") as ImageSourcePropType;
+const REWARD_PLACEHOLDER = require("../../../public/data/placeholders/reward-placeholder.webp") as ImageSourcePropType;
 
 export function getImageSourceForRemoteAsset(asset: RemoteAsset): ImageSourcePropType {
   const cachedUri = useRemoteAssetDownloadStore.getState().getCachedAssetUri(asset.id);

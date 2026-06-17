@@ -4,8 +4,8 @@ export const generatedAnimals: Animal[] = [
   {
     id: "animal_001",
     name: "Golden Retriever",
-    sadImage: require("../../public/data/generated-free/animals/sad/animal_001_golden_retriever.png"),
-    happyImage: require("../../public/data/generated-free/animals/happy/animal_001_golden_retriever.png")
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_001_golden_retriever.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_001_golden_retriever.webp")
   },
   {
     id: "animal_002",
