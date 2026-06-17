@@ -1,0 +1,5 @@
+# Ensure Unix line endings and executable bits are preserved for shell scripts
+# on all platforms (critical for CI — gradlew must be executable on macOS/Linux).
+android/gradlew text eol=lf filemode=true
+*.sh            text eol=lf filemode=true
+*.bash          text eol=lf filemode=true
