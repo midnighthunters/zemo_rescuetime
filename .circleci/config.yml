@@ -54,17 +54,17 @@ jobs:
 
       - restore_cache:
           keys:
-            - cocoapods-v1-{{ checksum "ios/Podfile.lock" }}
+            - cocoapods-v1-{{ checksum "ios/Podfile" }}-{{ checksum "package-lock.json" }}
             - cocoapods-v1-
 
       - run:
           name: Install CocoaPods dependencies
           command: |
             cd ios
-            pod install --repo-update
+            pod install
 
       - save_cache:
-          key: cocoapods-v1-{{ checksum "ios/Podfile.lock" }}
+          key: cocoapods-v1-{{ checksum "ios/Podfile" }}-{{ checksum "package-lock.json" }}
           paths:
             - ios/Pods
             - ~/.cocoapods
