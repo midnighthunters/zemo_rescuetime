@@ -12,6 +12,10 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# Editor / IDE
+.vscode/
+.idea/
+
 !assets/icon.png
 !assets/adaptive-icon.png
 !assets/splash-icon.png
@@ -24,6 +28,18 @@ ios/*.xcworkspace/xcuserdata/
 ios/*.xcodeproj/xcuserdata/
 ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 ios/.xcode.env.local
-ios/Podfile.lock
+# ios/Podfile.lock — intentionally tracked; commit after each pod install
+
+# iOS signing — never commit these
 provisioning_profile_base64.txt
 rescueTime_profile.mobileprovision
+*.mobileprovision
+*.p12
+*.p8
+*.cer
+*.key
+
+# Stray dev files
+*.txt
+RestaurantStepCounter.txt
+progress-*.png
