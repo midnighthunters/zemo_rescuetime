@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		13B07FBC1A68108700A75B9A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		A3B1C2D3E4F5A6B7C8D9E0F1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A3B1C2D3E4F5A6B7C8D9E0F0 /* PrivacyInfo.xcprivacy */; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297161215061F000B7C4FE /* JavaScriptCore.framework */; };
 /* End PBXBuildFile section */
 
@@ -16,6 +17,7 @@
 		13B07FB01A68108700A75B9A /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = RescueAnimalsSteps/AppDelegate.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* RescueAnimalsSteps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RescueAnimalsSteps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = RescueAnimalsSteps/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A3B1C2D3E4F5A6B7C8D9E0F0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = file.xcprivacy; name = PrivacyInfo.xcprivacy; path = RescueAnimalsSteps/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297161215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		DD2B8E0A23C6F8BB00EC62FD /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = RescueAnimalsSteps/Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -38,6 +40,7 @@
 				13B07FB01A68108700A75B9A /* AppDelegate.swift */,
 				DD2B8E0A23C6F8BB00EC62FD /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
+				A3B1C2D3E4F5A6B7C8D9E0F0 /* PrivacyInfo.xcprivacy */,
 			);
 			name = RescueAnimalsSteps;
 			sourceTree = "<group>";
@@ -126,6 +129,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
+				A3B1C2D3E4F5A6B7C8D9E0F1 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

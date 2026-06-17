@@ -54,7 +54,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - cocoapods-v1-{{ checksum "ios/Podfile" }}-{{ checksum "package-lock.json" }}
+            - cocoapods-v1-{{ checksum "ios/Podfile.lock" }}
             - cocoapods-v1-
 
       - run:
@@ -64,7 +64,7 @@ jobs:
             pod install
 
       - save_cache:
-          key: cocoapods-v1-{{ checksum "ios/Podfile" }}-{{ checksum "package-lock.json" }}
+          key: cocoapods-v1-{{ checksum "ios/Podfile.lock" }}
           paths:
             - ios/Pods
             - ~/.cocoapods
@@ -133,7 +133,8 @@ jobs:
               CODE_SIGN_STYLE=Manual \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
               PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
-              CODE_SIGN_IDENTITY="Apple Distribution"
+              CODE_SIGN_IDENTITY="Apple Distribution" \
+              EXPO_PUBLIC_REVENUECAT_IOS_API_KEY="$EXPO_PUBLIC_REVENUECAT_IOS_API_KEY"
 
       - run:
           name: Verify JS bundle embedded in archive
