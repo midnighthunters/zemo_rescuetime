@@ -41,5 +41,18 @@ target 'RescueAnimalsSteps' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # react_native_post_install (via NewArchitectureHelper.set_clang_cxx_language_standard_if_needed)
+    # forces ALL pod targets to c++20. fmt 11.0.2 (shipped with RN 0.81.x) uses FMT_STRING
+    # macros that Clang rejects as non-constant-expressions under strict C++20 (Xcode 16+).
+    # We override fmt back to c++17 AFTER react_native_post_install so it isn't stomped.
+    installer.pods_project.targets.each do |target|
+      if target.name == 'fmt'
+        target.build_configurations.each do |build_config|
+          build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+      end
+    end
+    installer.pods_project.save()
   end
 end

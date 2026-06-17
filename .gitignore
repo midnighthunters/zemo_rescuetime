@@ -12,8 +12,6 @@ yarn-error.log*
 .env.*
 !.env.example
 
-public/
-assets/*
 !assets/icon.png
 !assets/adaptive-icon.png
 !assets/splash-icon.png
@@ -27,3 +25,5 @@ ios/*.xcodeproj/xcuserdata/
 ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 ios/.xcode.env.local
 ios/Podfile.lock
+provisioning_profile_base64.txt
+rescueTime_profile.mobileprovision
