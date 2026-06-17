@@ -24,7 +24,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       NSMotionUsageDescription:
         "Your steps help feed, care for, and rescue animals in the app.",
+      NSHealthShareUsageDescription:
+        "Your step count from Health is used to feed, care for, and rescue animals in the app.",
+      NSHealthUpdateUsageDescription:
+        "Rescue Animals Steps does not write any data to Health.",
       UIRequiresFullScreen: false
+    },
+    entitlements: {
+      "com.apple.developer.healthkit": true,
+      "com.apple.developer.healthkit.access": []
     }
   },
   android: {
