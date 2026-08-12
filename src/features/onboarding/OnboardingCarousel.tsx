@@ -2,31 +2,38 @@ import { Image } from "expo-image";
 import { useRef, useState } from "react";
 import {
   FlatList,
-  Pressable,
   StyleSheet,
+  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
-  type NativeSyntheticEvent
+  type NativeSyntheticEvent,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { onboardingSlides, type OnboardingSlide } from "../../data/onboarding";
-import { useLanguage } from "../../i18n/LanguageProvider";
-import { useAppTheme } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
 import { AppButton } from "../../components/AppButton";
 import { MotionView, PulseView } from "../../components/Motion";
+import { onboardingSlides, type OnboardingSlide } from "../../data/onboarding";
+import { useLanguage } from "../../i18n/LanguageProvider";
+import { type AppColors, useAppTheme } from "../../theme/colors";
+import { spacing } from "../../theme/spacing";
 
 type OnboardingCarouselProps = {
-  onDone: () => void;
+  onDone: () => Promise<void>;
+  onSkipPermission: () => Promise<void>;
 };
 
-export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
+export function OnboardingCarousel({
+  onDone,
+  onSkipPermission,
+}: OnboardingCarouselProps) {
   const { width } = useWindowDimensions();
   const theme = useAppTheme();
+  const styles = createStyles(theme.colors, theme.isDark);
   const { t } = useLanguage();
   const listRef = useRef<FlatList<OnboardingSlide>>(null);
   const [index, setIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isLast = index === onboardingSlides.length - 1;
 
   const handleMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -34,81 +41,265 @@ export function OnboardingCarousel({ onDone }: OnboardingCarouselProps) {
     setIndex(Math.max(0, Math.min(onboardingSlides.length - 1, nextIndex)));
   };
 
-  const handleNext = () => {
-    if (isLast) {
-      onDone();
-      return;
-    }
+  const moveToNextSlide = () => {
+    const nextIndex = Math.min(index + 1, onboardingSlides.length - 1);
 
-    listRef.current?.scrollToIndex({ index: index + 1, animated: true });
+    // Update eagerly so button presses do not depend on a platform-specific
+    // momentum event (web does not consistently emit it for scrollToIndex).
+    setIndex(nextIndex);
+    listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+  };
+
+  const finish = async (requestStepAccess: boolean) => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      if (requestStepAccess) {
+        await onDone();
+      } else {
+        await onSkipPermission();
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.backgroundBottom }]}>
+    <SafeAreaView
+      edges={["top", "bottom", "left", "right"]}
+      style={[styles.root, { backgroundColor: theme.colors.backgroundBottom }]}
+    >
+      <View style={styles.brandRow}>
+        <View style={styles.brandMark}>
+          <Text style={styles.brandMarkText}>🐾</Text>
+        </View>
+        <Text style={styles.brandText}>Rescue Steps</Text>
+      </View>
+
       <FlatList
         ref={listRef}
+        accessibilityRole="adjustable"
+        contentInsetAdjustmentBehavior="automatic"
         data={onboardingSlides}
+        getItemLayout={(_, itemIndex) => ({
+          length: width,
+          offset: width * itemIndex,
+          index: itemIndex,
+        })}
         horizontal
         keyExtractor={(item) => item.id}
         onMomentumScrollEnd={handleMomentumEnd}
         pagingEnabled
         renderItem={({ item }) => (
-          <Pressable
-            accessibilityLabel={t("a11y.onboardingImage")}
-            accessibilityRole="button"
-            onPress={handleNext}
-            style={[styles.slide, { width }]}
-          >
-            <View style={styles.imageContainer}>
-              <PulseView floatDistance={6} pulseScale={1.025} style={styles.imagePulse}>
-                <Image contentFit="contain" source={item.image} style={styles.image} />
+          <View style={[styles.slide, { width }]}>
+            <MotionView direction="fade" style={styles.illustrationCard}>
+              <PulseView
+                floatDistance={5}
+                pulseScale={1.02}
+                style={styles.imagePulse}
+              >
+                <Image
+                  accessibilityLabel={item.title}
+                  contentFit="contain"
+                  source={item.image}
+                  style={styles.image}
+                />
               </PulseView>
+            </MotionView>
+            <View style={styles.copy}>
+              <Text accessibilityRole="header" style={styles.title}>
+                {item.title}
+              </Text>
+              <Text style={styles.subtitle}>{item.subtitle}</Text>
+              {item.requestsStepAccess ? (
+                <View style={styles.privacyPill}>
+                  <Text style={styles.privacyIcon}>🔒</Text>
+                  <Text style={styles.privacyText}>
+                    Read-only access. The app never writes Health data.
+                  </Text>
+                </View>
+              ) : null}
             </View>
-          </Pressable>
+          </View>
         )}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
+        style={styles.list}
       />
-      {isLast && (
-        <MotionView direction="up" style={styles.controls}>
+
+      <View style={styles.controls}>
+        <View
+          accessibilityLabel={`Page ${index + 1} of ${onboardingSlides.length}`}
+          style={styles.pageDots}
+        >
+          {onboardingSlides.map((slide, dotIndex) => (
+            <View
+              key={slide.id}
+              style={[styles.dot, dotIndex === index && styles.dotActive]}
+            />
+          ))}
+        </View>
+
+        {isLast ? (
+          <View style={styles.finalActions}>
+            <AppButton
+              icon="heart"
+              loading={isSubmitting}
+              onPress={() => void finish(true)}
+              title={t("onboarding.enableSteps")}
+              variant="primary"
+            />
+            <AppButton
+              disabled={isSubmitting}
+              onPress={() => void finish(false)}
+              title={t("common.notNow")}
+              variant="ghost"
+            />
+          </View>
+        ) : (
           <AppButton
-            icon="heart"
-            onPress={handleNext}
-            title={t("onboarding.start")}
+            icon="arrow-forward"
+            onPress={moveToNextSlide}
+            title={t("onboarding.next")}
             variant="primary"
           />
-        </MotionView>
-      )}
-    </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  imageContainer: {
-    alignItems: "center",
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl
-  },
-  image: {
-    height: "100%",
-    width: "100%"
-  },
-  imagePulse: {
-    height: "80%",
-    width: "100%"
-  },
-  controls: {
-    bottom: spacing.xl,
-    left: spacing.lg,
-    position: "absolute",
-    right: spacing.lg
-  },
-  root: {
-    flex: 1
-  },
-  slide: {
-    flex: 1
-  }
-});
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
+    brandMark: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceSoft,
+      borderRadius: 12,
+      height: 36,
+      justifyContent: "center",
+      width: 36,
+    },
+    brandMarkText: {
+      fontSize: 19,
+    },
+    brandRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+    },
+    brandText: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: "900",
+      letterSpacing: -0.2,
+    },
+    controls: {
+      gap: spacing.md,
+      paddingBottom: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    copy: {
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.xl,
+    },
+    dot: {
+      backgroundColor: colors.border,
+      borderRadius: 4,
+      height: 7,
+      width: 7,
+    },
+    dotActive: {
+      backgroundColor: colors.primary,
+      width: 24,
+    },
+    finalActions: {
+      gap: spacing.sm,
+    },
+    illustrationCard: {
+      alignItems: "center",
+      alignSelf: "center",
+      backgroundColor: isDark ? colors.surfaceSoft : "#F0FAF4",
+      borderColor: colors.border,
+      borderCurve: "continuous",
+      borderRadius: 32,
+      borderWidth: 1,
+      height: "52%",
+      justifyContent: "center",
+      maxHeight: 430,
+      minHeight: 240,
+      overflow: "hidden",
+      padding: spacing.xl,
+      width: "86%",
+    },
+    image: {
+      height: "100%",
+      width: "100%",
+    },
+    imagePulse: {
+      height: "92%",
+      width: "92%",
+    },
+    list: {
+      flex: 1,
+    },
+    pageDots: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 7,
+      justifyContent: "center",
+      minHeight: 16,
+    },
+    privacyIcon: {
+      fontSize: 14,
+    },
+    privacyPill: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceSoft,
+      borderCurve: "continuous",
+      borderRadius: 14,
+      flexDirection: "row",
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    privacyText: {
+      color: colors.muted,
+      flexShrink: 1,
+      fontSize: 12,
+      fontWeight: "700",
+      lineHeight: 16,
+      textAlign: "center",
+    },
+    root: {
+      flex: 1,
+    },
+    slide: {
+      gap: spacing.xl,
+      height: "100%",
+      justifyContent: "center",
+      paddingBottom: spacing.md,
+      paddingTop: spacing.md,
+    },
+    subtitle: {
+      color: colors.muted,
+      fontSize: 16,
+      fontWeight: "600",
+      lineHeight: 23,
+      maxWidth: 430,
+      textAlign: "center",
+    },
+    title: {
+      color: colors.text,
+      fontSize: 30,
+      fontWeight: "900",
+      letterSpacing: -0.7,
+      lineHeight: 35,
+      textAlign: "center",
+    },
+  });
+}

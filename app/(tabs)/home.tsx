@@ -78,7 +78,13 @@ export default function HomeScreen() {
     careMilestone ? (careNextRewardTarget?.title ?? t("common.rescue")) : undefined;
   const visibleUnlockEventId = lastCareEvent?.id ?? lastRescueEvent?.id;
 
-  const hasPermissionIssue = Boolean(steps.error || steps.permissionStatus === "denied");
+  const hasPermissionIssue =
+    !steps.isLoading &&
+    Boolean(
+      steps.error ||
+        !steps.isAvailable ||
+        steps.permissionStatus !== "granted"
+    );
 
   useEffect(() => {
     if (!visibleUnlockEventId) {
@@ -126,20 +132,36 @@ export default function HomeScreen() {
       {hasPermissionIssue ? (
         <MotionView delay={70} style={styles.permissionBanner}>
           <Ionicons color={theme.colors.danger} name="warning" size={18} />
-          <Text style={styles.permissionBannerText}>
-            {t("home.permissionNeeded")}
-          </Text>
+          <View accessibilityLiveRegion="polite" style={styles.permissionCopy}>
+            <Text style={styles.permissionBannerText}>
+              {t("home.permissionNeeded")}
+            </Text>
+            <Text selectable style={styles.permissionBannerDetail}>
+              {steps.error ??
+                "Connect your device step source to count today’s rescue progress."}
+            </Text>
+          </View>
           <View style={styles.permissionBannerActions}>
             <AppButton
-              icon="refresh"
+              icon={steps.permissionStatus === "undetermined" ? "heart" : "refresh"}
               loading={steps.isLoading}
-              onPress={steps.refreshSteps}
-              title={t("home.retry")}
+              onPress={
+                steps.permissionStatus === "undetermined"
+                  ? steps.requestPermission
+                  : steps.refreshSteps
+              }
+              style={styles.permissionAction}
+              title={
+                steps.permissionStatus === "undetermined"
+                  ? t("onboarding.enableSteps")
+                  : t("home.retry")
+              }
               variant="secondary"
             />
             <AppButton
               icon="settings"
               onPress={() => Linking.openSettings()}
+              style={styles.permissionAction}
               title={t("common.settings")}
               variant="ghost"
             />
@@ -153,7 +175,6 @@ export default function HomeScreen() {
           <Text style={styles.trackingText}>
             {t("home.tracking", { source: steps.sourceLabel })}
           </Text>
-          <Text style={styles.trackingStatus}>{steps.permissionStatus}</Text>
         </MotionView>
       )}
 
@@ -240,8 +261,11 @@ function createStyles(colors: AppColors, isDark: boolean) {
       fontWeight: "900",
       letterSpacing: -0.5
     },
+    permissionAction: {
+      flex: 1
+    },
     permissionBanner: {
-      alignItems: "center",
+      alignItems: "flex-start",
       backgroundColor: isDark ? "#2A1818" : "#FFF3F3",
       borderColor: colors.danger,
       borderRadius: 10,
@@ -252,15 +276,27 @@ function createStyles(colors: AppColors, isDark: boolean) {
       padding: spacing.md
     },
     permissionBannerActions: {
+      flex: 1,
+      flexBasis: "100%",
       flexDirection: "row",
       gap: spacing.xs,
-      marginLeft: "auto"
+      marginLeft: 26
+    },
+    permissionBannerDetail: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: "600",
+      lineHeight: 17
     },
     permissionBannerText: {
       color: colors.danger,
-      flex: 1,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: "800"
+    },
+    permissionCopy: {
+      flex: 1,
+      gap: 2,
+      minWidth: 180
     },
     trackingDot: {
       backgroundColor: colors.primary,
@@ -279,12 +315,6 @@ function createStyles(colors: AppColors, isDark: boolean) {
       gap: spacing.xs,
       paddingHorizontal: spacing.md,
       paddingVertical: 5
-    },
-    trackingStatus: {
-      color: colors.primaryDark,
-      fontSize: 11,
-      fontWeight: "800",
-      textTransform: "capitalize"
     },
     trackingText: {
       color: colors.muted,

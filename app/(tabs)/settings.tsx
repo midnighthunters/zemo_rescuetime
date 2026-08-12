@@ -106,6 +106,14 @@ export default function SettingsScreen() {
     theme.resolvedColorScheme === "dark"
       ? t("settings.themeDark")
       : t("settings.themeLight");
+  const stepPermissionLabel =
+    steps.permissionStatus.charAt(0).toUpperCase() +
+    steps.permissionStatus.slice(1);
+  const stepModeLabel =
+    steps.countingMode
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
 
   const confirmReset = () => {
     Alert.alert(
@@ -244,7 +252,7 @@ export default function SettingsScreen() {
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t("settings.permission")}</Text>
-          <Text style={styles.rowValue}>{steps.permissionStatus}</Text>
+          <Text style={styles.rowValue}>{stepPermissionLabel}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t("settings.pedometer")}</Text>
@@ -254,29 +262,47 @@ export default function SettingsScreen() {
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t("settings.mode")}</Text>
-          <Text style={styles.rowValue}>{steps.countingMode.replace("-", " ")}</Text>
+          <Text style={styles.rowValue}>{stepModeLabel}</Text>
         </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t("settings.storedToday")}</Text>
-          <Text style={styles.rowValue}>
-            {formatLocalizedNumber(steps.historicalStepsToday)}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t("settings.liveSession")}</Text>
-          <Text style={styles.rowValue}>{formatLocalizedNumber(steps.liveSteps)}</Text>
-        </View>
+        {steps.countingMode === "full-day" ? (
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t("settings.storedToday")}</Text>
+            <Text style={styles.rowValue}>
+              {formatLocalizedNumber(steps.historicalStepsToday)}
+            </Text>
+          </View>
+        ) : null}
+        {steps.countingMode === "live-session" ? (
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t("settings.liveSession")}</Text>
+            <Text style={styles.rowValue}>
+              {formatLocalizedNumber(steps.liveSteps)}
+            </Text>
+          </View>
+        ) : null}
         {steps.countingMode === "live-session" ? (
           <Text style={styles.note}>
             {t("settings.liveSessionNote")}
           </Text>
         ) : null}
-        {steps.error ? <Text style={styles.error}>{steps.error}</Text> : null}
+        {steps.error ? (
+          <Text selectable style={styles.error}>
+            {steps.error}
+          </Text>
+        ) : null}
         <AppButton
-          icon="refresh"
+          icon={steps.permissionStatus === "undetermined" ? "heart" : "refresh"}
           loading={steps.isLoading}
-          onPress={steps.refreshSteps}
-          title={t("settings.refreshPedometer")}
+          onPress={
+            steps.permissionStatus === "undetermined"
+              ? steps.requestPermission
+              : steps.refreshSteps
+          }
+          title={
+            steps.permissionStatus === "undetermined"
+              ? t("onboarding.enableSteps")
+              : t("settings.refreshPedometer")
+          }
           variant="secondary"
         />
         <AppButton

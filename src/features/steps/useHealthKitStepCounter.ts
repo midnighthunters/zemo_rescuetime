@@ -1,27 +1,15 @@
-/**
- * iOS-only step counter that reads from Apple HealthKit.
- * Replaces expo-sensors Pedometer for iOS so it works on iPad and all iPhone
- * models regardless of whether a hardware step-counter chip is present.
- *
- * Uses react-native-health (wraps HKQuantityTypeIdentifierStepCount).
- *
- * How live updates work:
- *   The native module exposes `initStepCountObserver` which registers an
- *   HKObserverQuery; whenever HealthKit delivers new step data it emits
- *   "change:steps" via NativeEventEmitter. We listen for that event and
- *   re-query the cumulative daily total.
- */
-
+import { AppState, NativeModules } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AppleHealthKit, {
-  type HealthKitPermissions,
   type HealthInputOptions,
+  type HealthKitPermissions,
   type HealthValue,
 } from "react-native-health";
-import { NativeEventEmitter, NativeModules, AppState } from "react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
 
-import { startOfToday } from "../../utils/date";
+import { getOnboarded } from "../../storage/rescueStorage";
 import { type PermissionStatus } from "./stepUtils";
+
+const ACTIVE_REFRESH_INTERVAL_MS = 30_000;
 
 const PERMISSIONS: HealthKitPermissions = {
   permissions: {
@@ -30,10 +18,14 @@ const PERMISSIONS: HealthKitPermissions = {
   },
 };
 
-// The raw native module – used to call initStepCountObserver and create the emitter.
-// It's not typed in react-native-health's index.d.ts so we access it directly.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const NativeHK = NativeModules.AppleHealthKit as any;
+const HEALTHKIT_NOT_LINKED =
+  "Apple Health support is missing from this build. Install a new device build and try again.";
+const HEALTHKIT_UNAVAILABLE =
+  "Apple Health is not available here. Step tracking requires a physical Apple device with Health enabled.";
+const HEALTHKIT_AUTHORIZATION_FAILED =
+  "Apple Health could not be connected. Allow Steps access in Settings > Privacy & Security > Health, then retry.";
+const HEALTHKIT_READ_FAILED =
+  "Today's steps could not be read from Apple Health. Unlock the device and try again.";
 
 export type HealthKitStepState = {
   stepsToday: number;
@@ -42,112 +34,260 @@ export type HealthKitStepState = {
   permissionStatus: PermissionStatus;
   error?: string;
   refreshSteps: () => Promise<void>;
+  requestPermission: () => Promise<void>;
 };
 
-export function useHealthKitStepCounter(): HealthKitStepState {
-  const [stepsToday, setStepsToday] = useState(0);
-  const [isAvailable, setIsAvailable] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [permissionStatus, setPermissionStatus] =
-    useState<PermissionStatus>("undetermined");
-  const [error, setError] = useState<string | undefined>();
+function isNativeHealthKitLinked() {
+  const nativeModule = NativeModules.AppleHealthKit;
+  return (
+    !!nativeModule &&
+    typeof AppleHealthKit.isAvailable === "function" &&
+    typeof AppleHealthKit.initHealthKit === "function" &&
+    typeof AppleHealthKit.getStepCount === "function"
+  );
+}
 
-  const initializedRef = useRef(false);
+function getHealthKitAvailability() {
+  return new Promise<boolean>((resolve, reject) => {
+    AppleHealthKit.isAvailable((error: object, available: boolean) => {
+      if (error) {
+        reject(error);
+        return;
+      }
 
-  /** Query today's cumulative step total from HealthKit */
-  const fetchSteps = useCallback((): Promise<void> => {
-    return new Promise((resolve) => {
-      const options: HealthInputOptions = {
-        startDate: startOfToday().toISOString(),
-        endDate: new Date().toISOString(),
-        includeManuallyAdded: true,
-      };
-
-      AppleHealthKit.getStepCount(
-        options,
-        (err: string, result: HealthValue) => {
-          if (!err && result != null) {
-            setStepsToday(Math.max(0, result.value ?? 0));
-            setError(undefined);
-          }
-          resolve();
-        }
-      );
+      resolve(Boolean(available));
     });
-  }, []);
+  });
+}
 
-  /** (Re-)initialise HealthKit, ask for permission, then load steps */
-  const refreshSteps = useCallback(async (): Promise<void> => {
-    setIsLoading(true);
+function initializeHealthKit() {
+  return new Promise<void>((resolve, reject) => {
+    AppleHealthKit.initHealthKit(PERMISSIONS, (error: string) => {
+      if (error) {
+        reject(new Error(error));
+        return;
+      }
 
-    await new Promise<void>((resolve) => {
-      AppleHealthKit.initHealthKit(PERMISSIONS, (err: string) => {
-        if (err) {
-          initializedRef.current = false;
-          setIsAvailable(false);
-          setPermissionStatus("denied");
-          setError("Health permission is needed to count rescue steps.");
-          setIsLoading(false);
-          resolve();
+      resolve();
+    });
+  });
+}
+
+function readStepsToday() {
+  return new Promise<number>((resolve, reject) => {
+    // getStepCount accepts a date and aggregates the local calendar day. The
+    // former startDate/endDate options were ignored by the native method.
+    const options: HealthInputOptions = {
+      date: new Date().toISOString(),
+      includeManuallyAdded: false,
+    };
+
+    AppleHealthKit.getStepCount(
+      options,
+      (error: string, result: HealthValue) => {
+        if (error) {
+          reject(new Error(error));
           return;
         }
 
-        initializedRef.current = true;
-        setIsAvailable(true);
-        setPermissionStatus("granted");
-        setError(undefined);
-        resolve();
-      });
-    });
+        resolve(Math.max(0, Math.round(result?.value ?? 0)));
+      }
+    );
+  });
+}
 
-    if (!initializedRef.current) return;
+export function useHealthKitStepCounter(
+  enabled = true
+): HealthKitStepState {
+  const [stepsToday, setStepsToday] = useState(0);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [isLoading, setIsLoading] = useState(enabled);
+  const [permissionStatus, setPermissionStatus] =
+    useState<PermissionStatus>("undetermined");
+  const [error, setError] = useState<string | undefined>();
+  const initializedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
 
-    await fetchSteps();
-    setIsLoading(false);
-  }, [fetchSteps]);
-
-  /** First load on mount */
   useEffect(() => {
-    void refreshSteps();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-  /**
-   * Subscribe to HealthKit background step delivery.
-   * `initStepCountObserver` registers an HKObserverQuery on the native side;
-   * new data arrives as "change:steps" events on the NativeEventEmitter.
-   */
-  useEffect(() => {
-    if (!isAvailable || permissionStatus !== "granted" || !NativeHK) {
-      return undefined;
+  const fetchSteps = useCallback(async () => {
+    const nextSteps = await readStepsToday();
+    if (mountedRef.current) {
+      setStepsToday(nextSteps);
+      setError(undefined);
+    }
+  }, []);
+
+  const refreshSteps = useCallback((): Promise<void> => {
+    if (!enabled) {
+      return Promise.resolve();
     }
 
-    const emitter = new NativeEventEmitter(NativeHK);
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
 
-    // Register the native HKObserverQuery
-    NativeHK.initStepCountObserver(
-      { startDate: startOfToday().toISOString() },
-      () => { /* observer registered */ }
-    );
+    const refreshPromise = (async () => {
+      if (mountedRef.current) {
+        setIsLoading(true);
+        setError(undefined);
+      }
 
-    const subscription = emitter.addListener("change:steps", () => {
-      // HealthKit pushed new step data — re-query the daily total
-      void fetchSteps();
-    });
+      if (!isNativeHealthKitLinked()) {
+        initializedRef.current = false;
+        if (mountedRef.current) {
+          setIsAvailable(false);
+          setPermissionStatus("denied");
+          setError(HEALTHKIT_NOT_LINKED);
+        }
+        return;
+      }
 
-    return () => {
-      subscription.remove();
-    };
-  }, [isAvailable, permissionStatus, fetchSteps]);
+      let available = false;
+      try {
+        available = await getHealthKitAvailability();
+      } catch {
+        available = false;
+      }
 
-  /** Re-fetch when the app returns to the foreground */
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active" && isAvailable && permissionStatus === "granted") {
-        void fetchSteps();
+      if (mountedRef.current) {
+        setIsAvailable(available);
+      }
+
+      if (!available) {
+        initializedRef.current = false;
+        if (mountedRef.current) {
+          setPermissionStatus("denied");
+          setError(HEALTHKIT_UNAVAILABLE);
+        }
+        return;
+      }
+
+      try {
+        await initializeHealthKit();
+      } catch {
+        initializedRef.current = false;
+        if (mountedRef.current) {
+          setPermissionStatus("denied");
+          setError(HEALTHKIT_AUTHORIZATION_FAILED);
+        }
+        return;
+      }
+
+      initializedRef.current = true;
+      if (mountedRef.current) {
+        // Apple intentionally does not reveal whether read access was denied.
+        // A successful authorization request means HealthKit is connected;
+        // denied read data is returned as an empty result.
+        setPermissionStatus("granted");
+      }
+
+      try {
+        await fetchSteps();
+      } catch {
+        if (mountedRef.current) {
+          setError(HEALTHKIT_READ_FAILED);
+        }
+      }
+    })().finally(() => {
+      refreshPromiseRef.current = null;
+      if (mountedRef.current) {
+        setIsLoading(false);
       }
     });
-    return () => sub.remove();
-  }, [isAvailable, permissionStatus, fetchSteps]);
+
+    refreshPromiseRef.current = refreshPromise;
+    return refreshPromise;
+  }, [enabled, fetchSteps]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const prepare = async () => {
+      if (!isNativeHealthKitLinked()) {
+        if (!cancelled) {
+          setIsAvailable(false);
+          setIsLoading(false);
+          setPermissionStatus("denied");
+          setError(HEALTHKIT_NOT_LINKED);
+        }
+        return;
+      }
+
+      let available = false;
+      try {
+        available = await getHealthKitAvailability();
+      } catch {
+        available = false;
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      setIsAvailable(available);
+      if (!available) {
+        setPermissionStatus("denied");
+        setError(HEALTHKIT_UNAVAILABLE);
+        setIsLoading(false);
+        return;
+      }
+
+      const hasOnboarded = await getOnboarded();
+      if (cancelled) {
+        return;
+      }
+
+      if (hasOnboarded) {
+        await refreshSteps();
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    void prepare();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, refreshSteps]);
+
+  useEffect(() => {
+    if (!enabled || !initializedRef.current || permissionStatus !== "granted") {
+      return;
+    }
+
+    const refreshSilently = () => {
+      if (AppState.currentState === "active") {
+        void fetchSteps().catch(() => {
+          // A transient read error (for example while the device is locked)
+          // should not replace a previously valid step total.
+        });
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshSilently();
+      }
+    });
+    const timer = setInterval(refreshSilently, ACTIVE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      appStateSubscription.remove();
+      clearInterval(timer);
+    };
+  }, [enabled, fetchSteps, permissionStatus]);
 
   return {
     stepsToday,
@@ -156,5 +296,6 @@ export function useHealthKitStepCounter(): HealthKitStepState {
     permissionStatus,
     error,
     refreshSteps,
+    requestPermission: refreshSteps,
   };
 }

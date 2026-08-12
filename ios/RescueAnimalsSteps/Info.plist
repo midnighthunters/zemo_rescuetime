@@ -45,10 +45,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSMotionUsageDescription</key>
-	<string>Your steps help feed, care for, and rescue animals in the app.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Your step count from Health is used to feed, care for, and rescue animals in the app.</string>
+	<string>Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Rescue Animals Steps does not write any data to Health.</string>
 	<key>UILaunchStoryboardName</key>

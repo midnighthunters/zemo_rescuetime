@@ -1,24 +1,21 @@
-/**
- * Android step counter using expo-sensors Pedometer.
- * This is the original implementation, untouched.
- * Only used on Android — iOS uses useHealthKitStepCounter instead.
- */
+/** Android step counter using expo-sensors Pedometer. */
 
 import { Pedometer } from "expo-sensors";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 
-import { getLocalDateKey, startOfToday } from "../../utils/date";
+import { getOnboarded } from "../../storage/rescueStorage";
+import { getLocalDateKey } from "../../utils/date";
 import { normalizePermissionStatus, type PermissionStatus } from "./stepUtils";
 import type { StepCounterState, StepCountingMode } from "./useStepCounter";
 
 const LIVE_STEP_UPDATE_INTERVAL_MS = 750;
 
-export function useExpoSensorStepCounter(): StepCounterState {
+export function useExpoSensorStepCounter(enabled = true): StepCounterState {
   const [historicalStepsToday, setHistoricalStepsToday] = useState(0);
   const [liveSteps, setLiveSteps] = useState(0);
   const [isAvailable, setIsAvailable] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(enabled);
   const [permissionStatus, setPermissionStatus] =
     useState<PermissionStatus>("undetermined");
   const [countingMode, setCountingMode] =
@@ -101,6 +98,11 @@ export function useExpoSensorStepCounter(): StepCounterState {
   );
 
   const refreshSteps = useCallback(async () => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(undefined);
 
@@ -149,14 +151,64 @@ export function useExpoSensorStepCounter(): StepCounterState {
     } finally {
       setIsLoading(false);
     }
-  }, [resetLiveSteps]);
+  }, [enabled, resetLiveSteps]);
 
   useEffect(() => {
-    refreshSteps();
-  }, [refreshSteps]);
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const prepare = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        if (cancelled) return;
+
+        setIsAvailable(available);
+        if (!available) {
+          setPermissionStatus("denied");
+          setCountingMode("unavailable");
+          setError("Step tracking is not available on this device.");
+          setIsLoading(false);
+          return;
+        }
+
+        const currentPermission = await Pedometer.getPermissionsAsync();
+        const normalized = normalizePermissionStatus(currentPermission?.status);
+        if (cancelled) return;
+
+        setPermissionStatus(normalized);
+        const hasOnboarded = await getOnboarded();
+        if (cancelled) return;
+
+        if (normalized === "granted" || hasOnboarded) {
+          await refreshSteps();
+        } else {
+          setIsLoading(false);
+        }
+      } catch (caught) {
+        if (!cancelled) {
+          setCountingMode("unavailable");
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Could not initialize step tracking."
+          );
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void prepare();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, refreshSteps]);
 
   useEffect(() => {
-    if (!isAvailable || permissionStatus !== "granted") {
+    if (!enabled || !isAvailable || permissionStatus !== "granted") {
       return undefined;
     }
 
@@ -181,7 +233,7 @@ export function useExpoSensorStepCounter(): StepCounterState {
     return () => {
       subscription.remove();
     };
-  }, [isAvailable, permissionStatus, scheduleLiveStepUpdate]);
+  }, [enabled, isAvailable, permissionStatus, scheduleLiveStepUpdate]);
 
   useEffect(() => {
     return () => {
@@ -192,15 +244,23 @@ export function useExpoSensorStepCounter(): StepCounterState {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
+      if (state === "active" && permissionStatus !== "undetermined") {
         refreshSteps();
       }
     });
     return () => subscription.remove();
-  }, [refreshSteps]);
+  }, [enabled, permissionStatus, refreshSteps]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const timer = setInterval(() => {
       const today = getLocalDateKey();
       if (today === dateKeyRef.current) {
@@ -213,7 +273,7 @@ export function useExpoSensorStepCounter(): StepCounterState {
     }, 60 * 1000);
 
     return () => clearInterval(timer);
-  }, [refreshSteps, resetLiveSteps]);
+  }, [enabled, refreshSteps, resetLiveSteps]);
 
   const stepsToday = useMemo(
     () => Math.max(0, historicalStepsToday + liveSteps),
@@ -241,5 +301,6 @@ export function useExpoSensorStepCounter(): StepCounterState {
     sourceLabel,
     error,
     refreshSteps,
+    requestPermission: refreshSteps,
   };
 }

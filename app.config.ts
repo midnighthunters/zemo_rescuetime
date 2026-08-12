@@ -22,10 +22,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: "com.zemolabs.rescuetime",
     requireFullScreen: false,
     infoPlist: {
-      NSMotionUsageDescription:
-        "Your steps help feed, care for, and rescue animals in the app.",
       NSHealthShareUsageDescription:
-        "Your step count from Health is used to feed, care for, and rescue animals in the app.",
+        "Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.",
       NSHealthUpdateUsageDescription:
         "Rescue Animals Steps does not write any data to Health.",
       UIRequiresFullScreen: false
@@ -52,10 +50,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-font",
     "expo-notifications",
     [
-      "expo-sensors",
+      "react-native-health",
       {
-        motionPermission:
-          "Allow Rescue Animals Steps to read your device step count for rescue progress."
+        healthSharePermission:
+          "Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.",
+        healthUpdatePermission:
+          "Rescue Animals Steps does not write any data to Health."
       }
     ]
   ],

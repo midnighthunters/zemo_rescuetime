@@ -8,22 +8,25 @@ export function useOnboarding() {
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
-    
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     try {
-      // Add timeout to prevent hanging in production builds
       const timeoutPromise = new Promise<boolean>((resolve) => {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           resolve(false);
         }, 3000);
       });
 
       const onboardedPromise = getOnboarded();
-      
       const onboarded = await Promise.race([onboardedPromise, timeoutPromise]);
       setHasOnboarded(onboarded);
     } catch {
       setHasOnboarded(false);
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setIsLoading(false);
     }
   }, []);

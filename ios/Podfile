@@ -28,9 +28,6 @@ target 'RescueAnimalsSteps' do
   config = use_native_modules!
   use_expo_modules!
 
-  # HealthKit integration for iOS step counting
-  pod 'RNAppleHealthKit', :path => '../node_modules/react-native-health'
-
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.

@@ -37,6 +37,7 @@ export function ScreenContainer({
       <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
         {scroll ? (
           <ScrollView
+            contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={[
               styles.scrollContent,
               { paddingBottom: 112 + insets.bottom }
