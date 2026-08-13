@@ -1,38 +1,48 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppButton } from "../src/components/AppButton";
-import { ScreenContainer } from "../src/components/ScreenContainer";
+import { AppText } from "../src/components/AppText";
+import { IconButton } from "../src/components/IconButton";
+import { MotionView } from "../src/components/Motion";
+import { PremiumCard } from "../src/components/PremiumCard";
+import { ScreenScaffold } from "../src/components/ScreenScaffold";
+import { StatusChip } from "../src/components/StatusChip";
 import { UiSprite } from "../src/components/UiSprite";
-import { useEntitlements } from "../src/features/purchases/useEntitlements";
 import type {
   RevenueCatPlan,
   RevenueCatPlanId
 } from "../src/features/purchases/purchaseService";
+import { useEntitlements } from "../src/features/purchases/useEntitlements";
 import { useLanguage } from "../src/i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../src/theme/colors";
-import { shadows } from "../src/theme/shadows";
-import { spacing } from "../src/theme/spacing";
+import { useResponsiveLayout } from "../src/theme/layout";
+import { pressScale } from "../src/theme/motion";
+import { radius, spacing } from "../src/theme/spacing";
 
 export default function PaywallScreen() {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors);
+  const layout = useResponsiveLayout();
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
   const { t } = useLanguage();
-  const [selectedPlanId, setSelectedPlanId] =
-    useState<RevenueCatPlanId>("yearly");
+  const [selectedPlanId, setSelectedPlanId] = useState<RevenueCatPlanId>("yearly");
   const {
-    purchasePro,
-    restorePurchases,
-    isLoading,
+    devProEnabled,
     error,
+    isLoading,
     isPro,
     isRevenueCatConfigured,
     plans,
-    devProEnabled,
+    purchasePro,
+    restorePurchases,
     setDevProEnabled
   } = useEntitlements();
+
   const selectedPlan = useMemo(
     () =>
       plans.find((plan) => plan.id === selectedPlanId) ??
@@ -40,6 +50,17 @@ export default function PaywallScreen() {
       plans[0],
     [plans, selectedPlanId]
   );
+
+  const availablePlans = plans.filter((plan) => plan.isAvailable);
+  const hasNoPlans = availablePlans.length === 0;
+
+  const benefits = [
+    { icon: "trophy-outline" as const, text: t("paywall.benefit.milestones") },
+    { icon: "paw-outline" as const, text: t("paywall.benefit.animals") },
+    { icon: "images-outline" as const, text: t("paywall.benefit.collection") },
+    { icon: "sparkles-outline" as const, text: t("paywall.benefit.premiumAnimations") },
+    { icon: "heart-outline" as const, text: t("paywall.benefit.newWorlds") }
+  ];
 
   const handlePurchase = async () => {
     const purchased = await purchasePro(selectedPlan?.id ?? "yearly");
@@ -54,105 +75,138 @@ export default function PaywallScreen() {
       router.replace("/(tabs)/home");
     }
   };
-  const benefits = [
-    t("paywall.benefit.milestones"),
-    t("paywall.benefit.animals"),
-    t("paywall.benefit.collection"),
-    t("paywall.benefit.premiumAnimations"),
-    t("paywall.benefit.newWorlds")
-  ];
 
   return (
-    <ScreenContainer>
-      <View style={styles.hero}>
-        <UiSprite spriteKey="proSanctuaryGate" size={136} style={styles.heroSprite} />
-        <Text style={styles.eyebrow}>{t("paywall.eyebrow")}</Text>
-        <Text style={styles.title}>{t("paywall.title")}</Text>
-        <Text style={styles.subtitle}>
+    <ScreenScaffold withTabBar={false}>
+      <View style={styles.topBar}>
+        <IconButton
+          accessibilityLabel={t("common.notNow")}
+          icon="close"
+          onPress={() => router.back()}
+          variant="surface"
+        />
+      </View>
+
+      {/* ── Sanctuary hero ── */}
+      <MotionView style={styles.hero}>
+        <UiSprite
+          size={layout.isCompact ? 108 : 132}
+          spriteKey="proAnimalFamily"
+        />
+        <StatusChip icon="star" label={t("paywall.eyebrow")} tone="pro" />
+        <AppText align="center" role="largeTitle">
+          {t("paywall.title")}
+        </AppText>
+        <AppText align="center" role="supportive" tone="secondary">
           {t("paywall.subtitle")}
-        </Text>
-      </View>
+        </AppText>
+      </MotionView>
 
-      <View style={styles.card}>
-        <View style={styles.proFamilyRow}>
-          <UiSprite spriteKey="proAnimalFamily" size={92} />
-          <UiSprite spriteKey="proGoldenKey" size={72} />
-          <UiSprite spriteKey="proTreasureChest" size={82} />
-        </View>
-        {benefits.map((benefit) => (
-          <View key={benefit} style={styles.benefitRow}>
-            <Ionicons
-              color={theme.colors.primary}
-              name="checkmark-circle"
-              size={21}
+      {/* ── Benefits ── */}
+      <MotionView delay={60}>
+        <PremiumCard gap={spacing.s12} variant="standard">
+          {benefits.map((benefit) => (
+            <View key={benefit.text} style={styles.benefitRow}>
+              <Ionicons
+                color={theme.colors.brandGreenText}
+                name={benefit.icon}
+                size={20}
+              />
+              <AppText role="bodyMedium" style={styles.benefitText}>
+                {benefit.text}
+              </AppText>
+            </View>
+          ))}
+        </PremiumCard>
+      </MotionView>
+
+      {/* ── Plans ── */}
+      {isPro ? (
+        <PremiumCard gap={spacing.s8} variant="sanctuary">
+          <StatusChip icon="shield-checkmark" label={t("common.proActive")} tone="safe" />
+          <AppText role="cardTitle">{t("paywall.success")}</AppText>
+        </PremiumCard>
+      ) : hasNoPlans ? (
+        <PremiumCard gap={spacing.s8} variant="warning">
+          <StatusChip icon="alert-circle" label={t("paywall.plansUnavailableTitle")} tone="warning" />
+          <AppText role="supportive" tone="secondary">
+            {t("paywall.plansUnavailableBody")}
+          </AppText>
+        </PremiumCard>
+      ) : (
+        <MotionView delay={110} style={styles.planGrid}>
+          {plans.map((plan) => (
+            <PlanOption
+              isLoading={isLoading}
+              isSelected={plan.id === selectedPlan?.id}
+              key={plan.id}
+              onSelect={() => setSelectedPlanId(plan.id)}
+              plan={plan}
             />
-            <Text style={styles.benefit}>{benefit}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.planGrid}>
-        {plans.map((plan) => (
-          <PlanOption
-            isLoading={isLoading}
-            isSelected={plan.id === selectedPlan?.id}
-            key={plan.id}
-            onSelect={() => setSelectedPlanId(plan.id)}
-            plan={plan}
-          />
-        ))}
-      </View>
+          ))}
+        </MotionView>
+      )}
 
       {!isRevenueCatConfigured ? (
-        <Text style={styles.note}>
+        <AppText align="center" role="caption" tone="tertiary">
           {t("paywall.revenueCatMissing")}
-        </Text>
+        </AppText>
       ) : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {isPro ? <Text style={styles.success}>{t("paywall.success")}</Text> : null}
+      {error ? (
+        <AppText align="center" role="caption" selectable tone="danger">
+          {error}
+        </AppText>
+      ) : null}
 
-      <AppButton
-        icon="sparkles"
-        disabled={!selectedPlan?.isAvailable || isPro}
-        loading={isLoading}
-        onPress={handlePurchase}
-        title={
-          isPro
-            ? t("common.proActive")
-            : selectedPlan
-              ? t("paywall.startPlan", {
-                  title: selectedPlan.title,
-                  price: selectedPlan.price
-                })
-              : t("settings.unlockPro")
-        }
-        variant="pro"
-      />
-      <AppButton
-        icon="refresh"
-        loading={isLoading}
-        onPress={handleRestore}
-        title={t("paywall.restore")}
-        variant="secondary"
-      />
-      {__DEV__ ? (
+      {/* ── Actions ── */}
+      <View style={styles.actions}>
         <AppButton
-          icon={devProEnabled ? "lock-open" : "lock-closed"}
-          onPress={() => setDevProEnabled(!devProEnabled)}
+          disabled={!selectedPlan?.isAvailable || isPro}
+          icon="sparkles"
+          loading={isLoading}
+          onPress={handlePurchase}
           title={
-            devProEnabled
-              ? t("settings.disableMockPro")
-              : t("settings.enableMockPro")
+            isPro
+              ? t("common.proActive")
+              : selectedPlan
+                ? t("paywall.startPlan", {
+                    price: selectedPlan.price,
+                    title: selectedPlan.title
+                  })
+                : t("settings.unlockPro")
           }
+          variant="pro"
+        />
+        <AppButton
+          loading={isLoading}
+          onPress={handleRestore}
+          title={t("paywall.restore")}
+          variant="secondary"
+        />
+        <AppButton
+          onPress={() => router.back()}
+          title={t("common.notNow")}
           variant="ghost"
         />
-      ) : null}
-      <AppButton
-        onPress={() => router.back()}
-        title={t("common.notNow")}
-        variant="ghost"
-      />
-    </ScreenContainer>
+        {__DEV__ ? (
+          <AppButton
+            icon={devProEnabled ? "lock-open" : "lock-closed"}
+            onPress={() => setDevProEnabled(!devProEnabled)}
+            size="compact"
+            title={
+              devProEnabled
+                ? t("settings.disableMockPro")
+                : t("settings.enableMockPro")
+            }
+            variant="ghost"
+          />
+        ) : null}
+      </View>
+
+      <AppText align="center" role="caption" tone="tertiary">
+        {t("paywall.terms")}
+      </AppText>
+    </ScreenScaffold>
   );
 }
 
@@ -168,13 +222,21 @@ function PlanOption({
   plan: RevenueCatPlan;
 }) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
+  const { t } = useLanguage();
 
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isLoading, selected: isSelected }}
-      disabled={isLoading}
+      accessibilityLabel={`${plan.title} ${plan.price} ${plan.periodLabel}`}
+      accessibilityRole="radio"
+      accessibilityState={{
+        checked: isSelected,
+        disabled: isLoading || !plan.isAvailable
+      }}
+      disabled={isLoading || !plan.isAvailable}
       onPress={onSelect}
       style={({ pressed }) => [
         styles.planCard,
@@ -184,178 +246,82 @@ function PlanOption({
       ]}
     >
       <View style={styles.planHeader}>
-        <View style={styles.planTitleRow}>
-          <Ionicons
-            color={isSelected ? theme.colors.primaryDark : theme.colors.muted}
-            name={isSelected ? "checkmark-circle" : "ellipse-outline"}
-            size={21}
-          />
-          <Text style={styles.planTitle}>{plan.title}</Text>
+        <Ionicons
+          color={
+            isSelected ? theme.colors.brandGreenText : theme.colors.textTertiary
+          }
+          name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+          size={22}
+        />
+        <View style={styles.planCopy}>
+          <AppText role="cardTitle">{plan.title}</AppText>
+          <AppText role="caption" tone="secondary">
+            {plan.periodLabel}
+          </AppText>
         </View>
-        {plan.badge ? <Text style={styles.planBadge}>{plan.badge}</Text> : null}
+        {plan.badge ? <StatusChip label={plan.badge} tone="pro" /> : null}
       </View>
-      <View style={styles.priceRow}>
-        <Text style={styles.price}>{plan.price}</Text>
-        <Text style={styles.period}>{plan.periodLabel}</Text>
-      </View>
-      <Text style={styles.planDetail}>{plan.detail}</Text>
-      {__DEV__ ? <Text style={styles.planId}>{plan.productId}</Text> : null}
+      <AppText role="metric">{plan.price}</AppText>
+      <AppText role="caption" tone="secondary">
+        {plan.isAvailable ? plan.detail : t("paywall.planUnavailable")}
+      </AppText>
     </Pressable>
   );
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
-    benefit: {
-      color: colors.text,
-      flex: 1,
-      fontSize: 16,
-      fontWeight: "800",
-      lineHeight: 22
+    actions: {
+      gap: spacing.s8
     },
     benefitRow: {
       alignItems: "center",
       flexDirection: "row",
-      gap: spacing.md
+      gap: spacing.s12
     },
-    card: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
-      gap: spacing.md,
-      padding: spacing.lg,
-      ...shadows.soft
-    },
-    error: {
-      color: colors.danger,
-      fontSize: 14,
-      fontWeight: "800",
-      textAlign: "center"
-    },
-    eyebrow: {
-      color: colors.pro,
-      fontSize: 13,
-      fontWeight: "900",
-      textTransform: "uppercase"
+    benefitText: {
+      flex: 1
     },
     hero: {
-      alignItems: "flex-start",
-      gap: spacing.md,
-      paddingTop: spacing.xl
-    },
-    heroSprite: {
-      alignSelf: "center"
-    },
-    note: {
-      color: colors.muted,
-      fontSize: 13,
-      fontWeight: "700",
-      lineHeight: 18,
-      textAlign: "center"
-    },
-    period: {
-      color: colors.muted,
-      fontSize: 13,
-      fontWeight: "800",
-      paddingBottom: 4
-    },
-    planBadge: {
-      backgroundColor: colors.surfaceWarm,
-      borderColor: colors.border,
-      borderRadius: 7,
-      borderWidth: 1,
-      color: colors.pro,
-      fontSize: 11,
-      fontWeight: "900",
-      overflow: "hidden",
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
-      textTransform: "uppercase"
+      alignItems: "center",
+      gap: spacing.s8
     },
     planCard: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 8,
+      backgroundColor: colors.surfacePrimary,
+      borderColor: colors.separatorStrong,
+      borderCurve: "continuous",
+      borderRadius: radius.card,
       borderWidth: 1,
-      gap: spacing.sm,
-      minHeight: 132,
-      padding: spacing.md
+      gap: spacing.s4,
+      padding: spacing.s16
     },
     planCardPressed: {
-      transform: [{ scale: 0.99 }]
+      transform: [{ scale: pressScale }]
     },
     planCardSelected: {
-      backgroundColor: colors.surfaceSoft,
-      borderColor: colors.primary,
+      backgroundColor: colors.brandGreenTint,
+      borderColor: colors.brandGreen,
       borderWidth: 2
     },
     planCardUnavailable: {
-      opacity: 0.72
+      opacity: 0.6
     },
-    planDetail: {
-      color: colors.muted,
-      fontSize: 13,
-      fontWeight: "700",
-      lineHeight: 18
+    planCopy: {
+      flex: 1,
+      gap: 1,
+      minWidth: 0
     },
     planGrid: {
-      gap: spacing.md
+      gap: spacing.s12
     },
     planHeader: {
       alignItems: "center",
       flexDirection: "row",
-      gap: spacing.sm,
-      justifyContent: "space-between"
+      gap: spacing.s8
     },
-    planId: {
-      color: colors.locked,
-      fontSize: 11,
-      fontWeight: "700"
-    },
-    planTitle: {
-      color: colors.text,
-      fontSize: 16,
-      fontWeight: "900"
-    },
-    planTitleRow: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: spacing.sm
-    },
-    price: {
-      color: colors.text,
-      fontSize: 30,
-      fontWeight: "900",
-      lineHeight: 35
-    },
-    priceRow: {
-      alignItems: "flex-end",
-      flexDirection: "row",
-      gap: spacing.xs
-    },
-    proFamilyRow: {
-      alignItems: "center",
-      flexDirection: "row",
-      justifyContent: "space-between"
-    },
-    subtitle: {
-      color: colors.muted,
-      fontSize: 16,
-      fontWeight: "700",
-      lineHeight: 23
-    },
-    success: {
-      color: colors.primaryDark,
-      fontSize: 14,
-      fontWeight: "900",
-      textAlign: "center"
-    },
-    title: {
-      color: colors.text,
-      fontSize: 36,
-      fontWeight: "900",
-      lineHeight: 41
+    topBar: {
+      alignItems: "flex-start",
+      flexDirection: "row"
     }
   });
 }

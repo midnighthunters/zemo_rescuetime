@@ -53,10 +53,12 @@ function RootLayoutShell() {
   }, []);
 
   useEffect(() => {
-    SystemUI.setBackgroundColorAsync(theme.colors.backgroundBottom).catch(() => {
+    // Keep the native window background identical to the app background so the
+    // splash-to-app handoff never flashes a different color.
+    SystemUI.setBackgroundColorAsync(theme.colors.appBackground).catch(() => {
       // Native system UI coloring can be unavailable on some web targets.
     });
-  }, [theme.colors.backgroundBottom]);
+  }, [theme.colors.appBackground]);
 
   useEffect(() => {
     void requestStartupNotificationPermission().catch(() => {
@@ -98,12 +100,12 @@ function RootLayoutShell() {
             <UnlockNotificationBridge />
             <ProAssetDownloadModal />
             <StatusBar
-              backgroundColor={theme.colors.backgroundBottom}
+              backgroundColor={theme.colors.appBackground}
               style={theme.statusBarStyle}
             />
             <Stack
               screenOptions={{
-                contentStyle: { backgroundColor: theme.colors.backgroundBottom },
+                contentStyle: { backgroundColor: theme.colors.appBackground },
                 headerShown: false
               }}
             >

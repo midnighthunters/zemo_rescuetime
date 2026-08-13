@@ -1,29 +1,30 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useMemo } from "react";
-import {
-  Linking,
-  StyleSheet,
-  Text,
-  View
-} from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Linking, StyleSheet, View } from "react-native";
 
 import { AppButton } from "../../src/components/AppButton";
+import { AppText } from "../../src/components/AppText";
 import { CareEventModal } from "../../src/components/CareEventModal";
-import { MotionView, PulseView } from "../../src/components/Motion";
+import { MotionView } from "../../src/components/Motion";
+import { PremiumCard } from "../../src/components/PremiumCard";
 import { RescueModal } from "../../src/components/RescueModal";
-import { ScreenContainer } from "../../src/components/ScreenContainer";
+import { ScreenScaffold } from "../../src/components/ScreenScaffold";
+import { StatusChip } from "../../src/components/StatusChip";
 import { StepHeroCard } from "../../src/components/StepHeroCard";
-import { UiSprite } from "../../src/components/UiSprite";
-import { dismissUnlockNotification } from "../../src/features/notifications/unlockNotifications";
+import type { RewardImage } from "../../src/data/types";
 import { shareAnimalUnlock } from "../../src/features/animals/shareAnimal";
+import { dismissUnlockNotification } from "../../src/features/notifications/unlockNotifications";
 import { useLanguage } from "../../src/i18n/LanguageProvider";
+import {
+  getAnimalImageSource,
+  getRewardImageSource,
+  getRewardTargetImageSource
+} from "../../src/services/assets/getAppAssetSource";
 import { useEntitlements } from "../../src/state/EntitlementProvider";
 import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
-import { shadows } from "../../src/theme/shadows";
 import { spacing } from "../../src/theme/spacing";
-import { getAnimalImageSource, getRewardTargetImageSource } from "../../src/services/assets/getAppAssetSource";
 
 function getGreetingKey() {
   const hour = new Date().getHours();
@@ -35,56 +36,67 @@ function getGreetingKey() {
 export default function HomeScreen() {
   const theme = useAppTheme();
   const styles = useMemo(
-    () => createStyles(theme.colors, theme.isDark),
-    [theme.colors, theme.isDark]
+    () => createStyles(theme.colors),
+    [theme.colors]
   );
-  const { language, t } = useLanguage();
+  const { formatDate, language, t } = useLanguage();
   const { isPro } = useEntitlements();
   const {
+    animals,
     currentAnimal,
+    dismissCareEvent,
+    dismissRescueEvent,
     getAnimalMetrics,
-    stepsToday,
-    steps,
     lastCareEvent,
     lastRescueEvent,
-    animals,
     milestones,
-    dismissCareEvent,
-    dismissRescueEvent
+    steps,
+    stepsToday,
+    unlockedAnimals
   } = useRescue();
+  const [showStepDetail, setShowStepDetail] = useState(false);
 
   const metrics = currentAnimal ? getAnimalMetrics(currentAnimal.id) : undefined;
   const rescuedAnimal = lastRescueEvent
-    ? animals.find((a) => a.id === lastRescueEvent.animalId)
+    ? animals.find((animal) => animal.id === lastRescueEvent.animalId)
     : undefined;
 
-  const rescuedIndex = rescuedAnimal ? animals.findIndex((a) => a.id === rescuedAnimal.id) : -1;
+  const rescuedIndex = rescuedAnimal
+    ? animals.findIndex((animal) => animal.id === rescuedAnimal.id)
+    : -1;
   const nextAnimal = rescuedIndex >= 0 ? animals[rescuedIndex + 1] : undefined;
-  const nextMilestone = nextAnimal ? milestones.find((m) => m.animalId === nextAnimal.id) : undefined;
+  const nextMilestone = nextAnimal
+    ? milestones.find((milestone) => milestone.animalId === nextAnimal.id)
+    : undefined;
   const nextRewardTarget = nextMilestone?.rewardTargets[0];
 
   const careMilestone = lastCareEvent
-    ? milestones.find((m) => m.animalId === lastCareEvent.animalId)
+    ? milestones.find((milestone) => milestone.animalId === lastCareEvent.animalId)
     : undefined;
+  const careRewardTarget =
+    lastCareEvent && careMilestone
+      ? careMilestone.rewardTargets.find(
+          (target) => target.rewardId === lastCareEvent.rewardId
+        )
+      : undefined;
   const careNextRewardTarget =
     lastCareEvent && careMilestone
       ? careMilestone.rewardTargets[lastCareEvent.rewardIndex + 1]
       : undefined;
-  const careNextTarget =
-    careMilestone
-      ? (careNextRewardTarget?.stepTarget ?? careMilestone.unlockSteps)
-      : undefined;
-  const careNextLabel =
-    careMilestone ? (careNextRewardTarget?.title ?? t("common.rescue")) : undefined;
+  const careNextTarget = careMilestone
+    ? careNextRewardTarget?.stepTarget ?? careMilestone.unlockSteps
+    : undefined;
+  const careNextLabel = careMilestone
+    ? careNextRewardTarget?.title ?? t("common.rescue")
+    : undefined;
   const visibleUnlockEventId = lastCareEvent?.id ?? lastRescueEvent?.id;
 
   const hasPermissionIssue =
     !steps.isLoading &&
     Boolean(
-      steps.error ||
-        !steps.isAvailable ||
-        steps.permissionStatus !== "granted"
+      steps.error || !steps.isAvailable || steps.permissionStatus !== "granted"
     );
+  const needsFirstGrant = steps.permissionStatus === "undetermined";
 
   useEffect(() => {
     if (!visibleUnlockEventId) {
@@ -99,125 +111,176 @@ export default function HomeScreen() {
     return () => clearTimeout(retryTimer);
   }, [visibleUnlockEventId]);
 
-  // After first animal rescued, non-pro users see the paywall
+  // After the first rescue, non-Pro users see the paywall — but only once the
+  // rescue celebration has finished closing.
   const justRescuedFirst =
-    Boolean(lastRescueEvent) &&
-    rescuedAnimal?.id === animals[0]?.id &&
-    !isPro;
+    Boolean(lastRescueEvent) && rescuedAnimal?.id === animals[0]?.id && !isPro;
 
   const handleRescueDismiss = () => {
     dismissRescueEvent();
     if (justRescuedFirst) {
-      // Small delay so the rescue modal finishes closing first
       setTimeout(() => router.push("/paywall"), 350);
     }
   };
 
+  const today = useMemo(
+    () => formatDate(new Date(), { day: "numeric", month: "long", weekday: "long" }),
+    [formatDate]
+  );
+
   return (
-    <ScreenContainer>
-      {/* ── Compact header ── */}
+    <ScreenScaffold>
+      {/* ── Greeting and date ── */}
       <MotionView style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerGreeting}>
+        <View style={styles.headerCopy}>
+          <AppText role="label" tone="secondary">
             {t("home.greeting", { period: t(getGreetingKey()) })}
-          </Text>
-          <Text style={styles.headerTitle}>{t("home.title")}</Text>
+          </AppText>
+          <AppText accessibilityRole="header" role="screenTitle">
+            {t("home.title")}
+          </AppText>
+          <AppText role="caption" tone="tertiary">
+            {today}
+          </AppText>
         </View>
-        <PulseView floatDistance={4} pulseScale={1.04}>
-          <UiSprite spriteKey="progressPawTrophy" size={52} />
-        </PulseView>
       </MotionView>
 
-      {/* ── Pedometer status pill / warning ── */}
+      {/* ── Step source status or a single, calm warning card ── */}
       {hasPermissionIssue ? (
-        <MotionView delay={70} style={styles.permissionBanner}>
-          <Ionicons color={theme.colors.danger} name="warning" size={18} />
-          <View accessibilityLiveRegion="polite" style={styles.permissionCopy}>
-            <Text style={styles.permissionBannerText}>
-              {t("home.permissionNeeded")}
-            </Text>
-            <Text selectable style={styles.permissionBannerDetail}>
-              {steps.error ??
-                "Connect your device step source to count today’s rescue progress."}
-            </Text>
-          </View>
-          <View style={styles.permissionBannerActions}>
+        <MotionView delay={60}>
+          <PremiumCard gap={spacing.s12} variant="warning">
+            <View style={styles.warningTop}>
+              <Ionicons
+                color={theme.colors.dangerText}
+                name="alert-circle"
+                size={22}
+              />
+              <View style={styles.warningCopy}>
+                <AppText role="cardTitle" tone="danger">
+                  {t("home.permissionNeeded")}
+                </AppText>
+                <AppText
+                  accessibilityLiveRegion="polite"
+                  role="supportive"
+                  tone="secondary"
+                >
+                  {needsFirstGrant
+                    ? t("home.permissionExplainer")
+                    : t("home.permissionRecovery")}
+                </AppText>
+              </View>
+            </View>
+
             <AppButton
-              icon={steps.permissionStatus === "undetermined" ? "heart" : "refresh"}
+              icon={needsFirstGrant ? "heart" : "refresh"}
               loading={steps.isLoading}
               onPress={
-                steps.permissionStatus === "undetermined"
-                  ? steps.requestPermission
-                  : steps.refreshSteps
+                needsFirstGrant ? steps.requestPermission : steps.refreshSteps
               }
-              style={styles.permissionAction}
               title={
-                steps.permissionStatus === "undetermined"
-                  ? t("onboarding.enableSteps")
-                  : t("home.retry")
+                needsFirstGrant ? t("onboarding.enableSteps") : t("home.retry")
               }
-              variant="secondary"
+              variant="primary"
             />
-            <AppButton
-              icon="settings"
-              onPress={() => Linking.openSettings()}
-              style={styles.permissionAction}
-              title={t("common.settings")}
-              variant="ghost"
-            />
-          </View>
+
+            <View style={styles.warningActions}>
+              <AppButton
+                onPress={() => Linking.openSettings()}
+                size="compact"
+                style={styles.warningAction}
+                title={t("common.settings")}
+                variant="ghost"
+              />
+              {steps.error ? (
+                <AppButton
+                  icon={showStepDetail ? "chevron-up" : "chevron-down"}
+                  iconPosition="trailing"
+                  onPress={() => setShowStepDetail((value) => !value)}
+                  size="compact"
+                  style={styles.warningAction}
+                  title={t("home.showDetails")}
+                  variant="ghost"
+                />
+              ) : null}
+            </View>
+
+            {showStepDetail && steps.error ? (
+              <AppText role="caption" selectable tone="secondary">
+                {steps.error}
+              </AppText>
+            ) : null}
+          </PremiumCard>
         </MotionView>
       ) : (
-        <MotionView delay={70} style={styles.trackingPill}>
-          <PulseView pulseScale={1.4}>
-            <View style={styles.trackingDot} />
-          </PulseView>
-          <Text style={styles.trackingText}>
-            {t("home.tracking", { source: steps.sourceLabel })}
-          </Text>
+        <MotionView delay={60} style={styles.trackingRow}>
+          <StatusChip
+            icon="pulse"
+            label={t("home.tracking", { source: steps.sourceLabel })}
+            tone="steps"
+          />
         </MotionView>
       )}
 
-      {/* ── Care event modal ── */}
-      {lastCareEvent ? (
-        <CareEventModal
-          key={lastCareEvent.id}
-          visible={Boolean(lastCareEvent)}
-          animalName={lastCareEvent.animalName}
-          label={lastCareEvent.label}
-          title={lastCareEvent.title}
-          rewardImage={getRewardTargetImageSource({ image: lastCareEvent.image, remoteAssetId: lastCareEvent.remoteAssetId } as any)}
-          rewardIndex={lastCareEvent.rewardIndex}
-          nextTargetLabel={careNextLabel}
-          nextTargetSteps={careNextTarget}
-          nextTargetImage={careNextRewardTarget ? getRewardTargetImageSource(careNextRewardTarget) : undefined}
-          onDismiss={dismissCareEvent}
-        />
-      ) : null}
-
-      {/* ── Main rescue card ── */}
+      {/* ── The rescue in progress ── */}
       <StepHeroCard
         isRefreshing={steps.isLoading}
         metrics={metrics}
         onOpenPaywall={() => router.push("/paywall")}
         onRefreshSteps={steps.refreshSteps}
         onViewAnimal={() => {
-          if (currentAnimal) router.push(`/animal/${currentAnimal.id}`);
+          if (currentAnimal) {
+            router.push(`/animal/${currentAnimal.id}`);
+          }
         }}
+        rescuedCount={unlockedAnimals.length}
         sourceLabel={steps.sourceLabel}
         stepsToday={stepsToday}
       />
 
-      {/* ── Rescue unlock modal ── */}
+      {/* ── Care reward moment ── */}
+      {lastCareEvent ? (
+        <CareEventModal
+          animalName={lastCareEvent.animalName}
+          key={lastCareEvent.id}
+          label={lastCareEvent.label}
+          nextTargetImage={
+            careNextRewardTarget
+              ? getRewardTargetImageSource(careNextRewardTarget)
+              : undefined
+          }
+          nextTargetLabel={careNextLabel}
+          nextTargetSteps={careNextTarget}
+          onDismiss={dismissCareEvent}
+          rewardImage={
+            careRewardTarget
+              ? getRewardTargetImageSource(careRewardTarget)
+              : getRewardImageSource({
+                  image: lastCareEvent.image,
+                  remoteAssetId: lastCareEvent.remoteAssetId
+                } as RewardImage)
+          }
+          rewardIndex={lastCareEvent.rewardIndex}
+          title={lastCareEvent.title}
+          visible={Boolean(lastCareEvent)}
+        />
+      ) : null}
+
+      {/* ── Rescue celebration ── */}
       <RescueModal
-        key={lastRescueEvent?.id ?? "rescue-modal"}
-        animalImage={rescuedAnimal ? getAnimalImageSource(rescuedAnimal, "happy") : undefined}
+        animalImage={
+          rescuedAnimal ? getAnimalImageSource(rescuedAnimal, "happy") : undefined
+        }
         animalName={lastRescueEvent?.animalName ?? ""}
+        key={lastRescueEvent?.id ?? "rescue-modal"}
+        nextAnimalImage={
+          nextAnimal ? getAnimalImageSource(nextAnimal, "sad") : undefined
+        }
         nextAnimalName={nextAnimal?.name}
-        nextAnimalImage={nextAnimal ? getAnimalImageSource(nextAnimal, "sad") : undefined}
-        nextTargetImage={nextRewardTarget ? getRewardTargetImageSource(nextRewardTarget) : undefined}
-        nextTargetTitle={nextRewardTarget?.title ?? t("common.rescue")}
+        nextTargetImage={
+          nextRewardTarget ? getRewardTargetImageSource(nextRewardTarget) : undefined
+        }
         nextTargetSteps={nextRewardTarget?.stepTarget ?? nextMilestone?.unlockSteps}
+        nextTargetTitle={nextRewardTarget?.title ?? t("common.rescue")}
         onNextRescue={handleRescueDismiss}
         onShareAnimal={() => {
           if (rescuedAnimal) {
@@ -234,92 +297,40 @@ export default function HomeScreen() {
         }}
         visible={Boolean(lastRescueEvent)}
       />
-
-    </ScreenContainer>
+    </ScreenScaffold>
   );
 }
 
-function createStyles(colors: AppColors, isDark: boolean) {
+function createStyles(_colors: AppColors) {
   return StyleSheet.create({
     header: {
-      alignItems: "center",
       flexDirection: "row",
-      justifyContent: "space-between",
-      paddingVertical: spacing.xs
+      gap: spacing.s12
     },
-    headerGreeting: {
-      color: colors.muted,
-      fontSize: 13,
-      fontWeight: "700"
-    },
-    headerLeft: {
-      gap: 2
-    },
-    headerTitle: {
-      color: colors.text,
-      fontSize: 26,
-      fontWeight: "900",
-      letterSpacing: -0.5
-    },
-    permissionAction: {
-      flex: 1
-    },
-    permissionBanner: {
-      alignItems: "flex-start",
-      backgroundColor: isDark ? "#2A1818" : "#FFF3F3",
-      borderColor: colors.danger,
-      borderRadius: 10,
-      borderWidth: 1,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.sm,
-      padding: spacing.md
-    },
-    permissionBannerActions: {
-      flex: 1,
-      flexBasis: "100%",
-      flexDirection: "row",
-      gap: spacing.xs,
-      marginLeft: 26
-    },
-    permissionBannerDetail: {
-      color: colors.muted,
-      fontSize: 12,
-      fontWeight: "600",
-      lineHeight: 17
-    },
-    permissionBannerText: {
-      color: colors.danger,
-      fontSize: 14,
-      fontWeight: "800"
-    },
-    permissionCopy: {
+    headerCopy: {
       flex: 1,
       gap: 2,
-      minWidth: 180
+      minWidth: 0
     },
-    trackingDot: {
-      backgroundColor: colors.primary,
-      borderRadius: 4,
-      height: 8,
-      width: 8
+    trackingRow: {
+      flexDirection: "row"
     },
-    trackingPill: {
-      alignItems: "center",
-      alignSelf: "flex-start",
-      backgroundColor: colors.surfaceSoft,
-      borderColor: isDark ? colors.border : "#CBEED8",
-      borderRadius: 20,
-      borderWidth: 1,
+    warningAction: {
+      flex: 1
+    },
+    warningActions: {
       flexDirection: "row",
-      gap: spacing.xs,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 5
+      gap: spacing.s8
     },
-    trackingText: {
-      color: colors.muted,
-      fontSize: 12,
-      fontWeight: "700"
+    warningCopy: {
+      flex: 1,
+      gap: spacing.s4,
+      minWidth: 0
+    },
+    warningTop: {
+      alignItems: "flex-start",
+      flexDirection: "row",
+      gap: spacing.s12
     }
   });
 }
