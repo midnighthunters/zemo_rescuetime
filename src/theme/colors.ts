@@ -13,7 +13,75 @@ import { useColorScheme, type ColorSchemeName } from "react-native";
 
 import { STORAGE_KEYS } from "../storage/storageKeys";
 
+/**
+ * "Apple Sanctuary Adventure" semantic color tokens.
+ *
+ * Every value is intentionally paired: a `*Fill` token is a background that is
+ * always used together with its matching `*Ink` token, and every `*Text` token
+ * is contrast-checked against `surfacePrimary` / `appBackground` for WCAG AA.
+ *
+ * The legacy aliases at the bottom of the type keep older call sites compiling
+ * while the redesign rolls through the app; they resolve to the same palette.
+ */
 export type AppColors = {
+  /* ── Backgrounds ── */
+  readonly appBackground: string;
+  readonly groupedBackground: string;
+  readonly surfacePrimary: string;
+  readonly surfaceSecondary: string;
+  readonly surfaceBlue: string;
+  readonly surfaceAmber: string;
+  readonly surfaceDanger: string;
+  readonly surfaceNeutral: string;
+  readonly cageStage: string;
+  readonly sanctuaryStage: string;
+
+  /* ── Text ── */
+  readonly textPrimary: string;
+  readonly textSecondary: string;
+  readonly textTertiary: string;
+  readonly textInverse: string;
+
+  /* ── Brand / semantics ── */
+  readonly brandGreen: string;
+  readonly brandGreenPressed: string;
+  readonly brandGreenText: string;
+  readonly brandGreenFill: string;
+  readonly brandGreenInk: string;
+  readonly brandGreenTint: string;
+
+  readonly stepBlue: string;
+  readonly stepBlueText: string;
+  readonly stepBlueTint: string;
+
+  readonly rewardAmber: string;
+  readonly rewardAmberText: string;
+  readonly rewardAmberFill: string;
+  readonly rewardAmberInk: string;
+  readonly rewardAmberTint: string;
+
+  readonly activeCoral: string;
+  readonly activeCoralText: string;
+  readonly activeCoralTint: string;
+
+  readonly danger: string;
+  readonly dangerText: string;
+  readonly dangerFill: string;
+  readonly dangerInk: string;
+
+  readonly lockedSurface: string;
+  readonly lockedText: string;
+
+  /* ── Lines, shadows, chrome ── */
+  readonly separator: string;
+  readonly separatorStrong: string;
+  readonly shadowColor: string;
+  readonly scrim: string;
+  readonly tabBar: string;
+  readonly tabBarBorder: string;
+  readonly trackNeutral: string;
+
+  /* ── Legacy aliases (same palette, older names) ── */
   readonly backgroundTop: string;
   readonly backgroundBottom: string;
   readonly surface: string;
@@ -28,59 +96,148 @@ export type AppColors = {
   readonly coral: string;
   readonly pro: string;
   readonly locked: string;
-  readonly danger: string;
   readonly border: string;
   readonly shadow: string;
-  readonly tabBar: string;
   readonly overlay: string;
   readonly white: string;
 };
 
-export const lightColors: AppColors = {
-  backgroundTop: "#FFF8EA",
-  backgroundBottom: "#EAF8F0",
-  surface: "#FFFFFF",
-  surfaceElevated: "#FFFFFF",
-  surfaceWarm: "#FFF3D6",
-  surfaceSoft: "#EEF9F2",
-  text: "#223047",
-  muted: "#6D7C91",
-  primary: "#26B56F",
-  primaryDark: "#117A49",
-  secondary: "#FFBF3F",
-  coral: "#FF8A5B",
-  pro: "#D8951D",
-  locked: "#7B86A6",
-  danger: "#D85656",
-  border: "rgba(34,48,71,0.10)",
-  shadow: "#13251F",
-  tabBar: "rgba(255,255,255,0.94)",
-  overlay: "rgba(23,32,51,0.48)",
-  white: "#FFFFFF"
-};
+const lightBase = {
+  appBackground: "#F7F7F2",
+  groupedBackground: "#EFF3EE",
+  surfacePrimary: "#FFFFFF",
+  surfaceSecondary: "#F0F7F2",
+  surfaceBlue: "#EDF7FF",
+  surfaceAmber: "#FFF5DE",
+  surfaceDanger: "#FDEDED",
+  surfaceNeutral: "#F2F4F1",
+  cageStage: "#D9EEFA",
+  sanctuaryStage: "#E4F5E9",
 
-export const darkColors: AppColors = {
-  backgroundTop: "#071A18",
-  backgroundBottom: "#111520",
-  surface: "#17211F",
-  surfaceElevated: "#1F2A27",
-  surfaceWarm: "#2D281A",
-  surfaceSoft: "#142A24",
-  text: "#F4F7F3",
-  muted: "#A9B4AF",
-  primary: "#45D18F",
-  primaryDark: "#80E4B7",
-  secondary: "#F0B84C",
-  coral: "#FF8D6E",
-  pro: "#F1BD55",
-  locked: "#8893A6",
-  danger: "#FF7878",
-  border: "#2D3B38",
-  shadow: "#000000",
-  tabBar: "rgba(23,33,31,0.94)",
-  overlay: "rgba(0,0,0,0.64)",
-  white: "#FFFFFF"
-};
+  textPrimary: "#17211E",
+  textSecondary: "#5C6862",
+  textTertiary: "#6B7772",
+  textInverse: "#FFFFFF",
+
+  brandGreen: "#2DBE72",
+  brandGreenPressed: "#20985A",
+  brandGreenText: "#17804C",
+  brandGreenFill: "#17804C",
+  brandGreenInk: "#FFFFFF",
+  brandGreenTint: "#E4F5EB",
+
+  stepBlue: "#2F8FFF",
+  stepBlueText: "#1069CC",
+  stepBlueTint: "#E4F1FE",
+
+  rewardAmber: "#F5B83B",
+  rewardAmberText: "#8A5E06",
+  rewardAmberFill: "#F5B83B",
+  rewardAmberInk: "#3A2500",
+  rewardAmberTint: "#FDF1D8",
+
+  activeCoral: "#FF8064",
+  activeCoralText: "#C2482C",
+  activeCoralTint: "#FFECE5",
+
+  danger: "#E05252",
+  dangerText: "#BE3B32",
+  dangerFill: "#C33B33",
+  dangerInk: "#FFFFFF",
+
+  lockedSurface: "#E8ECE9",
+  lockedText: "#6B7772",
+
+  separator: "rgba(23,33,30,0.10)",
+  separatorStrong: "rgba(23,33,30,0.16)",
+  shadowColor: "#132520",
+  scrim: "rgba(12,20,17,0.55)",
+  tabBar: "rgba(255,255,255,0.97)",
+  tabBarBorder: "rgba(23,33,30,0.08)",
+  trackNeutral: "rgba(23,33,30,0.10)"
+} as const;
+
+const darkBase = {
+  appBackground: "#0E1513",
+  groupedBackground: "#121C19",
+  surfacePrimary: "#18231F",
+  surfaceSecondary: "#1E2C27",
+  surfaceBlue: "#152A33",
+  surfaceAmber: "#2B2416",
+  surfaceDanger: "#2C1A19",
+  surfaceNeutral: "#1B2521",
+  cageStage: "#132B2A",
+  sanctuaryStage: "#16302A",
+
+  textPrimary: "#F4F7F5",
+  textSecondary: "#AAB5AF",
+  textTertiary: "#8B968F",
+  textInverse: "#0B1512",
+
+  brandGreen: "#45D18F",
+  brandGreenPressed: "#35B478",
+  brandGreenText: "#6EDCA6",
+  brandGreenFill: "#3ECB8B",
+  brandGreenInk: "#06251A",
+  brandGreenTint: "rgba(69,209,143,0.16)",
+
+  stepBlue: "#5AAAFF",
+  stepBlueText: "#8CC5FF",
+  stepBlueTint: "rgba(90,170,255,0.16)",
+
+  rewardAmber: "#F2C25B",
+  rewardAmberText: "#F3D289",
+  rewardAmberFill: "#F2C25B",
+  rewardAmberInk: "#2C2000",
+  rewardAmberTint: "rgba(242,194,91,0.16)",
+
+  activeCoral: "#FF9C82",
+  activeCoralText: "#FFB6A2",
+  activeCoralTint: "rgba(255,156,130,0.16)",
+
+  danger: "#FF7B7B",
+  dangerText: "#FF9E9E",
+  dangerFill: "#D9453F",
+  dangerInk: "#FFFFFF",
+
+  lockedSurface: "#232E29",
+  lockedText: "#8B968F",
+
+  separator: "rgba(255,255,255,0.10)",
+  separatorStrong: "rgba(255,255,255,0.18)",
+  shadowColor: "#000000",
+  scrim: "rgba(0,0,0,0.68)",
+  tabBar: "rgba(24,35,31,0.97)",
+  tabBarBorder: "rgba(255,255,255,0.10)",
+  trackNeutral: "rgba(255,255,255,0.12)"
+} as const;
+
+function withLegacyAliases(base: typeof lightBase): AppColors {
+  return {
+    ...base,
+    backgroundTop: base.appBackground,
+    backgroundBottom: base.groupedBackground,
+    surface: base.surfacePrimary,
+    surfaceElevated: base.surfaceSecondary,
+    surfaceWarm: base.surfaceAmber,
+    surfaceSoft: base.surfaceSecondary,
+    text: base.textPrimary,
+    muted: base.textSecondary,
+    primary: base.brandGreen,
+    primaryDark: base.brandGreenText,
+    secondary: base.rewardAmber,
+    coral: base.activeCoral,
+    pro: base.rewardAmberText,
+    locked: base.lockedText,
+    border: base.separator,
+    shadow: base.shadowColor,
+    overlay: base.scrim,
+    white: "#FFFFFF"
+  };
+}
+
+export const lightColors: AppColors = withLegacyAliases(lightBase);
+export const darkColors: AppColors = withLegacyAliases(darkBase);
 
 export const colors = lightColors;
 
@@ -129,7 +286,7 @@ function createTheme(
 
   return {
     colors: palette,
-    gradient: [palette.backgroundTop, palette.backgroundBottom] as const,
+    gradient: [palette.appBackground, palette.groupedBackground] as const,
     isDark,
     isThemeLoading,
     resolvedColorScheme: isDark ? "dark" : "light",
