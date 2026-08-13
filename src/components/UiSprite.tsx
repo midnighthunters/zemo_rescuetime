@@ -10,9 +10,15 @@ type UiSpriteProps = {
   height?: number;
   style?: StyleProp<ImageStyle>;
   contentFit?: ImageContentFit;
+  /** Meaningful label; omit for decorative art. */
+  accessibilityLabel?: string;
+  /** Explicitly hide purely decorative artwork from screen readers. */
+  accessibilityIgnore?: boolean;
 };
 
 export function UiSprite({
+  accessibilityIgnore = true,
+  accessibilityLabel,
   spriteKey,
   size,
   width,
@@ -26,9 +32,15 @@ export function UiSprite({
     return null;
   }
 
+  const isDecorative = accessibilityIgnore && !accessibilityLabel;
+
   return (
     <Image
+      accessibilityElementsHidden={isDecorative}
+      accessibilityLabel={accessibilityLabel}
+      accessible={!isDecorative}
       contentFit={contentFit}
+      importantForAccessibility={isDecorative ? "no-hide-descendants" : "auto"}
       source={source}
       style={[
         {
