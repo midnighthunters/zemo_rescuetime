@@ -1,16 +1,13 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Speech from "expo-speech";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated as RNAnimated,
-  Dimensions,
-  Easing,
+  Animated,
   Modal,
   Pressable,
   StyleSheet,
-  Text,
   View,
+  useWindowDimensions,
   type ImageSourcePropType
 } from "react-native";
 
@@ -21,10 +18,12 @@ import {
 import { useUnlockAudioSettings } from "../features/audio/useUnlockAudioSettings";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
-import { spacing } from "../theme/spacing";
-
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const PARTICLE_COUNT = 36;
+import { duration, easing, useReduceMotion } from "../theme/motion";
+import { elevation } from "../theme/shadows";
+import { radius, spacing } from "../theme/spacing";
+import { AppButton } from "./AppButton";
+import { AppText } from "./AppText";
+import { StatusChip } from "./StatusChip";
 
 type CareEventModalProps = {
   visible: boolean;
@@ -39,88 +38,30 @@ type CareEventModalProps = {
   onDismiss: () => void;
 };
 
-type IconParticleProps = {
-  delay: number;
-  drift: number;
-  icon: ImageSourcePropType;
-  size: number;
-  x: number;
-};
-
-function IconParticle({ delay, drift, icon, size, x }: IconParticleProps) {
-  const anim = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    anim.setValue(0);
-    const timeout = setTimeout(() => {
-      RNAnimated.timing(anim, {
-        toValue: 1,
-        duration: 1250 + (delay % 5) * 90,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true
-      }).start();
-    }, delay);
-
-    return () => clearTimeout(timeout);
-  }, [anim, delay]);
-
-  const translateY = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -(SCREEN_H * 0.62)]
-  });
-  const translateX = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, drift]
-  });
-  const opacity = anim.interpolate({
-    inputRange: [0, 0.12, 0.78, 1],
-    outputRange: [0, 1, 0.86, 0]
-  });
-  const scale = anim.interpolate({
-    inputRange: [0, 0.2, 1],
-    outputRange: [0.35, 1, 0.58]
-  });
-  const rotate = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["-14deg", "18deg"]
-  });
-
-  return (
-    <RNAnimated.View
-      pointerEvents="none"
-      style={{
-        bottom: 18,
-        left: x,
-        opacity,
-        position: "absolute",
-        transform: [{ translateX }, { translateY }, { scale }, { rotate }],
-        zIndex: 3
-      }}
-    >
-      <Image contentFit="contain" source={icon} style={{ height: size, width: size }} />
-    </RNAnimated.View>
-  );
-}
-
+/**
+ * Reward moment. A restrained scrim, one scale-and-settle on the reward object,
+ * and an explicit Continue action. No particle storms, no strobing.
+ */
 export function CareEventModal({
-  visible,
   animalName,
   label,
-  title,
-  rewardImage,
-  rewardIndex,
+  nextTargetImage,
   nextTargetLabel,
   nextTargetSteps,
-  nextTargetImage,
-  onDismiss
+  onDismiss,
+  rewardImage,
+  rewardIndex,
+  title,
+  visible
 }: CareEventModalProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
-  const {
-    formatNumber: formatLocalizedNumber,
-    speechLocale,
-    t
-  } = useLanguage();
+  const { height } = useWindowDimensions();
+  const reduceMotion = useReduceMotion();
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
+  const { formatNumber: formatLocalizedNumber, speechLocale, t } = useLanguage();
   const {
     defaultUnlockAudioEnabled,
     isLoading: isUnlockAudioLoading,
@@ -130,131 +71,70 @@ export function CareEventModal({
     ? defaultUnlockAudioEnabled
     : unlockAudioEnabled;
 
-  const backdrop = useRef(new RNAnimated.Value(0)).current;
-  const rewardScale = useRef(new RNAnimated.Value(0)).current;
-  const rewardRotate = useRef(new RNAnimated.Value(0)).current;
-  const textSlide = useRef(new RNAnimated.Value(24)).current;
-  const textOpacity = useRef(new RNAnimated.Value(0)).current;
-  const nextSlide = useRef(new RNAnimated.Value(30)).current;
-  const nextOpacity = useRef(new RNAnimated.Value(0)).current;
-  const glowPulse = useRef(new RNAnimated.Value(0)).current;
-  const unlockSoundRef = useRef<UnlockChimeSound | null>(null);
-  const iconParticles = useMemo(
-    () =>
-      Array.from({ length: PARTICLE_COUNT }, (_, index) => {
-        const column = index % 12;
-        const row = Math.floor(index / 12);
+  /* Presented as a bottom sheet on short devices, a centered card otherwise. */
+  const asSheet = height < 720;
 
-        return {
-          delay: 90 + index * 32,
-          drift: ((index * 37) % 90) - 45,
-          size: 14 + ((index + row) % 5) * 3,
-          x: (SCREEN_W / 13) * (column + 1) - 10 + row * 8
-        };
-      }),
-    []
-  );
+  const backdrop = useRef(new Animated.Value(0)).current;
+  const cardEntry = useRef(new Animated.Value(0)).current;
+  const rewardSettle = useRef(new Animated.Value(0)).current;
+  const unlockSoundRef = useRef<UnlockChimeSound | null>(null);
+  const [isSettled, setIsSettled] = useState(false);
 
   useEffect(() => {
     if (!visible) {
-      [
-        backdrop,
-        rewardScale,
-        rewardRotate,
-        textSlide,
-        textOpacity,
-        nextSlide,
-        nextOpacity,
-        glowPulse
-      ].forEach((value, index) =>
-        value.setValue([0, 0, 0, 24, 0, 30, 0, 0][index])
-      );
-      return;
+      backdrop.setValue(0);
+      cardEntry.setValue(0);
+      rewardSettle.setValue(0);
+      setIsSettled(false);
+      return undefined;
     }
 
-    RNAnimated.sequence([
-      RNAnimated.timing(backdrop, {
+    if (reduceMotion) {
+      backdrop.setValue(1);
+      cardEntry.setValue(1);
+      rewardSettle.setValue(1);
+      setIsSettled(true);
+      return undefined;
+    }
+
+    const animation = Animated.sequence([
+      Animated.parallel([
+        Animated.timing(backdrop, {
+          duration: duration.state,
+          easing: easing.standard,
+          toValue: 1,
+          useNativeDriver: true
+        }),
+        Animated.timing(cardEntry, {
+          duration: duration.enter,
+          easing: easing.decelerate,
+          toValue: 1,
+          useNativeDriver: true
+        })
+      ]),
+      Animated.timing(rewardSettle, {
+        duration: duration.celebrate,
+        easing: easing.settle,
         toValue: 1,
-        duration: 220,
         useNativeDriver: true
-      }),
-      RNAnimated.parallel([
-        RNAnimated.spring(rewardScale, {
-          toValue: 1,
-          friction: 4,
-          tension: 190,
-          useNativeDriver: true
-        }),
-        RNAnimated.timing(rewardRotate, {
-          toValue: 1,
-          duration: 460,
-          easing: Easing.out(Easing.back(1.3)),
-          useNativeDriver: true
-        })
-      ]),
-      RNAnimated.parallel([
-        RNAnimated.spring(textSlide, {
-          toValue: 0,
-          friction: 7,
-          tension: 120,
-          useNativeDriver: true
-        }),
-        RNAnimated.timing(textOpacity, {
-          toValue: 1,
-          duration: 260,
-          useNativeDriver: true
-        })
-      ]),
-      RNAnimated.delay(90),
-      RNAnimated.parallel([
-        RNAnimated.spring(nextSlide, {
-          toValue: 0,
-          friction: 6,
-          tension: 100,
-          useNativeDriver: true
-        }),
-        RNAnimated.timing(nextOpacity, {
-          toValue: 1,
-          duration: 280,
-          useNativeDriver: true
-        })
-      ]),
-      RNAnimated.loop(
-        RNAnimated.sequence([
-          RNAnimated.timing(glowPulse, {
-            toValue: 1,
-            duration: 680,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true
-          }),
-          RNAnimated.timing(glowPulse, {
-            toValue: 0,
-            duration: 680,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true
-          })
-        ]),
-        { iterations: 3 }
-      )
-    ]).start();
-  }, [
-    visible,
-    backdrop,
-    glowPulse,
-    nextOpacity,
-    nextSlide,
-    rewardRotate,
-    rewardScale,
-    textOpacity,
-    textSlide
-  ]);
+      })
+    ]);
+
+    animation.start(({ finished }) => {
+      if (finished) {
+        setIsSettled(true);
+      }
+    });
+
+    return () => animation.stop();
+  }, [backdrop, cardEntry, reduceMotion, rewardSettle, visible]);
 
   useEffect(() => {
     if (!shouldPlayUnlockAudio || !visible) {
       Speech.stop();
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
       unlockSoundRef.current = null;
-      return;
+      return undefined;
     }
 
     let cancelled = false;
@@ -264,16 +144,8 @@ export function CareEventModal({
       }
 
       Speech.speak(
-        t("speech.careUnlocked", {
-          animal: animalName,
-          reward: title
-        }),
-        {
-          language: speechLocale,
-          pitch: 1.02,
-          rate: 0.92,
-          volume: 0.84
-        }
+        t("speech.careUnlocked", { animal: animalName, reward: title }),
+        { language: speechLocale, pitch: 1.02, rate: 0.92, volume: 0.84 }
       );
     }, 620);
 
@@ -288,11 +160,11 @@ export function CareEventModal({
 
         unlockSoundRef.current = sound;
       } catch {
-        // Target cards should still appear if celebratory audio cannot play.
+        // Reward cards should still appear if celebratory audio cannot play.
       }
     }
 
-    playRewardChime();
+    void playRewardChime();
 
     return () => {
       cancelled = true;
@@ -301,188 +173,168 @@ export function CareEventModal({
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
       unlockSoundRef.current = null;
     };
-  }, [
-    animalName,
-    shouldPlayUnlockAudio,
-    speechLocale,
-    t,
-    title,
-    visible
-  ]);
+  }, [animalName, shouldPlayUnlockAudio, speechLocale, t, title, visible]);
 
-  const rotate = rewardRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["-18deg", "0deg"]
-  });
-  const glowScale = glowPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.08]
-  });
+  const handleDismiss = () => {
+    if (!isSettled) {
+      return;
+    }
+
+    onDismiss();
+  };
+
+  const cardTransform = reduceMotion
+    ? undefined
+    : [
+        {
+          translateY: cardEntry.interpolate({
+            inputRange: [0, 1],
+            outputRange: [asSheet ? 48 : 20, 0]
+          })
+        },
+        {
+          scale: cardEntry.interpolate({
+            inputRange: [0, 1],
+            outputRange: [asSheet ? 1 : 0.96, 1]
+          })
+        }
+      ];
+
+  const rewardTransform = reduceMotion
+    ? undefined
+    : [
+        {
+          scale: rewardSettle.interpolate({
+            inputRange: [0, 0.6, 1],
+            outputRange: [0.6, 1.06, 1]
+          })
+        }
+      ];
 
   return (
-    <Modal animationType="none" transparent visible={visible}>
-      <Pressable style={styles.overlay} onPress={onDismiss}>
-        <RNAnimated.View style={[styles.backdrop, { opacity: backdrop }]} />
-        {iconParticles.map((particle, index) => (
-          <IconParticle
-            key={`${rewardIndex}-${index}`}
-            delay={particle.delay}
-            drift={particle.drift}
-            icon={rewardImage}
-            size={particle.size}
-            x={particle.x}
-          />
-        ))}
-        <Pressable style={styles.card} onPress={() => {}}>
-          <RNAnimated.View
-            style={[
-              styles.rewardGlowRing,
-              { opacity: backdrop, transform: [{ scale: glowScale }] }
-            ]}
-          />
-          <RNAnimated.View
-            style={{
-              alignItems: "center",
-              transform: [{ scale: rewardScale }, { rotate }],
-              zIndex: 2
-            }}
-          >
+    <Modal
+      animationType="none"
+      onRequestClose={handleDismiss}
+      transparent
+      visible={visible}
+    >
+      <View style={[styles.root, asSheet && styles.rootSheet]}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.backdrop, { opacity: backdrop }]}
+        />
+        <Pressable
+          accessibilityLabel={t("careEvent.tapContinue")}
+          accessibilityRole="button"
+          onPress={handleDismiss}
+          style={StyleSheet.absoluteFill}
+        />
+        <Animated.View
+          accessibilityViewIsModal
+          style={[
+            styles.card,
+            asSheet ? styles.cardSheet : styles.cardCentered,
+            { opacity: reduceMotion ? 1 : cardEntry, transform: cardTransform }
+          ]}
+        >
+          <Animated.View style={[styles.rewardStage, { transform: rewardTransform }]}>
             <Image
               contentFit="contain"
               source={rewardImage}
               style={styles.rewardImage}
             />
-          </RNAnimated.View>
+          </Animated.View>
 
-          <RNAnimated.View
-            style={{
-              alignItems: "center",
-              gap: spacing.xs,
-              opacity: textOpacity,
-              transform: [{ translateY: textSlide }]
-            }}
-          >
-            <View style={styles.badge}>
-              <Ionicons
-                color={theme.colors.primary}
-                name="checkmark-circle"
-                size={16}
-              />
-              <Text style={styles.badgeText}>
-                {t("careEvent.rewardUnlocked", { number: rewardIndex + 1 })}
-              </Text>
-            </View>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>
+          <View style={styles.copy}>
+            <StatusChip
+              icon="checkmark-circle"
+              label={t("careEvent.rewardUnlocked", { number: rewardIndex + 1 })}
+              tone="safe"
+            />
+            <AppText align="center" role="sectionTitle">
+              {title}
+            </AppText>
+            <AppText align="center" role="supportive" tone="secondary">
               {t("careEvent.earned", { animal: animalName, reward: label })}
-            </Text>
-          </RNAnimated.View>
+            </AppText>
+          </View>
 
           {nextTargetLabel && nextTargetSteps !== undefined ? (
-            <RNAnimated.View
-              style={[
-                styles.nextPanel,
-                {
-                  opacity: nextOpacity,
-                  transform: [{ translateY: nextSlide }]
-                }
-              ]}
-            >
-              <View style={styles.nextRow}>
+            <View style={styles.nextRow}>
+              <View style={styles.nextThumb}>
                 {nextTargetImage ? (
                   <Image
                     contentFit="contain"
                     source={nextTargetImage}
                     style={styles.nextImage}
                   />
-                ) : (
-                  <View style={styles.nextImageFallback}>
-                    <Ionicons color="#096DD9" name="key" size={22} />
-                  </View>
-                )}
-                <View style={styles.nextCopy}>
-                  <Text style={styles.nextLabel}>{t("careEvent.nextGoal")}</Text>
-                  <Text style={styles.nextTitle}>{nextTargetLabel}</Text>
-                </View>
-                <View style={styles.nextBadge}>
-                  <Text style={styles.nextSteps}>
-                    {formatLocalizedNumber(nextTargetSteps)}
-                  </Text>
-                  <Text style={styles.nextStepsUnit}>{t("common.steps")}</Text>
-                </View>
+                ) : null}
               </View>
-            </RNAnimated.View>
+              <View style={styles.nextCopy}>
+                <AppText role="label" tone="blue">
+                  {t("careEvent.nextGoal")}
+                </AppText>
+                <AppText numberOfLines={1} role="cardTitle">
+                  {nextTargetLabel}
+                </AppText>
+              </View>
+              <AppText role="metric" style={styles.nextSteps} tone="blue">
+                {formatLocalizedNumber(nextTargetSteps)}
+              </AppText>
+            </View>
           ) : null}
 
-          <Pressable onPress={onDismiss} style={styles.dismissButton}>
-            <Text style={styles.dismissText}>{t("careEvent.tapContinue")}</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
+          <AppButton
+            disabled={!isSettled}
+            icon="arrow-forward"
+            iconPosition="trailing"
+            onPress={handleDismiss}
+            style={styles.action}
+            title={t("common.continue")}
+            variant="primary"
+          />
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
+    action: {
+      width: "100%"
+    },
     backdrop: {
-      backgroundColor: "rgba(10,18,28,0.78)",
+      backgroundColor: colors.scrim,
       bottom: 0,
       left: 0,
       position: "absolute",
       right: 0,
       top: 0
     },
-    badge: {
-      alignItems: "center",
-      alignSelf: "center",
-      backgroundColor: colors.surfaceSoft,
-      borderColor: colors.primary,
-      borderRadius: 8,
-      borderWidth: 1.5,
-      flexDirection: "row",
-      gap: spacing.xs,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs
-    },
-    badgeText: {
-      color: colors.primaryDark,
-      fontSize: 12,
-      fontWeight: "900",
-      textTransform: "uppercase"
-    },
     card: {
       alignItems: "center",
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      elevation: 20,
-      gap: spacing.lg,
-      margin: spacing.lg,
+      backgroundColor: colors.surfacePrimary,
+      borderColor: colors.separator,
+      borderCurve: "continuous",
+      borderWidth: isDark ? 1 : 0,
+      gap: spacing.s16,
       maxWidth: 440,
-      padding: spacing.xl,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.32,
-      shadowRadius: 28,
-      width: "92%",
-      zIndex: 10
+      padding: spacing.s24,
+      width: "100%",
+      ...elevation("sheet", isDark, colors.shadowColor)
     },
-    dismissButton: {
-      paddingVertical: spacing.sm
+    cardCentered: {
+      borderRadius: radius.sheet
     },
-    dismissText: {
-      color: colors.muted,
-      fontSize: 13,
-      fontWeight: "700"
+    cardSheet: {
+      borderTopLeftRadius: radius.sheet,
+      borderTopRightRadius: radius.sheet,
+      paddingBottom: spacing.s32
     },
-    nextBadge: {
+    copy: {
       alignItems: "center",
-      backgroundColor: isDark ? colors.surfaceElevated : "#EAF6FF",
-      borderColor: isDark ? colors.border : "#48AEEF",
-      borderRadius: 8,
-      borderWidth: 1,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs
+      gap: spacing.s8
     },
     nextCopy: {
       flex: 1,
@@ -490,93 +342,53 @@ function createStyles(colors: AppColors, isDark: boolean) {
       minWidth: 0
     },
     nextImage: {
-      backgroundColor: colors.surface,
-      borderColor: isDark ? colors.border : "#B8E3FF",
-      borderRadius: 8,
-      borderWidth: 1,
-      height: 52,
-      width: 52
-    },
-    nextImageFallback: {
-      alignItems: "center",
-      backgroundColor: colors.surface,
-      borderColor: isDark ? colors.border : "#B8E3FF",
-      borderRadius: 8,
-      borderWidth: 1,
-      height: 52,
-      justifyContent: "center",
-      width: 52
-    },
-    nextLabel: {
-      color: colors.muted,
-      fontSize: 10,
-      fontWeight: "900",
-      textTransform: "uppercase"
-    },
-    nextPanel: {
-      backgroundColor: isDark ? colors.surfaceElevated : "#EAF6FF",
-      borderColor: isDark ? colors.border : "#48AEEF",
-      borderRadius: 8,
-      borderWidth: 1.5,
-      padding: spacing.lg,
-      width: "100%"
+      height: 40,
+      width: 40
     },
     nextRow: {
       alignItems: "center",
+      backgroundColor: colors.surfaceBlue,
+      borderCurve: "continuous",
+      borderRadius: radius.control,
       flexDirection: "row",
-      gap: spacing.md
+      gap: spacing.s12,
+      padding: spacing.s12,
+      width: "100%"
     },
     nextSteps: {
-      color: "#096DD9",
-      fontSize: 16,
-      fontWeight: "900"
+      fontSize: 18,
+      lineHeight: 23
     },
-    nextStepsUnit: {
-      color: colors.muted,
-      fontSize: 10,
-      fontWeight: "700"
-    },
-    nextTitle: {
-      color: colors.text,
-      fontSize: 15,
-      fontWeight: "900"
-    },
-    overlay: {
+    nextThumb: {
       alignItems: "center",
-      bottom: 0,
+      backgroundColor: colors.surfacePrimary,
+      borderRadius: radius.chip,
+      height: 48,
       justifyContent: "center",
-      left: 0,
-      position: "absolute",
-      right: 0,
-      top: 0
-    },
-    rewardGlowRing: {
-      backgroundColor: colors.surfaceSoft,
-      borderColor: colors.primary,
-      borderRadius: 78,
-      borderWidth: 3,
-      height: 144,
-      position: "absolute",
-      top: spacing.xl - 8,
-      width: 144,
-      zIndex: 1
+      overflow: "hidden",
+      width: 48
     },
     rewardImage: {
-      height: 132,
-      width: 132
+      height: 104,
+      width: 104
     },
-    subtitle: {
-      color: colors.muted,
-      fontSize: 14,
-      fontWeight: "700",
-      lineHeight: 21,
-      textAlign: "center"
+    rewardStage: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceAmber,
+      borderRadius: radius.round,
+      height: 136,
+      justifyContent: "center",
+      width: 136
     },
-    title: {
-      color: colors.text,
-      fontSize: 24,
-      fontWeight: "900",
-      textAlign: "center"
+    root: {
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+      padding: spacing.s20
+    },
+    rootSheet: {
+      justifyContent: "flex-end",
+      padding: 0
     }
   });
 }

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useMemo } from "react";
 import { StyleSheet, View, type ImageSourcePropType } from "react-native";
 
@@ -7,72 +8,73 @@ import { jailSprites } from "../data/assets";
 import type { AnimalCareState } from "../data/types";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { type AppColors, useAppTheme } from "../theme/colors";
+import { radius, spacing } from "../theme/spacing";
 
 type AnimalCageProps = {
   animalImage: ImageSourcePropType;
   progress: number;
   careState: AnimalCareState;
   isRescued?: boolean;
+  /** Slightly tighter framing for grid and modal contexts. */
+  compact?: boolean;
 };
 
+/**
+ * The rescue stage. Cage layers weaken as progress rises: bars fade and drift
+ * apart, the lid lifts, and the lock badge switches to an "opening" state near
+ * the target. Once rescued the cage disappears entirely and the animal sits on a
+ * warm sanctuary surface.
+ */
 export function AnimalCage({
   animalImage,
-  careState,
-  progress,
-  isRescued
+  careState: _careState,
+  compact = false,
+  isRescued,
+  progress
 }: AnimalCageProps) {
   const theme = useAppTheme();
   const { t } = useLanguage();
   const styles = useMemo(
-    () => createStyles(theme.colors, theme.isDark),
-    [theme.colors, theme.isDark]
+    () => createStyles(theme.colors, theme.isDark, compact),
+    [compact, theme.colors, theme.isDark]
   );
-  const warmth = Math.max(0, Math.min(1, progress));
-  const needsCare = careState === "hungry" || careState === "healing";
-  const glowOpacity = (needsCare ? 0.28 : 0.34) + warmth * 0.16;
+
+  const clamped = Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
+  /* Bars stay clearly readable until the halfway point, then visibly weaken. */
+  const barOpacity = isRescued ? 0 : 1 - clamped * 0.55;
+  const barSpread = clamped * (compact ? 6 : 12);
+  const lidLift = clamped * (compact ? 5 : 10);
+  const isOpening = clamped >= 0.85;
+
+  const stageGradient = isRescued
+    ? ([theme.colors.sanctuaryStage, theme.colors.brandGreenTint] as const)
+    : ([theme.colors.cageStage, theme.isDark ? theme.colors.surfaceSecondary : "#EFF8FE"] as const);
 
   return (
     <View
       accessibilityLabel={
-        isRescued
-          ? t("a11y.animalCage.rescued")
-          : t("a11y.animalCage.waiting")
+        isRescued ? t("a11y.animalCage.rescued") : t("a11y.animalCage.waiting")
       }
-      style={[
-        styles.root,
-        {
-          backgroundColor:
-            isRescued
-              ? theme.colors.surfaceSoft
-              : warmth > 0.7
-                ? theme.colors.surfaceWarm
-                : theme.isDark
-                  ? "#102821"
-                  : "#BFEFFF"
-        }
-      ]}
+      style={styles.root}
     >
-      <View
+      <LinearGradient
+        colors={stageGradient}
+        end={{ x: 0.8, y: 1 }}
         pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          { backgroundColor: isRescued ? theme.colors.primary : theme.colors.secondary },
-          { opacity: glowOpacity }
-        ]}
+        start={{ x: 0.2, y: 0 }}
+        style={StyleSheet.absoluteFill}
       />
 
       {!isRescued ? (
         <>
-          {/* z=2: Back cage body � behind everything */}
-          <View pointerEvents="none" style={styles.openJailLayer}>
+          {/* Cage shell, behind the animal. */}
+          <View pointerEvents="none" style={[styles.shellLayer, { opacity: barOpacity }]}>
             <Image
               contentFit="contain"
               source={jailSprites.openJail}
               style={styles.layerImage}
             />
           </View>
-
-          {/* z=3: Platform/base � behind the animal and gate */}
           <View pointerEvents="none" style={styles.platformLayer}>
             <Image
               contentFit="contain"
@@ -81,61 +83,120 @@ export function AnimalCage({
             />
           </View>
         </>
-      ) : null}
+      ) : (
+        <View pointerEvents="none" style={styles.sanctuaryHalo} />
+      )}
 
-      {/* z=4: Animal � in front of back body + platform, behind gate bars */}
+      {/* The animal is always the visual focus. */}
       <View style={styles.animal}>
-        <Image contentFit="contain" source={animalImage} style={styles.animalImage} />
+        <Image contentFit="contain" source={animalImage} style={styles.layerImage} />
       </View>
 
       {!isRescued ? (
         <>
-          {/* z=6: Front gate bars � in front of the animal */}
-          <View pointerEvents="none" style={styles.gateLayer}>
-            <Image contentFit="contain" source={jailSprites.gate} style={styles.layerImage} />
+          {/* Front bars split apart and fade as care accumulates. */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.gateHalf,
+              styles.gateLeft,
+              { opacity: barOpacity, transform: [{ translateX: -barSpread }] }
+            ]}
+          >
+            <Image
+              contentFit="contain"
+              source={jailSprites.gate}
+              style={styles.gateImageLeft}
+            />
+          </View>
+          <View
+            pointerEvents="none"
+            style={[
+              styles.gateHalf,
+              styles.gateRight,
+              { opacity: barOpacity, transform: [{ translateX: barSpread }] }
+            ]}
+          >
+            <Image
+              contentFit="contain"
+              source={jailSprites.gate}
+              style={styles.gateImageRight}
+            />
           </View>
 
-          {/* z=8: Top handle/lid � topmost layer */}
-          <View pointerEvents="none" style={styles.topLayer}>
-            <Image contentFit="contain" source={jailSprites.top} style={styles.layerImage} />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.topLayer,
+              { opacity: barOpacity, transform: [{ translateY: -lidLift }] }
+            ]}
+          >
+            <Image
+              contentFit="contain"
+              source={jailSprites.top}
+              style={styles.layerImage}
+            />
           </View>
 
-          <View pointerEvents="none" style={styles.lockBadge}>
-            <Ionicons color="#FFFFFF" name="lock-closed" size={24} />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.lockBadge,
+              isOpening && { backgroundColor: theme.colors.brandGreenFill }
+            ]}
+          >
+            <Ionicons
+              color="#FFFFFF"
+              name={isOpening ? "lock-open" : "lock-closed"}
+              size={compact ? 16 : 20}
+            />
           </View>
         </>
-      ) : null}
+      ) : (
+        <View pointerEvents="none" style={styles.safeBadge}>
+          <Ionicons
+            color={theme.colors.brandGreenInk}
+            name="shield-checkmark"
+            size={compact ? 16 : 20}
+          />
+        </View>
+      )}
     </View>
   );
 }
 
-function createStyles(colors: AppColors, isDark: boolean) {
+function createStyles(colors: AppColors, isDark: boolean, compact: boolean) {
   return StyleSheet.create({
     animal: {
-      bottom: "20%",
-      height: "52%",
+      bottom: compact ? "18%" : "19%",
+      height: compact ? "56%" : "54%",
       position: "absolute",
-      width: "52%",
+      width: compact ? "56%" : "54%",
       zIndex: 4
     },
-    ambientGlow: {
-      borderRadius: 999,
-      height: "64%",
+    gateHalf: {
+      height: "52%",
+      overflow: "hidden",
       position: "absolute",
-      width: "64%",
-      zIndex: 0
-    },
-    animalImage: {
-      height: "100%",
-      width: "100%"
-    },
-    gateLayer: {
-      height: "54%",
-      left: "15%",
-      position: "absolute",
-      top: "25%",
-      width: "70%",
+      top: "26%",
+      width: "35%",
       zIndex: 6
+    },
+    gateImageLeft: {
+      height: "100%",
+      width: "200%"
+    },
+    gateImageRight: {
+      height: "100%",
+      left: "-100%",
+      position: "absolute",
+      width: "200%"
+    },
+    gateLeft: {
+      left: "15%"
+    },
+    gateRight: {
+      right: "15%"
     },
     layerImage: {
       height: "100%",
@@ -143,25 +204,17 @@ function createStyles(colors: AppColors, isDark: boolean) {
     },
     lockBadge: {
       alignItems: "center",
-      backgroundColor: "rgba(18, 31, 45, 0.82)",
-      borderColor: "rgba(255, 255, 255, 0.92)",
-      borderRadius: 22,
-      borderWidth: 2,
-      height: 44,
+      backgroundColor: "rgba(18, 31, 45, 0.78)",
+      borderColor: "rgba(255,255,255,0.9)",
+      borderRadius: radius.round,
+      borderWidth: 1.5,
+      height: compact ? 30 : 38,
       justifyContent: "center",
       position: "absolute",
-      right: "13%",
-      top: "18%",
-      width: 44,
+      right: spacing.s12,
+      top: spacing.s12,
+      width: compact ? 30 : 38,
       zIndex: 12
-    },
-    openJailLayer: {
-      height: "72%",
-      left: "5%",
-      position: "absolute",
-      top: "14%",
-      width: "90%",
-      zIndex: 2
     },
     platformLayer: {
       bottom: "-1%",
@@ -173,12 +226,41 @@ function createStyles(colors: AppColors, isDark: boolean) {
     root: {
       alignItems: "center",
       aspectRatio: 1,
-      borderColor: isDark ? colors.border : "#FFFFFF",
-      borderRadius: 8,
-      borderWidth: 1,
+      borderCurve: "continuous",
+      borderRadius: radius.card,
       justifyContent: "center",
       overflow: "hidden",
       width: "100%"
+    },
+    safeBadge: {
+      alignItems: "center",
+      backgroundColor: colors.brandGreen,
+      borderRadius: radius.round,
+      height: compact ? 30 : 38,
+      justifyContent: "center",
+      position: "absolute",
+      right: spacing.s12,
+      top: spacing.s12,
+      width: compact ? 30 : 38,
+      zIndex: 12
+    },
+    sanctuaryHalo: {
+      backgroundColor: isDark
+        ? "rgba(69,209,143,0.14)"
+        : "rgba(45,190,114,0.16)",
+      borderRadius: radius.round,
+      height: "62%",
+      position: "absolute",
+      width: "62%",
+      zIndex: 0
+    },
+    shellLayer: {
+      height: "72%",
+      left: "5%",
+      position: "absolute",
+      top: "14%",
+      width: "90%",
+      zIndex: 2
     },
     topLayer: {
       height: "31%",

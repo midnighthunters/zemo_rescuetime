@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
 
 import type { RescueMilestone } from "../data/types";
 import { useLanguage } from "../i18n/LanguageProvider";
+import { getRewardTargetImageSource } from "../services/assets/getAppAssetSource";
 import { type AppColors, useAppTheme } from "../theme/colors";
-import { spacing } from "../theme/spacing";
-import { MotionView, PulseView } from "./Motion";
+import { radius, spacing } from "../theme/spacing";
+import { AppText } from "./AppText";
+import { StatusChip } from "./StatusChip";
 
 type CareMilestoneRowProps = {
   milestone: RescueMilestone;
@@ -15,161 +18,249 @@ type CareMilestoneRowProps = {
   proLocked?: boolean;
 };
 
+type JourneyRow = {
+  key: string;
+  label: string;
+  stepTarget: number;
+  image?: ReturnType<typeof getRewardTargetImageSource>;
+  complete: boolean;
+  isRescue: boolean;
+};
+
+/**
+ * The six care rewards plus the final rescue gate, rendered as a vertical
+ * journey. The next unearned step is the strongest node; earned steps reveal
+ * their reward art.
+ */
 export function CareMilestoneRow({
-  milestone,
-  stepsToday,
   claimedMiniMilestones,
-  proLocked
+  milestone,
+  proLocked,
+  stepsToday
 }: CareMilestoneRowProps) {
   const theme = useAppTheme();
-  const styles = createStyles(theme.colors, theme.isDark);
+  const styles = useMemo(
+    () => createStyles(theme.colors, theme.isDark),
+    [theme.colors, theme.isDark]
+  );
   const { formatNumber: formatLocalizedNumber, t } = useLanguage();
-  const items = [
-    ...milestone.rewardTargets.map((target) => ({
-      key: target.id,
-      label: target.title,
-      stepTarget: target.stepTarget,
-      image: target.image,
-      complete:
-        claimedMiniMilestones.includes(target.stepTarget) ||
-        stepsToday >= target.stepTarget,
-      isRescue: false
-    })),
-    {
-      key: "rescue",
-      label: t("common.rescue"),
-      stepTarget: milestone.unlockSteps,
-      image: undefined,
-      complete: stepsToday >= milestone.unlockSteps,
-      isRescue: true
-    }
-  ];
+
+  const rows = useMemo<JourneyRow[]>(
+    () => [
+      ...milestone.rewardTargets.map((target) => ({
+        complete:
+          claimedMiniMilestones.includes(target.stepTarget) ||
+          stepsToday >= target.stepTarget,
+        image: getRewardTargetImageSource(target),
+        isRescue: false,
+        key: target.id,
+        label: target.title,
+        stepTarget: target.stepTarget
+      })),
+      {
+        complete: stepsToday >= milestone.unlockSteps,
+        image: undefined,
+        isRescue: true,
+        key: "rescue",
+        label: t("common.rescue"),
+        stepTarget: milestone.unlockSteps
+      }
+    ],
+    [claimedMiniMilestones, milestone, stepsToday, t]
+  );
+
+  const nextIndex = rows.findIndex((row) => !row.complete);
 
   return (
     <View style={styles.root}>
-      {items.map((item, index) => (
-        <MotionView
-          key={item.key}
-          delay={index * 70}
-          direction="fade"
-          accessibilityLabel={t("rescueModal.nextSteps", {
-            target: item.label,
-            steps: formatLocalizedNumber(item.stepTarget)
-          })}
-          style={[
-            styles.item,
-            item.complete && styles.itemComplete,
-            proLocked && styles.itemLocked
-          ]}
-        >
-          <View style={styles.imageWrap}>
-            {item.image ? (
-              <PulseView
-                active={item.complete}
-                floatDistance={2}
-                pulseScale={1.05}
-                style={styles.rewardPulse}
+      {rows.map((row, index) => {
+        const isNext = !proLocked && index === nextIndex;
+        const isLast = index === rows.length - 1;
+
+        return (
+          <View key={row.key} style={styles.item}>
+            <View style={styles.rail}>
+              <View
+                style={[
+                  styles.node,
+                  row.complete && styles.nodeComplete,
+                  isNext && styles.nodeNext,
+                  proLocked && !row.complete && styles.nodeLocked
+                ]}
               >
-                <Image
-                  contentFit="contain"
-                  source={item.image}
-                  style={styles.rewardImage}
-                />
-              </PulseView>
-            ) : (
-              <PulseView active={item.complete} pulseScale={1.1}>
                 <Ionicons
                   color={
-                    proLocked
-                      ? theme.colors.locked
-                      : item.complete
-                        ? theme.colors.primary
-                        : theme.colors.muted
+                    row.complete
+                      ? theme.colors.brandGreenInk
+                      : isNext
+                        ? theme.colors.textInverse
+                        : theme.colors.lockedText
                   }
-                  name={item.complete ? "checkmark-circle" : "key"}
-                  size={32}
+                  name={
+                    row.complete
+                      ? "checkmark"
+                      : proLocked
+                        ? "lock-closed"
+                        : row.isRescue
+                          ? "flag"
+                          : "gift"
+                  }
+                  size={14}
                 />
-              </PulseView>
-            )}
+              </View>
+              {!isLast ? (
+                <View
+                  style={[styles.line, row.complete && styles.lineComplete]}
+                />
+              ) : null}
+            </View>
+
+            <View
+              style={[
+                styles.card,
+                row.complete && styles.cardComplete,
+                isNext && styles.cardNext
+              ]}
+            >
+              <View style={styles.thumb}>
+                {row.complete && row.image && !row.isRescue ? (
+                  <Image
+                    contentFit="contain"
+                    source={row.image}
+                    style={styles.thumbImage}
+                  />
+                ) : (
+                  <Ionicons
+                    color={
+                      isNext ? theme.colors.activeCoralText : theme.colors.lockedText
+                    }
+                    name={row.isRescue ? "flag-outline" : "gift-outline"}
+                    size={22}
+                  />
+                )}
+              </View>
+              <View style={styles.copy}>
+                <AppText numberOfLines={2} role="cardTitle">
+                  {row.complete || isNext || row.isRescue
+                    ? row.label
+                    : t("progress.lockedReward")}
+                </AppText>
+                <AppText role="caption" tone="secondary">
+                  {t("common.stepsToTarget", {
+                    steps: formatLocalizedNumber(row.stepTarget)
+                  })}
+                </AppText>
+              </View>
+              <StatusChip
+                label={
+                  proLocked && !row.complete
+                    ? t("common.pro")
+                    : row.complete
+                      ? t("state.earned")
+                      : isNext
+                        ? t("state.next")
+                        : t("state.locked")
+                }
+                tone={
+                  proLocked && !row.complete
+                    ? "pro"
+                    : row.complete
+                      ? "safe"
+                      : isNext
+                        ? "active"
+                        : "locked"
+                }
+              />
+            </View>
           </View>
-          <Text
-            adjustsFontSizeToFit
-            numberOfLines={2}
-            style={[styles.label, item.complete && styles.completeLabel]}
-          >
-            {item.label}
-          </Text>
-          <Text style={styles.target}>
-            {t("common.stepsToTarget", {
-              steps: formatLocalizedNumber(item.stepTarget)
-            })}
-          </Text>
-        </MotionView>
-      ))}
+        );
+      })}
     </View>
   );
 }
 
 function createStyles(colors: AppColors, isDark: boolean) {
   return StyleSheet.create({
-    completeLabel: {
-      color: colors.primaryDark
-    },
-    imageWrap: {
+    card: {
       alignItems: "center",
-      backgroundColor: isDark ? colors.surfaceElevated : "#FFFFFF",
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
-      height: 58,
-      justifyContent: "center",
-      width: "100%"
+      backgroundColor: colors.surfaceSecondary,
+      borderColor: colors.separator,
+      borderCurve: "continuous",
+      borderRadius: radius.control,
+      borderWidth: StyleSheet.hairlineWidth,
+      flex: 1,
+      flexDirection: "row",
+      gap: spacing.s12,
+      minWidth: 0,
+      padding: spacing.s12
+    },
+    cardComplete: {
+      backgroundColor: colors.brandGreenTint,
+      borderColor: isDark ? colors.separatorStrong : "rgba(23,128,76,0.20)"
+    },
+    cardNext: {
+      backgroundColor: colors.activeCoralTint,
+      borderColor: colors.activeCoral,
+      borderWidth: 1.5
+    },
+    copy: {
+      flex: 1,
+      gap: 2,
+      minWidth: 0
     },
     item: {
+      flexDirection: "row",
+      gap: spacing.s12
+    },
+    line: {
+      backgroundColor: colors.separator,
+      flex: 1,
+      marginVertical: 2,
+      width: 2
+    },
+    lineComplete: {
+      backgroundColor: colors.brandGreen
+    },
+    node: {
       alignItems: "center",
-      backgroundColor: isDark ? "rgba(31,42,39,0.72)" : "rgba(255,255,255,0.76)",
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
-      flexBasis: "31%",
-      flexGrow: 1,
-      gap: spacing.xs,
-      minHeight: 138,
-      minWidth: 96,
-      padding: spacing.sm
+      backgroundColor: colors.lockedSurface,
+      borderRadius: radius.round,
+      height: 26,
+      justifyContent: "center",
+      width: 26
     },
-    itemComplete: {
-      backgroundColor: colors.surfaceSoft,
-      borderColor: colors.primary
+    nodeComplete: {
+      backgroundColor: colors.brandGreen
     },
-    itemLocked: {
-      opacity: 0.58
+    nodeLocked: {
+      backgroundColor: colors.lockedSurface
     },
-    label: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: "900",
-      lineHeight: 15,
-      minHeight: 30,
-      textAlign: "center"
+    nodeNext: {
+      backgroundColor: colors.activeCoral
     },
-    rewardImage: {
-      height: 54,
-      width: "100%"
-    },
-    rewardPulse: {
-      width: "100%"
+    rail: {
+      alignItems: "center",
+      alignSelf: "stretch",
+      paddingTop: spacing.s12,
+      width: 26
     },
     root: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.sm
+      gap: spacing.s4
     },
-    target: {
-      color: colors.muted,
-      fontSize: 10,
-      fontWeight: "700",
-      textAlign: "center"
+    thumb: {
+      alignItems: "center",
+      backgroundColor: colors.surfacePrimary,
+      borderColor: colors.separator,
+      borderRadius: radius.chip,
+      borderWidth: StyleSheet.hairlineWidth,
+      height: 48,
+      justifyContent: "center",
+      overflow: "hidden",
+      width: 48
+    },
+    thumbImage: {
+      height: 42,
+      width: 42
     }
   });
 }
