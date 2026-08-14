@@ -212,7 +212,29 @@ const darkBase = {
   trackNeutral: "rgba(255,255,255,0.12)"
 } as const;
 
-function withLegacyAliases(base: typeof lightBase): AppColors {
+type BaseColors = Omit<
+  AppColors,
+  | "backgroundTop"
+  | "backgroundBottom"
+  | "surface"
+  | "surfaceElevated"
+  | "surfaceWarm"
+  | "surfaceSoft"
+  | "text"
+  | "muted"
+  | "primary"
+  | "primaryDark"
+  | "secondary"
+  | "coral"
+  | "pro"
+  | "locked"
+  | "border"
+  | "shadow"
+  | "overlay"
+  | "white"
+>;
+
+function withLegacyAliases(base: BaseColors): AppColors {
   return {
     ...base,
     backgroundTop: base.appBackground,

@@ -248,7 +248,32 @@ const englishTranslations = {
   "stepHero.viewAnimal": "View Animal",
   "stepHero.waitingForYou": "Waiting for you...",
   "stepHero.needsCare": "Needs your care",
-  "stepHero.almostSafe": "Almost safe!"
+  "stepHero.almostSafe": "Almost safe!",
+  "common.continue": "Continue",
+  "paywall.plansUnavailableBody":
+    "Plans can't be loaded right now. Please try again later.",
+  "paywall.plansUnavailableTitle": "Plans unavailable",
+  "paywall.planUnavailable": "Currently unavailable",
+  "paywall.terms":
+    "Subscriptions renew automatically unless cancelled at least 24 hours before the current period ends.",
+  "progress.chartSummary": "Last {days} days: {steps} steps.",
+  "settings.diagnosticDetail": "Diagnostic detail",
+  "settings.manageSubscription": "Manage subscription",
+  "settings.modeFullDay": "Full day",
+  "settings.modeLiveSession": "Live session",
+  "settings.proPack": "Offline Pro pack",
+  "settings.proPackClear": "Remove downloaded pack",
+  "settings.proPackDownload": "Download pack",
+  "settings.proPackFailed": "Download failed",
+  "settings.proPackPending": "Download needed",
+  "settings.proPackReady": "Ready offline",
+  "settings.proPackResume": "Resume download",
+  "settings.proPackRetry": "Try download again",
+  "settings.restoreSubtitle": "Restore previous purchases",
+  "settings.stepsHealthy": "Steps connected",
+  "settings.stepsProblem": "Steps need attention",
+  "settings.working": "Working...",
+  "stepHero.allSafeBody": "Every animal is safe. Keep walking to stay strong."
 } as const;
 
 export type TranslationKey = keyof typeof englishTranslations;
@@ -258,7 +283,10 @@ export type TranslateFn = (
   params?: TranslationParams
 ) => string;
 
-export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
+export const translations: Record<
+  AppLanguage,
+  Partial<Record<TranslationKey, string>>
+> = {
   en: englishTranslations,
   fr: {
     "a11y.animalCage.rescued": "Animal sauvé",

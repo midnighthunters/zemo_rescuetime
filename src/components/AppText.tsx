@@ -16,7 +16,7 @@ export type AppTextTone =
   | "danger"
   | "locked";
 
-type AppTextProps = TextProps & {
+type AppTextProps = Omit<TextProps, "role"> & {
   role?: TypeRole;
   tone?: AppTextTone;
   align?: TextStyle["textAlign"];

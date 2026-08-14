@@ -16,6 +16,14 @@ const HEALTHKIT_AUTHORIZATION_FAILED =
 const HEALTHKIT_READ_FAILED =
   "Today's steps could not be read from Apple Health. Unlock the device and try again.";
 
+function getHealthKitErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export type HealthKitStepState = {
   stepsToday: number;
   isAvailable: boolean;
@@ -129,11 +137,11 @@ export function useHealthKitStepCounter(
 
       try {
         await initializeHealthKit();
-      } catch {
+      } catch (error) {
         initializedRef.current = false;
         if (mountedRef.current) {
           setPermissionStatus("denied");
-          setError(HEALTHKIT_AUTHORIZATION_FAILED);
+          setError(getHealthKitErrorMessage(error, HEALTHKIT_AUTHORIZATION_FAILED));
         }
         return;
       }
@@ -148,9 +156,9 @@ export function useHealthKitStepCounter(
 
       try {
         await fetchSteps();
-      } catch {
+      } catch (error) {
         if (mountedRef.current) {
-          setError(HEALTHKIT_READ_FAILED);
+          setError(getHealthKitErrorMessage(error, HEALTHKIT_READ_FAILED));
         }
       }
     })().finally(() => {
