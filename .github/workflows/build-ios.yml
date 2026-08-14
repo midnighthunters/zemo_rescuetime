@@ -1,0 +1,291 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build label (production uploads to TestFlight; preview only exports an IPA)
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    name: Archive and export IPA
+    # macos-26 supplies Xcode 26, which is required by App Store Connect.
+    runs-on: macos-26
+    env:
+      APP_SCHEME: RescueAnimalsSteps
+      APP_WORKSPACE: ios/RescueAnimalsSteps.xcworkspace
+      APP_BUNDLE_ID: com.zemolabs.rescuetime
+      RCT_NO_LAUNCH_PACKAGER: '1'
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+      EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+      EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE: ${{ secrets.EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select and verify Xcode 26
+        shell: bash
+        run: |
+          set -euo pipefail
+          XCODE_PATH="/Applications/Xcode_26.4.1.app/Contents/Developer"
+          if [[ ! -d "$XCODE_PATH" ]]; then
+            echo "Required Xcode 26.4.1 is unavailable at $XCODE_PATH." >&2
+            ls -1 /Applications/Xcode*.app 2>/dev/null || true
+            exit 1
+          fi
+          sudo xcode-select --switch "$XCODE_PATH"
+          xcodebuild -version
+          xcode-select -p
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          SDK_MAJOR="${SDK_VERSION%%.*}"
+          echo "iPhoneOS SDK: $SDK_VERSION"
+          if [[ "$SDK_MAJOR" -lt 26 ]]; then
+            echo "App Store Connect requires iPhoneOS SDK 26 or later." >&2
+            exit 1
+          fi
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Ruby gems (CocoaPods + dependencies)
+        shell: bash
+        run: bundle install
+
+      - name: Install iOS dependencies
+        working-directory: ios
+        run: bundle exec pod install
+
+      - name: Validate signing inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for variable in APPLE_TEAM_ID IOS_CERTIFICATE_BASE64 IOS_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 IOS_PROVISIONING_PROFILE_NAME; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing required GitHub secret: $variable" >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate App Store Connect inputs
+        if: ${{ inputs.build_type == 'production' }}
+        shell: bash
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          for variable in APP_STORE_CONNECT_API_KEY_ID APP_STORE_CONNECT_API_KEY_BASE64 APP_STORE_CONNECT_ISSUER_ID; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing required GitHub secret for production upload: $variable" >&2
+              exit 1
+            fi
+          done
+
+      - name: Import signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/rescuetime-build.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+          CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          printf '%s' "$IOS_CERTIFICATE_BASE64" | tr -d '[:space:]' | base64 -D > "$CERTIFICATE_PATH"
+          openssl pkcs12 -in "$CERTIFICATE_PATH" -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          security import "$CERTIFICATE_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$IOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      - name: Install provisioning profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          PROFILE_PLIST_PATH="$RUNNER_TEMP/profile.plist"
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | tr -d '[:space:]' | base64 -D > "$PROFILE_PATH"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST_PATH"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST_PATH")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST_PATH")"
+
+          if [[ "$PROFILE_NAME" != "$IOS_PROVISIONING_PROFILE_NAME" ]]; then
+            echo "IOS_PROVISIONING_PROFILE_NAME does not match the profile's embedded Name." >&2
+            echo "Expected: $IOS_PROVISIONING_PROFILE_NAME" >&2
+            echo "Found: $PROFILE_NAME" >&2
+            exit 1
+          fi
+
+          mkdir -p "$PROFILE_DIR"
+          cp "$PROFILE_PATH" "$PROFILE_DIR/$PROFILE_UUID.mobileprovision"
+          echo "Installed provisioning profile: $PROFILE_NAME ($PROFILE_UUID)"
+
+      - name: Pin Node for Xcode bundling
+        shell: bash
+        run: |
+          set -euo pipefail
+          NODE_PATH_RESOLVED="$(command -v node)"
+          echo "export NODE_BINARY=$NODE_PATH_RESOLVED" > ios/.xcode.env.local
+          cat ios/.xcode.env.local
+
+      - name: Archive iOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE_PATH="$RUNNER_TEMP/RescueAnimalsSteps.xcarchive"
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
+          xcodebuild -quiet clean archive \
+            -workspace "$APP_WORKSPACE" \
+            -scheme "$APP_SCHEME" \
+            -configuration Release \
+            -archivePath "$ARCHIVE_PATH" \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER}"
+
+      - name: Verify embedded JavaScript bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/RescueAnimalsSteps.app"
+          BUNDLE_PATH="$APP_PATH/main.jsbundle"
+          if [[ ! -f "$BUNDLE_PATH" ]]; then
+            echo "main.jsbundle is missing from the archive." >&2
+            ls -la "$APP_PATH" || true
+            exit 1
+          fi
+          BUNDLE_SIZE="$(wc -c < "$BUNDLE_PATH")"
+          echo "main.jsbundle size: $BUNDLE_SIZE bytes"
+          if (( BUNDLE_SIZE < 100000 )); then
+            echo "main.jsbundle is suspiciously small." >&2
+            exit 1
+          fi
+
+      - name: Export App Store IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPORT_PATH="$RUNNER_TEMP/export"
+          PLIST_PATH="$RUNNER_TEMP/ExportOptions.plist"
+          mkdir -p "$EXPORT_PATH"
+
+          cat > "$PLIST_PATH" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$APP_BUNDLE_ID</key>
+              <string>$IOS_PROVISIONING_PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -quiet -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$PLIST_PATH"
+
+          IPA_PATH="$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' -print -quit)"
+          if [[ -z "$IPA_PATH" ]]; then
+            echo "No IPA was produced." >&2
+            exit 1
+          fi
+          mkdir -p "$GITHUB_WORKSPACE/ipa_export"
+          cp "$IPA_PATH" "$GITHUB_WORKSPACE/ipa_export/"
+          echo "IPA_PATH=$GITHUB_WORKSPACE/ipa_export/$(basename "$IPA_PATH")" >> "$GITHUB_ENV"
+          ls -lh "$GITHUB_WORKSPACE/ipa_export"
+
+      - name: Upload production build to TestFlight
+        if: ${{ inputs.build_type == 'production' }}
+        shell: bash
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          API_KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          API_KEY_PATH="$API_KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          mkdir -p "$API_KEY_DIR"
+          printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" \
+            | tr -d '[:space:]' \
+            | base64 -D \
+            > "$API_KEY_PATH"
+          chmod 600 "$API_KEY_PATH"
+
+          xcrun altool \
+            --upload-app \
+            --file "$IPA_PATH" \
+            --type ios \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
+            --verbose
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rescuetime-ipa-${{ github.run_number }}
+          path: ipa_export/*.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Clean up signing material
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set +e
+          if [[ -n "${KEYCHAIN_PATH:-}" ]]; then
+            security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          fi
+          rm -f ios/.xcode.env.local
+          rm -f "$RUNNER_TEMP/certificate.p12" "$RUNNER_TEMP/profile.mobileprovision"
