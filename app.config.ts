@@ -26,7 +26,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.",
       NSHealthUpdateUsageDescription:
         "Rescue Animals Steps does not write any data to Health.",
-      UIRequiresFullScreen: false
+      UIRequiresFullScreen: false,
+      CFBundleIconName: "AppIcon"
     },
     entitlements: {
       "com.apple.developer.healthkit": true

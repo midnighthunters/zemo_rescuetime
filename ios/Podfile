@@ -14,8 +14,9 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-# Expo SDK 54 requires iOS 15.1 minimum (RN 0.81)
-platform :ios, '15.1'
+# Match the iOS 16.0 release baseline used by JailTime.
+minimum_ios_version = '16.0'
+platform :ios, minimum_ios_version
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -47,8 +48,13 @@ target 'RescueAnimalsSteps' do
     # macros that Clang rejects as non-constant-expressions under strict C++20 (Xcode 16+).
     # We override fmt back to c++17 AFTER react_native_post_install so it isn't stomped.
     installer.pods_project.targets.each do |target|
-      if target.name == 'fmt'
-        target.build_configurations.each do |build_config|
+      target.build_configurations.each do |build_config|
+        # Some pods declare an obsolete deployment target (for example, 9.0).
+        # Keep every pod aligned with the application minimum to avoid Xcode
+        # warnings and unsupported-target build behavior.
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = minimum_ios_version
+
+        if target.name == 'fmt'
           build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
         end
       end
