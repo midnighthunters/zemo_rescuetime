@@ -1,22 +1,11 @@
-import { AppState, NativeModules } from "react-native";
+import { AppState } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import AppleHealthKit, {
-  type HealthInputOptions,
-  type HealthKitPermissions,
-  type HealthValue,
-} from "react-native-health";
 
 import { getOnboarded } from "../../storage/rescueStorage";
+import RescueHealthKit, { isRescueHealthKitLinked } from "./RescueHealthKit";
 import { type PermissionStatus } from "./stepUtils";
 
 const ACTIVE_REFRESH_INTERVAL_MS = 30_000;
-
-const PERMISSIONS: HealthKitPermissions = {
-  permissions: {
-    read: [AppleHealthKit.Constants.Permissions.Steps],
-    write: [],
-  },
-};
 
 const HEALTHKIT_NOT_LINKED =
   "Apple Health support is missing from this build. Install a new device build and try again.";
@@ -38,62 +27,31 @@ export type HealthKitStepState = {
 };
 
 function isNativeHealthKitLinked() {
-  const nativeModule = NativeModules.AppleHealthKit;
-  return (
-    !!nativeModule &&
-    typeof AppleHealthKit.isAvailable === "function" &&
-    typeof AppleHealthKit.initHealthKit === "function" &&
-    typeof AppleHealthKit.getStepCount === "function"
-  );
+  return isRescueHealthKitLinked();
 }
 
 function getHealthKitAvailability() {
-  return new Promise<boolean>((resolve, reject) => {
-    AppleHealthKit.isAvailable((error: object, available: boolean) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(Boolean(available));
-    });
-  });
+  return Promise.resolve(Boolean(RescueHealthKit?.isAvailable()));
 }
 
-function initializeHealthKit() {
-  return new Promise<void>((resolve, reject) => {
-    AppleHealthKit.initHealthKit(PERMISSIONS, (error: string) => {
-      if (error) {
-        reject(new Error(error));
-        return;
-      }
+async function initializeHealthKit() {
+  if (!RescueHealthKit) {
+    throw new Error(HEALTHKIT_NOT_LINKED);
+  }
 
-      resolve();
-    });
-  });
+  const authorized = await RescueHealthKit.requestAuthorization();
+  if (!authorized) {
+    throw new Error(HEALTHKIT_AUTHORIZATION_FAILED);
+  }
 }
 
-function readStepsToday() {
-  return new Promise<number>((resolve, reject) => {
-    // getStepCount accepts a date and aggregates the local calendar day. The
-    // former startDate/endDate options were ignored by the native method.
-    const options: HealthInputOptions = {
-      date: new Date().toISOString(),
-      includeManuallyAdded: false,
-    };
+async function readStepsToday() {
+  if (!RescueHealthKit) {
+    throw new Error(HEALTHKIT_NOT_LINKED);
+  }
 
-    AppleHealthKit.getStepCount(
-      options,
-      (error: string, result: HealthValue) => {
-        if (error) {
-          reject(new Error(error));
-          return;
-        }
-
-        resolve(Math.max(0, Math.round(result?.value ?? 0)));
-      }
-    );
-  });
+  const steps = await RescueHealthKit.getTodayStepCount();
+  return Math.max(0, Math.round(steps));
 }
 
 export function useHealthKitStepCounter(

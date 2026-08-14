@@ -64,6 +64,12 @@ jobs:
             cd ios
             pod install
 
+      - run:
+          name: Validate Swift HealthKit autolinking
+          command: |
+            grep -q 'RescueHealthKit' ios/Podfile.lock
+            npx expo-modules-autolinking resolve --platform apple | grep -q 'RescueHealthKitModule'
+
       - save_cache:
           key: cocoapods-v2-{{ checksum "package-lock.json" }}-{{ checksum "ios/Podfile" }}
           paths:
@@ -102,6 +108,11 @@ jobs:
             mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
             security cms -D -i "$PROFILE_PATH" > $TMPDIR/profile.plist
             PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' $TMPDIR/profile.plist)
+            if ! /usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.healthkit' $TMPDIR/profile.plist | grep -qx 'true'; then
+              echo "ERROR: Provisioning profile does not include the HealthKit entitlement."
+              echo "Enable HealthKit for $APP_BUNDLE_ID in Apple Developer and regenerate the profile."
+              exit 1
+            fi
             cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID.mobileprovision"
 
       - run:
@@ -159,6 +170,15 @@ jobs:
               echo "ERROR: main.jsbundle is suspiciously small ($BUNDLE_SIZE bytes) — likely a failed bundle."
               exit 1
             fi
+
+      - run:
+          name: Verify signed HealthKit entitlement
+          command: |
+            source $BASH_ENV
+            APP_PATH="$ARCHIVE_PATH/Products/Applications/RescueAnimalsSteps.app"
+            ENTITLEMENTS_PATH=$TMPDIR/archived-entitlements.plist
+            codesign -d --entitlements :- "$APP_PATH" > "$ENTITLEMENTS_PATH" 2>/dev/null
+            /usr/libexec/PlistBuddy -c 'Print :com.apple.developer.healthkit' "$ENTITLEMENTS_PATH" | grep -qx 'true'
 
       - run:
           name: Export IPA

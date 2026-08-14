@@ -82,8 +82,13 @@ const englishTranslations = {
   "greeting.evening": "Evening",
   "greeting.morning": "Morning",
   "home.greeting": "Good {period}",
+  "home.permissionExplainer":
+    "Allow Apple Health step access so your movement can power rescue progress.",
   "home.permissionNeeded": "Step access needed",
+  "home.permissionRecovery":
+    "Apple Health needs attention. Retry or open Settings, then view the details if the problem continues.",
   "home.retry": "Retry",
+  "home.showDetails": "Details",
   "home.title": "Rescue Steps",
   "home.tracking": "Live - {source}",
   "language.currentSpeech":
@@ -338,8 +343,13 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     "greeting.evening": "soir",
     "greeting.morning": "matin",
     "home.greeting": "Bon {period}",
+    "home.permissionExplainer":
+      "Autorisez l’accès aux pas d’Apple Santé pour faire progresser les sauvetages.",
     "home.permissionNeeded": "Accès aux pas requis",
+    "home.permissionRecovery":
+      "Apple Santé nécessite votre attention. Réessayez ou ouvrez Réglages, puis consultez les détails si le problème persiste.",
     "home.retry": "Réessayer",
+    "home.showDetails": "Détails",
     "home.title": "Rescue Steps",
     "home.tracking": "En direct - {source}",
     "language.currentSpeech":
@@ -593,8 +603,13 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     "greeting.evening": "Abend",
     "greeting.morning": "Morgen",
     "home.greeting": "Guten {period}",
+    "home.permissionExplainer":
+      "Erlaube Apple Health den Schrittzugriff, damit deine Bewegung den Rettungsfortschritt antreibt.",
     "home.permissionNeeded": "Schrittzugriff erforderlich",
+    "home.permissionRecovery":
+      "Apple Health benötigt Aufmerksamkeit. Versuche es erneut oder öffne die Einstellungen und sieh dir bei Bedarf die Details an.",
     "home.retry": "Erneut versuchen",
+    "home.showDetails": "Details",
     "home.title": "Rescue Steps",
     "home.tracking": "Live - {source}",
     "language.currentSpeech":
@@ -845,8 +860,13 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     "greeting.evening": "こんばんは",
     "greeting.morning": "おはようございます",
     "home.greeting": "{period}",
+    "home.permissionExplainer":
+      "Appleヘルスの歩数アクセスを許可して、移動をレスキューの進捗に反映しましょう。",
     "home.permissionNeeded": "歩数へのアクセスが必要です",
+    "home.permissionRecovery":
+      "Appleヘルスの確認が必要です。再試行するか設定を開き、問題が続く場合は詳細を確認してください。",
     "home.retry": "再試行",
+    "home.showDetails": "詳細",
     "home.title": "Rescue Steps",
     "home.tracking": "ライブ - {source}",
     "language.currentSpeech":
@@ -1096,8 +1116,13 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     "greeting.evening": "noches",
     "greeting.morning": "días",
     "home.greeting": "Buenas {period}",
+    "home.permissionExplainer":
+      "Permite el acceso a los pasos de Apple Salud para que tu movimiento impulse el progreso del rescate.",
     "home.permissionNeeded": "Se necesita acceso a los pasos",
+    "home.permissionRecovery":
+      "Apple Salud necesita atención. Reintenta o abre Ajustes y consulta los detalles si el problema continúa.",
     "home.retry": "Reintentar",
+    "home.showDetails": "Detalles",
     "home.title": "Rescue Steps",
     "home.tracking": "En vivo - {source}",
     "language.currentSpeech":
@@ -1350,8 +1375,13 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     "greeting.evening": "저녁",
     "greeting.morning": "아침",
     "home.greeting": "좋은 {period}",
+    "home.permissionExplainer":
+      "Apple 건강의 걸음 수 접근을 허용하여 움직임을 구조 진행에 반영하세요.",
     "home.permissionNeeded": "걸음 수 접근이 필요합니다",
+    "home.permissionRecovery":
+      "Apple 건강을 확인해야 합니다. 다시 시도하거나 설정을 열고, 문제가 계속되면 세부 정보를 확인하세요.",
     "home.retry": "다시 시도",
+    "home.showDetails": "세부 정보",
     "home.title": "Rescue Steps",
     "home.tracking": "실시간 - {source}",
     "language.currentSpeech":
