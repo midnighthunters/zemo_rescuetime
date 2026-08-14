@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: "rescue-animals-step-counter",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/icon.png",
+  icon: "./assets/logo.png",
   scheme: "rescueanimals",
   userInterfaceStyle: "automatic",
   splash: {
@@ -29,8 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       UIRequiresFullScreen: false
     },
     entitlements: {
-      "com.apple.developer.healthkit": true,
-      "com.apple.developer.healthkit.access": []
+      "com.apple.developer.healthkit": true
     }
   },
   android: {
@@ -49,15 +48,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-font",
     "expo-notifications",
-    [
-      "react-native-health",
-      {
-        healthSharePermission:
-          "Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.",
-        healthUpdatePermission:
-          "Rescue Animals Steps does not write any data to Health."
-      }
-    ]
   ],
   extra: {
     eas: {
