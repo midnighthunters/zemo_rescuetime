@@ -81,6 +81,8 @@ jobs:
           set -euo pipefail
           grep -q 'RescueHealthKit' ios/Podfile.lock
           npx expo-modules-autolinking resolve --platform apple | grep -q 'RescueHealthKitModule'
+          grep -q 'RescueHealthKitModule.self' ios/RescueAnimalsSteps/ExpoModulesProvider.swift
+          grep -q 'ExpoModulesProvider.swift in Sources' ios/RescueAnimalsSteps.xcodeproj/project.pbxproj
 
       - name: Validate signing inputs
         shell: bash

@@ -69,6 +69,8 @@ jobs:
           command: |
             grep -q 'RescueHealthKit' ios/Podfile.lock
             npx expo-modules-autolinking resolve --platform apple | grep -q 'RescueHealthKitModule'
+            grep -q 'RescueHealthKitModule.self' ios/RescueAnimalsSteps/ExpoModulesProvider.swift
+            grep -q 'ExpoModulesProvider.swift in Sources' ios/RescueAnimalsSteps.xcodeproj/project.pbxproj
 
       - save_cache:
           key: cocoapods-v2-{{ checksum "package-lock.json" }}-{{ checksum "ios/Podfile" }}
