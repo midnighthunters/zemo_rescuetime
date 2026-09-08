@@ -22,6 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: "com.zemolabs.rescuetime",
     requireFullScreen: false,
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       NSHealthShareUsageDescription:
         "Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.",
       NSHealthUpdateUsageDescription:
