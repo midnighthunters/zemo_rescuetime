@@ -84,8 +84,7 @@ jobs:
           set -euo pipefail
           grep -q 'RescueHealthKit' ios/Podfile.lock
           npx expo-modules-autolinking resolve --platform apple | grep -q 'RescueHealthKitModule'
-          grep -q 'RescueHealthKitModule.self' ios/RescueAnimalsSteps/ExpoModulesProvider.swift
-          grep -q 'ExpoModulesProvider.swift in Sources' ios/RescueAnimalsSteps.xcodeproj/project.pbxproj
+          grep -q 'RescueHealthKitModule.self' ios/Pods/Target\ Support\ Files/Pods-RescueAnimalsSteps/ExpoModulesProvider.swift
 
       - name: Validate signing inputs
         shell: bash
@@ -128,7 +127,7 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
           printf '%s' "$IOS_CERTIFICATE_BASE64" | tr -d '[:space:]' | base64 -D > "$CERTIFICATE_PATH"
-          openssl pkcs12 -in "$CERTIFICATE_PATH" -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
+          openssl pkcs12 -legacy -in "$CERTIFICATE_PATH" -noout -passin pass:"$IOS_CERTIFICATE_PASSWORD"
           security import "$CERTIFICATE_PATH" \
             -k "$KEYCHAIN_PATH" \
             -P "$IOS_CERTIFICATE_PASSWORD" \
