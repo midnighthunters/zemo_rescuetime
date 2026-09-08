@@ -121,21 +121,21 @@ public final class RescueHealthKitModule: Module {
         end: now,
         options: .strictStartDate
       )
-      let automaticStepsPredicate = HKQuery.predicateForObjects(
-        withMetadataKey: HKMetadataKeyWasUserEntered,
-        operatorType: .notEqualTo,
-        value: true
-      )
-      let predicate = NSCompoundPredicate(
-        andPredicateWithSubpredicates: [datePredicate, automaticStepsPredicate]
-      )
 
       let query = HKStatisticsQuery(
         quantityType: stepType,
-        quantitySamplePredicate: predicate,
+        quantitySamplePredicate: datePredicate,
         options: .cumulativeSum
       ) { _, result, error in
         if let error {
+          let nsError = error as NSError
+          let isNoData = nsError.domain == HKErrorDomain && (nsError.code == 6 || nsError.code == 11)
+            || error.localizedDescription.localizedCaseInsensitiveContains("no data available")
+          if isNoData {
+            promise.resolve(0)
+            return
+          }
+
           promise.reject(
             "ERR_HEALTHKIT_STEP_QUERY",
             "Apple Health could not read today's steps: \(error.localizedDescription)"

@@ -69,8 +69,16 @@ async function readStepsToday() {
     throw new Error(HEALTHKIT_NOT_LINKED);
   }
 
-  const steps = await RescueHealthKit.getTodayStepCount();
-  return Math.max(0, Math.round(steps));
+  try {
+    const steps = await RescueHealthKit.getTodayStepCount();
+    return Math.max(0, Math.round(steps));
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    if (message.toLowerCase().includes("no data available")) {
+      return 0;
+    }
+    throw caught;
+  }
 }
 
 /**
