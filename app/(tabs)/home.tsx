@@ -96,7 +96,7 @@ export default function HomeScreen() {
     Boolean(
       steps.error || !steps.isAvailable || steps.permissionStatus !== "granted"
     );
-  const needsFirstGrant = steps.permissionStatus === "undetermined";
+  const needsPermissionRequest = steps.permissionStatus === "undetermined";
 
   useEffect(() => {
     if (!visibleUnlockEventId) {
@@ -157,28 +157,35 @@ export default function HomeScreen() {
               />
               <View style={styles.warningCopy}>
                 <AppText role="cardTitle" tone="danger">
-                  {t("home.permissionNeeded")}
+                  {needsPermissionRequest
+                    ? t("home.permissionNeeded")
+                    : t("settings.stepsProblem")}
                 </AppText>
                 <AppText
                   accessibilityLiveRegion="polite"
                   role="supportive"
                   tone="secondary"
                 >
-                  {needsFirstGrant
-                    ? t("home.permissionExplainer")
-                    : t("home.permissionRecovery")}
+                  {steps.error ??
+                    (needsPermissionRequest
+                      ? t("home.permissionExplainer")
+                      : t("home.permissionRecovery"))}
                 </AppText>
               </View>
             </View>
 
             <AppButton
-              icon={needsFirstGrant ? "heart" : "refresh"}
+              icon={needsPermissionRequest ? "heart" : "refresh"}
               loading={steps.isLoading}
               onPress={
-                needsFirstGrant ? steps.requestPermission : steps.refreshSteps
+                needsPermissionRequest
+                  ? steps.requestPermission
+                  : steps.refreshSteps
               }
               title={
-                needsFirstGrant ? t("onboarding.enableSteps") : t("home.retry")
+                needsPermissionRequest
+                  ? t("onboarding.enableSteps")
+                  : t("home.retry")
               }
               variant="primary"
             />

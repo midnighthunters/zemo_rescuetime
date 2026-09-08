@@ -2,9 +2,17 @@ import { requireOptionalNativeModule } from "expo";
 
 export type RescueHealthKitNativeModule = {
   isAvailable: () => boolean;
-  requestAuthorization: () => Promise<boolean>;
+  getAuthorizationRequestStatus?: () => Promise<
+    HealthKitAuthorizationRequestStatus
+  >;
+  requestAuthorization: () => Promise<void>;
   getTodayStepCount: () => Promise<number>;
 };
+
+export type HealthKitAuthorizationRequestStatus =
+  | "shouldRequest"
+  | "unnecessary"
+  | "unknown";
 
 const RescueHealthKit =
   requireOptionalNativeModule<RescueHealthKitNativeModule>("RescueHealthKit");
