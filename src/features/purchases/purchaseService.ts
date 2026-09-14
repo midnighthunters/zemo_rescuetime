@@ -321,6 +321,9 @@ function findPackageForPlan(
     packages.find((candidate) =>
       productIds.includes(candidate.product.identifier)
     ) ??
+    packages.find((candidate) =>
+      productIds.includes(candidate.identifier)
+    ) ??
     getPlanShortcut(offering, planId) ??
     packages.find((candidate) => candidate.packageType === getPackageType(planId)) ??
     null

@@ -57,7 +57,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     revenueCatEntitlementId:
       process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "pro",
-    revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? "",
+    revenueCatIosApiKey:
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ??
+      "appl_KauOSwVliypKkwsJQglgEnzvstg",
     revenueCatAndroidApiKey:
       process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? "",
     revenueCatUseTestStore: boolFromEnv(
@@ -78,10 +80,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.EXPO_PUBLIC_REVENUECAT_YEARLY_PACKAGE_ID ?? "$rc_annual",
     revenueCatIosMonthlyProductId:
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_MONTHLY_PRODUCT_ID ??
-      "com.zemolabs.rescuetime.pro.monthly",
+      "monthly_subscription_rescuetime",
     revenueCatIosYearlyProductId:
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_YEARLY_PRODUCT_ID ??
-      "com.zemolabs.rescuetime.pro.yearly",
+      "annual_rescuetime_sub",
     revenueCatAndroidMonthlyProductId:
       process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_MONTHLY_PRODUCT_ID ??
       "rescue_animals_pro_monthly",

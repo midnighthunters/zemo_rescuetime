@@ -13,6 +13,7 @@ import { ScreenScaffold } from "../../src/components/ScreenScaffold";
 import { StatusChip } from "../../src/components/StatusChip";
 import { StepHeroCard } from "../../src/components/StepHeroCard";
 import type { RewardImage } from "../../src/data/types";
+import { FREE_ANIMAL_COUNT } from "../../src/features/animals/animalAccess";
 import { shareAnimalUnlock } from "../../src/features/animals/shareAnimal";
 import { dismissUnlockNotification } from "../../src/features/notifications/unlockNotifications";
 import { useLanguage } from "../../src/i18n/LanguageProvider";
@@ -111,14 +112,17 @@ export default function HomeScreen() {
     return () => clearTimeout(retryTimer);
   }, [visibleUnlockEventId]);
 
-  // After the first rescue, non-Pro users see the paywall — but only once the
+  // After all free animals are rescued, non-Pro users see the paywall — but only once the
   // rescue celebration has finished closing.
-  const justRescuedFirst =
-    Boolean(lastRescueEvent) && rescuedAnimal?.id === animals[0]?.id && !isPro;
+  const justRescuedLastFree =
+    Boolean(lastRescueEvent) &&
+    (rescuedAnimal?.id === animals[FREE_ANIMAL_COUNT - 1]?.id ||
+      unlockedAnimals.length >= FREE_ANIMAL_COUNT) &&
+    !isPro;
 
   const handleRescueDismiss = () => {
     dismissRescueEvent();
-    if (justRescuedFirst) {
+    if (justRescuedLastFree) {
       setTimeout(() => router.push("/paywall"), 350);
     }
   };

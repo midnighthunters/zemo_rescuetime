@@ -1,7 +1,9 @@
 import type { AnimalCardStatus } from "../../data/types";
 
+export const FREE_ANIMAL_COUNT = 4;
+
 export function canAccessAnimalIndex(index: number, isPro: boolean) {
-  return isPro || index === 0;
+  return isPro || index < FREE_ANIMAL_COUNT;
 }
 
 export function getAnimalCardStatus(options: {

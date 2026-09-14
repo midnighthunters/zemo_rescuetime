@@ -5,6 +5,7 @@ import type {
   RescueMilestone
 } from "./types";
 import { getGeneratedRewardsForAnimal } from "./rewards.generated";
+import { FREE_ANIMAL_COUNT } from "../features/animals/animalAccess";
 
 const unlockStepTargets = [
   500,
@@ -48,7 +49,7 @@ export function generateMilestones(animals: Animal[]): RescueMilestone[] {
     return {
       animalId: animal.id,
       unlockSteps: target,
-      isFree: index === 0,
+      isFree: index < FREE_ANIMAL_COUNT,
       miniMilestones: rewardTargets.map((reward) => reward.stepTarget),
       rewardTargets
     };
