@@ -97,7 +97,7 @@ export default function HomeScreen() {
     Boolean(
       steps.error || !steps.isAvailable || steps.permissionStatus !== "granted"
     );
-  const needsPermissionRequest = steps.permissionStatus === "undetermined";
+  const needsPermissionRequest = steps.permissionStatus !== "granted";
 
   useEffect(() => {
     if (!visibleUnlockEventId) {

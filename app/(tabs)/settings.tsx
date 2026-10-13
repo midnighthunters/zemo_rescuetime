@@ -298,16 +298,16 @@ export default function SettingsScreen() {
       </MotionView>
       <View style={styles.stepActions}>
         <AppButton
-          icon={steps.permissionStatus === "undetermined" ? "heart" : "refresh"}
+          icon={steps.permissionStatus !== "granted" ? "heart" : "refresh"}
           loading={steps.isLoading}
           onPress={
-            steps.permissionStatus === "undetermined"
+            steps.permissionStatus !== "granted"
               ? steps.requestPermission
               : steps.refreshSteps
           }
           style={styles.stepAction}
           title={
-            steps.permissionStatus === "undetermined"
+            steps.permissionStatus !== "granted"
               ? t("onboarding.enableSteps")
               : t("settings.refreshPedometer")
           }

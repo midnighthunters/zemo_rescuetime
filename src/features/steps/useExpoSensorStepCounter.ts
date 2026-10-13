@@ -97,6 +97,53 @@ export function useExpoSensorStepCounter(enabled = true): StepCounterState {
     [publishLiveSteps]
   );
 
+  const requestPermission = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(undefined);
+
+    try {
+      const available =
+        Platform.OS !== "web" && (await Pedometer.isAvailableAsync());
+      setIsAvailable(available);
+
+      if (!available) {
+        setPermissionStatus("denied");
+        setHistoricalStepsToday(0);
+        resetLiveSteps();
+        setCountingMode("unavailable");
+        setError("Step tracking is not available on this device.");
+        return;
+      }
+
+      const requested = await Pedometer.requestPermissionsAsync();
+      const normalized = normalizePermissionStatus(requested?.status);
+      setPermissionStatus(normalized);
+
+      if (normalized === "granted") {
+        setCountingMode("live-session");
+        setError(undefined);
+      } else {
+        setHistoricalStepsToday(0);
+        resetLiveSteps();
+        setCountingMode("unavailable");
+        setError("Motion permission is needed to count rescue steps.");
+      }
+    } catch (caught) {
+      setCountingMode("unavailable");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not request motion permission."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [enabled, resetLiveSteps]);
+
   const refreshSteps = useCallback(async () => {
     if (!enabled) {
       setIsLoading(false);
@@ -114,25 +161,19 @@ export function useExpoSensorStepCounter(enabled = true): StepCounterState {
       if (!available) {
         setPermissionStatus("denied");
         setHistoricalStepsToday(0);
-        resetLiveSteps(0);
+        resetLiveSteps();
         setCountingMode("unavailable");
         setError("Step tracking is not available on this device.");
         return;
       }
 
       const currentPermission = await Pedometer.getPermissionsAsync();
-      let normalized = normalizePermissionStatus(currentPermission?.status);
-
-      if (normalized === "undetermined") {
-        const requested = await Pedometer.requestPermissionsAsync();
-        normalized = normalizePermissionStatus(requested?.status);
-      }
-
+      const normalized = normalizePermissionStatus(currentPermission?.status);
       setPermissionStatus(normalized);
 
       if (normalized !== "granted") {
         setHistoricalStepsToday(0);
-        resetLiveSteps(0);
+        resetLiveSteps();
         setCountingMode("unavailable");
         setError("Motion permission is needed to count rescue steps.");
         return;
@@ -141,6 +182,7 @@ export function useExpoSensorStepCounter(enabled = true): StepCounterState {
       // Android uses live-session mode (no historical step API)
       setHistoricalStepsToday(0);
       setCountingMode("live-session");
+      setError(undefined);
     } catch (caught) {
       setCountingMode("unavailable");
       setError(
@@ -249,12 +291,12 @@ export function useExpoSensorStepCounter(enabled = true): StepCounterState {
     }
 
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active" && permissionStatus !== "undetermined") {
+      if (state === "active") {
         refreshSteps();
       }
     });
     return () => subscription.remove();
-  }, [enabled, permissionStatus, refreshSteps]);
+  }, [enabled, refreshSteps]);
 
   useEffect(() => {
     if (!enabled) {
@@ -268,7 +310,7 @@ export function useExpoSensorStepCounter(enabled = true): StepCounterState {
       }
       dateKeyRef.current = today;
       setHistoricalStepsToday(0);
-      resetLiveSteps(0);
+      resetLiveSteps();
       refreshSteps();
     }, 60 * 1000);
 
@@ -301,6 +343,6 @@ export function useExpoSensorStepCounter(enabled = true): StepCounterState {
     sourceLabel,
     error,
     refreshSteps,
-    requestPermission: refreshSteps,
+    requestPermission,
   };
 }
