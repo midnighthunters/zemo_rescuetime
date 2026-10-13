@@ -499,8 +499,8 @@ async function writeAnimalManifest(animals: AnimalAsset[]) {
     happyImage: require("../../public/data/generated-free/animals/happy/${animal.fileName}")
   }`;
       } else {
-        const sadId = `animal-${animal.id.replace(/_/g, "-")}-sad`;
-        const happyId = `animal-${animal.id.replace(/_/g, "-")}-happy`;
+        const sadId = `animal-${animal.id.replace(/_/g, "-")}-${slugify(animal.name).replace(/_/g, "-")}-sad`;
+        const happyId = `animal-${animal.id.replace(/_/g, "-")}-${slugify(animal.name).replace(/_/g, "-")}-happy`;
         return `  {
     id: "${animal.id}",
     name: "${animal.name}",

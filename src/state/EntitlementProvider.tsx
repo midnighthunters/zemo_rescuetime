@@ -10,6 +10,7 @@ import {
 
 import { getDevSettings, saveDevSettings } from "../storage/rescueStorage";
 import { useSubscriptionStore } from "../store/subscriptionStore";
+import { useRemoteAssetDownloadStore } from "../services/assets/remoteAssetDownloadStore";
 import {
   getCustomerEntitlement,
   getFallbackRevenueCatPlans,
@@ -199,6 +200,10 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     useSubscriptionStore.getState().setPro(isPro);
+    if (isPro) {
+      useRemoteAssetDownloadStore.getState().markProPackAvailable();
+      void useRemoteAssetDownloadStore.getState().checkProPackIntegrity();
+    }
   }, [isPro]);
 
   const setDevProEnabled = useCallback(async (enabled: boolean) => {

@@ -367,7 +367,20 @@ export const useRemoteAssetDownloadStore = create<RemoteAssetDownloadState>((set
     },
 
     getCachedAssetUri: (assetId: string) => {
-      return get().cachedUris[assetId];
+      const uris = get().cachedUris;
+      if (uris[assetId]) {
+        return uris[assetId];
+      }
+      const parts = assetId.split("-");
+      if (parts.length >= 3) {
+        const prefix = parts.slice(0, 3).join("-");
+        const suffix = parts[parts.length - 1];
+        const matched = Object.entries(uris).find(
+          ([key]) => key.startsWith(prefix) && key.endsWith(suffix)
+        );
+        if (matched) return matched[1];
+      }
+      return undefined;
     },
 
     clearDownloadedProAssets: async () => {
