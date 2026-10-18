@@ -290,6 +290,9 @@ export default function HomeScreen() {
         nextAnimalImage={
           nextAnimal ? getAnimalImageSource(nextAnimal, "sad") : undefined
         }
+        sadAnimalImage={
+          rescuedAnimal ? getAnimalImageSource(rescuedAnimal, "sad") : undefined
+        }
         nextAnimalName={nextAnimal?.name}
         nextTargetImage={
           nextRewardTarget ? getRewardTargetImageSource(nextRewardTarget) : undefined

@@ -1,4 +1,4 @@
-﻿import { Image } from "expo-image";
+import { Image } from "expo-image";
 import * as Speech from "expo-speech";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -21,7 +21,7 @@ import { type AppColors, useAppTheme } from "../theme/colors";
 import { duration, easing, useReduceMotion } from "../theme/motion";
 import { elevation } from "../theme/shadows";
 import { radius, spacing } from "../theme/spacing";
-import { AnimalCage } from "./AnimalCage";
+import { AnimalRevealStage } from "./AnimalRevealStage";
 import { AppButton } from "./AppButton";
 import { AppText } from "./AppText";
 import { StatusChip } from "./StatusChip";
@@ -30,6 +30,7 @@ type RescueModalProps = {
   visible: boolean;
   animalName: string;
   animalImage?: ImageSourcePropType;
+  sadAnimalImage?: ImageSourcePropType;
   nextAnimalName?: string;
   nextAnimalImage?: ImageSourcePropType;
   nextTargetImage?: ImageSourcePropType;
@@ -40,13 +41,11 @@ type RescueModalProps = {
   onNextRescue: () => void;
 };
 
-const BURST_COUNT = 8;
-const RELEASE_DELAY = 420;
-
 /**
- * The strongest celebration in the app: the cage crossfades into a sanctuary
- * stage, one short sparkle burst plays, and the rescue result is stated before
- * the next target. Everything is one-shot and Reduce Motion aware.
+ * The celebratory rescue unlock modal.
+ * Features the cinematic AnimalRevealStage where the trapped animal
+ * breaks out of the cage, heroically transforms into happy 3D form,
+ * and settles into the sanctuary.
  */
 export function RescueModal({
   animalImage,
@@ -59,6 +58,7 @@ export function RescueModal({
   onNextRescue,
   onShareAnimal,
   onViewAnimals,
+  sadAnimalImage,
   visible
 }: RescueModalProps) {
   const theme = useAppTheme();
@@ -81,28 +81,12 @@ export function RescueModal({
 
   const backdrop = useRef(new Animated.Value(0)).current;
   const cardEntry = useRef(new Animated.Value(0)).current;
-  const release = useRef(new Animated.Value(0)).current;
-  const burst = useRef(new Animated.Value(0)).current;
-  const [released, setReleased] = useState(false);
   const [isSettled, setIsSettled] = useState(false);
-
-  const burstSeeds = useMemo(
-    () =>
-      Array.from({ length: BURST_COUNT }, (_, index) => ({
-        angle: (index / BURST_COUNT) * Math.PI * 2,
-        distance: 64 + (index % 3) * 18,
-        size: 8 + (index % 3) * 3
-      })),
-    []
-  );
 
   useEffect(() => {
     if (!visible) {
       backdrop.setValue(0);
       cardEntry.setValue(0);
-      release.setValue(0);
-      burst.setValue(0);
-      setReleased(false);
       setIsSettled(false);
       return undefined;
     }
@@ -110,55 +94,31 @@ export function RescueModal({
     if (reduceMotion) {
       backdrop.setValue(1);
       cardEntry.setValue(1);
-      release.setValue(1);
-      setReleased(true);
       setIsSettled(true);
       return undefined;
     }
 
-    const releaseTimer = setTimeout(() => setReleased(true), RELEASE_DELAY);
-    const animation = Animated.sequence([
-      Animated.parallel([
-        Animated.timing(backdrop, {
-          duration: duration.state,
-          easing: easing.standard,
-          toValue: 1,
-          useNativeDriver: true
-        }),
-        Animated.timing(cardEntry, {
-          duration: duration.enter,
-          easing: easing.decelerate,
-          toValue: 1,
-          useNativeDriver: true
-        })
-      ]),
-      Animated.parallel([
-        Animated.timing(release, {
-          duration: duration.celebrate,
-          easing: easing.settle,
-          toValue: 1,
-          useNativeDriver: true
-        }),
-        Animated.timing(burst, {
-          duration: 900,
-          easing: easing.decelerate,
-          toValue: 1,
-          useNativeDriver: true
-        })
-      ])
+    const animation = Animated.parallel([
+      Animated.timing(backdrop, {
+        duration: duration.state,
+        easing: easing.standard,
+        toValue: 1,
+        useNativeDriver: true
+      }),
+      Animated.timing(cardEntry, {
+        duration: duration.enter,
+        easing: easing.decelerate,
+        toValue: 1,
+        useNativeDriver: true
+      })
     ]);
 
-    animation.start(({ finished }) => {
-      if (finished) {
-        setIsSettled(true);
-      }
-    });
+    animation.start();
 
     return () => {
-      clearTimeout(releaseTimer);
       animation.stop();
     };
-  }, [backdrop, burst, cardEntry, reduceMotion, release, visible]);
+  }, [backdrop, cardEntry, reduceMotion, visible]);
 
   useEffect(() => {
     if (!visible || !animalName || !shouldPlayUnlockAudio) {
@@ -254,87 +214,17 @@ export function RescueModal({
               { opacity: reduceMotion ? 1 : cardEntry, transform: cardTransform }
             ]}
           >
-            {/* ── Cage crossfades into sanctuary ── */}
+            {/* ── Celebratory Animal Reveal ── */}
             <View
               style={[styles.stage, stageIsCompact && styles.stageCompact]}
             >
-              {animalImage ? (
-                <>
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      StyleSheet.absoluteFill,
-                      {
-                        opacity: reduceMotion
-                          ? 0
-                          : release.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [1, 0]
-                            })
-                      }
-                    ]}
-                  >
-                    <AnimalCage
-                      animalImage={animalImage}
-                      careState="ready_to_rescue"
-                      compact
-                      progress={1}
-                    />
-                  </Animated.View>
-                  <View
-                    style={[
-                      StyleSheet.absoluteFill,
-                      !released && !reduceMotion ? styles.hidden : null
-                    ]}
-                  >
-                    <AnimalCage
-                      animalImage={animalImage}
-                      careState="ready_to_rescue"
-                      compact
-                      isRescued
-                      progress={1}
-                    />
-                  </View>
-                </>
-              ) : null}
-
-              {!reduceMotion
-                ? burstSeeds.map((seed, index) => (
-                    <Animated.View
-                      key={`burst-${index}`}
-                      pointerEvents="none"
-                      style={[
-                        styles.spark,
-                        {
-                          backgroundColor:
-                            index % 2 === 0
-                              ? theme.colors.rewardAmber
-                              : theme.colors.brandGreen,
-                          height: seed.size,
-                          opacity: burst.interpolate({
-                            inputRange: [0, 0.2, 1],
-                            outputRange: [0, 0.9, 0]
-                          }),
-                          transform: [
-                            {
-                              translateX: burst.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, Math.cos(seed.angle) * seed.distance]
-                              })
-                            },
-                            {
-                              translateY: burst.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, Math.sin(seed.angle) * seed.distance]
-                              })
-                            }
-                          ],
-                          width: seed.size
-                        }
-                      ]}
-                    />
-                  ))
-                : null}
+              <AnimalRevealStage
+                animalName={animalName}
+                compact={stageIsCompact}
+                happyAnimalImage={animalImage}
+                onSettled={() => setIsSettled(true)}
+                sadAnimalImage={sadAnimalImage}
+              />
             </View>
 
             {/* ── Result first ── */}
@@ -455,9 +345,6 @@ function createStyles(colors: AppColors, isDark: boolean) {
       alignItems: "center",
       gap: spacing.s8
     },
-    hidden: {
-      opacity: 0
-    },
     nextCopy: {
       flex: 1,
       gap: 2,
@@ -506,10 +393,6 @@ function createStyles(colors: AppColors, isDark: boolean) {
     secondaryRow: {
       flexDirection: "row",
       gap: spacing.s8
-    },
-    spark: {
-      borderRadius: radius.round,
-      position: "absolute"
     },
     stage: {
       aspectRatio: 1,
