@@ -56,12 +56,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       projectId: "41d8c626-78f9-4b01-a6f0-90ae40bee098"
     },
     revenueCatEntitlementId:
-      process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "pro",
+      process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "premium_rescuetime",
     revenueCatIosApiKey:
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ??
       "appl_KauOSwVliypKkwsJQglgEnzvstg",
     revenueCatAndroidApiKey:
-      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? "",
+      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ??
+      "goog_khTLNFYCVMZWcUjZGRBduZPJmnF",
     revenueCatUseTestStore: boolFromEnv(
       process.env.EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE
     ),

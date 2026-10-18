@@ -68,7 +68,8 @@ export type RevenueCatDebugInfo = {
 };
 
 export const ENTITLEMENT_PRO =
-  getExtraString("revenueCatEntitlementId", "pro") || "pro";
+  getExtraString("revenueCatEntitlementId", "premium_rescuetime") ||
+  "premium_rescuetime";
 
 const PLAN_DETAILS: Record<
   RevenueCatPlanId,
