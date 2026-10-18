@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Linking, StyleSheet, Switch, View } from "react-native";
+import { Alert, Linking, StyleSheet, Switch, View } from "react-native";
 
 import { AppButton } from "../../src/components/AppButton";
 import { AppText } from "../../src/components/AppText";
@@ -97,6 +97,30 @@ export default function SettingsScreen() {
       : proPackStatus === "failed"
         ? t("settings.proPackRetry")
         : t("settings.proPackDownload");
+
+  const handleRestoreWithFeedback = async () => {
+    try {
+      const restored = await restorePurchases();
+      if (restored) {
+        Alert.alert(
+          "Purchases Restored",
+          "Your Pro subscription has been restored successfully!",
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert(
+          "No Subscription Found",
+          "No active Pro subscription was found for this Google Play account.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (caught: any) {
+      Alert.alert(
+        "Restore Error",
+        caught?.message ?? "Unable to restore purchases."
+      );
+    }
+  };
 
   return (
     <ScreenScaffold>
@@ -247,14 +271,18 @@ export default function SettingsScreen() {
                 variant="ghost"
               />
             )}
-            {managementURL ? (
-              <AppButton
-                onPress={() => Linking.openURL(managementURL)}
-                size="compact"
-                title={t("settings.manageSubscription")}
-                variant="ghost"
-              />
-            ) : null}
+            <AppButton
+              icon="open-outline"
+              onPress={() =>
+                Linking.openURL(
+                  managementURL ||
+                    "https://play.google.com/store/account/subscriptions?package=com.zemolabs.rescuetime"
+                )
+              }
+              size="compact"
+              title="Manage or cancel subscription"
+              variant="ghost"
+            />
           </PremiumCard>
         ) : (
           <PremiumCard gap={spacing.s16} variant="hero">
@@ -281,7 +309,7 @@ export default function SettingsScreen() {
             />
             <AppButton
               loading={isLoading}
-              onPress={restorePurchases}
+              onPress={handleRestoreWithFeedback}
               size="compact"
               title={t("settings.restorePurchases")}
               variant="ghost"

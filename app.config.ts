@@ -57,6 +57,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     revenueCatEntitlementId:
       process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "premium_rescuetime",
+    revenueCatOfferingId:
+      process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID ?? "rescuetime_offering",
     revenueCatIosApiKey:
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ??
       "appl_KauOSwVliypKkwsJQglgEnzvstg",

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { AppButton } from "../src/components/AppButton";
 import { AppText } from "../src/components/AppText";
@@ -22,6 +22,9 @@ import { useResponsiveLayout } from "../src/theme/layout";
 import { pressScale } from "../src/theme/motion";
 import { radius, spacing } from "../src/theme/spacing";
 
+const GOOGLE_PLAY_SUBSCRIPTION_URL =
+  "https://play.google.com/store/account/subscriptions?package=com.zemolabs.rescuetime";
+
 export default function PaywallScreen() {
   const theme = useAppTheme();
   const layout = useResponsiveLayout();
@@ -35,7 +38,7 @@ export default function PaywallScreen() {
     error,
     isLoading,
     isPro,
-    isRevenueCatConfigured,
+    managementURL,
     plans,
     purchasePro,
     restorePurchases
@@ -49,9 +52,6 @@ export default function PaywallScreen() {
     [plans, selectedPlanId]
   );
 
-  const availablePlans = plans.filter((plan) => plan.isAvailable);
-  const hasNoPlans = availablePlans.length === 0;
-
   const benefits = [
     { icon: "trophy-outline" as const, text: t("paywall.benefit.milestones") },
     { icon: "paw-outline" as const, text: t("paywall.benefit.animals") },
@@ -61,16 +61,44 @@ export default function PaywallScreen() {
   ];
 
   const handlePurchase = async () => {
-    const purchased = await purchasePro(selectedPlan?.id ?? "yearly");
-    if (purchased) {
-      router.replace("/(tabs)/home");
+    try {
+      const purchased = await purchasePro(selectedPlan?.id ?? "yearly");
+      if (purchased) {
+        Alert.alert(
+          "Welcome to Pro!",
+          "Thank you for supporting animal rescue! All Pro animals and features are now unlocked.",
+          [{ text: "OK", onPress: () => router.replace("/(tabs)/home") }]
+        );
+      }
+    } catch (caught: any) {
+      Alert.alert(
+        "Purchase Incomplete",
+        caught?.message ?? "Unable to complete Google Play purchase."
+      );
     }
   };
 
   const handleRestore = async () => {
-    const restored = await restorePurchases();
-    if (restored) {
-      router.replace("/(tabs)/home");
+    try {
+      const restored = await restorePurchases();
+      if (restored) {
+        Alert.alert(
+          "Purchases Restored",
+          "Your previous Pro subscription has been restored successfully!",
+          [{ text: "OK", onPress: () => router.replace("/(tabs)/home") }]
+        );
+      } else {
+        Alert.alert(
+          "No Active Subscription",
+          "No active subscription was found for this Google Play account. If you purchased using another Google account, please check that account in the Google Play Store.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (caught: any) {
+      Alert.alert(
+        "Restore Error",
+        caught?.message ?? "Could not connect to Google Play to restore purchases."
+      );
     }
   };
 
@@ -118,18 +146,11 @@ export default function PaywallScreen() {
         </PremiumCard>
       </MotionView>
 
-      {/* ── Plans ── */}
+      {/* ── Plans (Always Show Both Monthly & Yearly) ── */}
       {isPro ? (
         <PremiumCard gap={spacing.s8} variant="sanctuary">
           <StatusChip icon="shield-checkmark" label={t("common.proActive")} tone="safe" />
           <AppText role="cardTitle">{t("paywall.success")}</AppText>
-        </PremiumCard>
-      ) : hasNoPlans ? (
-        <PremiumCard gap={spacing.s8} variant="warning">
-          <StatusChip icon="alert-circle" label={t("paywall.plansUnavailableTitle")} tone="warning" />
-          <AppText role="supportive" tone="secondary">
-            {t("paywall.plansUnavailableBody")}
-          </AppText>
         </PremiumCard>
       ) : (
         <MotionView delay={110} style={styles.planGrid}>
@@ -154,19 +175,16 @@ export default function PaywallScreen() {
       {/* ── Actions ── */}
       <View style={styles.actions}>
         <AppButton
-          disabled={!selectedPlan?.isAvailable || isPro}
+          disabled={isPro}
           icon="sparkles"
           loading={isLoading}
           onPress={handlePurchase}
           title={
             isPro
               ? t("common.proActive")
-              : selectedPlan
-                ? t("paywall.startPlan", {
-                    price: selectedPlan.price,
-                    title: selectedPlan.title
-                  })
-                : t("settings.unlockPro")
+              : selectedPlan?.id === "monthly"
+                ? `Start Monthly — ${selectedPlan.price} / mo`
+                : `Start Yearly — ${selectedPlan?.price ?? "$20"} / yr (Save 44%)`
           }
           variant="pro"
         />
@@ -183,9 +201,29 @@ export default function PaywallScreen() {
         />
       </View>
 
-      <AppText align="center" role="caption" tone="tertiary">
-        {t("paywall.terms")}
-      </AppText>
+      {/* ── Subscription Terms & Cancellation ── */}
+      <View style={styles.termsContainer}>
+        <AppText align="center" role="caption" tone="tertiary">
+          {t("paywall.terms") ||
+            "Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current billing cycle. Payment is charged to your Google Play account."}
+        </AppText>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            Linking.openURL(managementURL || GOOGLE_PLAY_SUBSCRIPTION_URL)
+          }
+          style={styles.cancelLinkButton}
+        >
+          <Ionicons
+            color={theme.colors.brandGreenText}
+            name="open-outline"
+            size={14}
+          />
+          <AppText role="caption" style={styles.cancelLinkText}>
+            Manage or Cancel Subscription (Google Play)
+          </AppText>
+        </Pressable>
+      </View>
     </ScreenScaffold>
   );
 }
@@ -214,14 +252,13 @@ function PlanOption({
       accessibilityRole="radio"
       accessibilityState={{
         checked: isSelected,
-        disabled: isLoading || !plan.isAvailable
+        disabled: isLoading
       }}
-      disabled={isLoading || !plan.isAvailable}
+      disabled={isLoading}
       onPress={onSelect}
       style={({ pressed }) => [
         styles.planCard,
         isSelected && styles.planCardSelected,
-        !plan.isAvailable && styles.planCardUnavailable,
         pressed && !isLoading && styles.planCardPressed
       ]}
     >
@@ -243,7 +280,7 @@ function PlanOption({
       </View>
       <AppText role="metric">{plan.price}</AppText>
       <AppText role="caption" tone="secondary">
-        {plan.isAvailable ? plan.detail : t("paywall.planUnavailable")}
+        {plan.detail || (plan.id === "monthly" ? "Billed monthly" : "$1.67 per month")}
       </AppText>
     </Pressable>
   );
@@ -261,6 +298,18 @@ function createStyles(colors: AppColors, isDark: boolean) {
     },
     benefitText: {
       flex: 1
+    },
+    cancelLinkButton: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: spacing.s4,
+      marginTop: spacing.s4,
+      paddingVertical: spacing.s4
+    },
+    cancelLinkText: {
+      color: colors.brandGreenText,
+      fontWeight: "600",
+      textDecorationLine: "underline"
     },
     hero: {
       alignItems: "center",
@@ -283,9 +332,6 @@ function createStyles(colors: AppColors, isDark: boolean) {
       borderColor: colors.brandGreen,
       borderWidth: 2
     },
-    planCardUnavailable: {
-      opacity: 0.6
-    },
     planCopy: {
       flex: 1,
       gap: 1,
@@ -298,6 +344,12 @@ function createStyles(colors: AppColors, isDark: boolean) {
       alignItems: "center",
       flexDirection: "row",
       gap: spacing.s8
+    },
+    termsContainer: {
+      alignItems: "center",
+      gap: spacing.s4,
+      marginTop: spacing.s8,
+      paddingHorizontal: spacing.s12
     },
     topBar: {
       alignItems: "flex-start",

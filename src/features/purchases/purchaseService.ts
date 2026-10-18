@@ -82,14 +82,14 @@ const PLAN_DETAILS: Record<
   }
 > = {
   monthly: {
-    fallbackPrice: "$6",
+    fallbackPrice: "$3",
     packageExtraKey: "revenueCatMonthlyPackageId",
     packageFallback: "$rc_monthly",
     periodLabel: "per month",
     title: "Monthly"
   },
   yearly: {
-    fallbackPrice: "$50",
+    fallbackPrice: "$20",
     packageExtraKey: "revenueCatYearlyPackageId",
     packageFallback: "$rc_annual",
     periodLabel: "per year",
@@ -320,10 +320,12 @@ function findPackageForPlan(
   return (
     packages.find((candidate) => candidate.identifier === packageId) ??
     packages.find((candidate) =>
-      productIds.includes(candidate.product.identifier)
-    ) ??
-    packages.find((candidate) =>
-      productIds.includes(candidate.identifier)
+      productIds.some(
+        (id) =>
+          candidate.product.identifier === id ||
+          candidate.product.identifier.startsWith(id + ":") ||
+          candidate.identifier === id
+      )
     ) ??
     getPlanShortcut(offering, planId) ??
     packages.find((candidate) => candidate.packageType === getPackageType(planId)) ??
@@ -342,7 +344,7 @@ function getPackageDetail(
   const monthlyEquivalent = purchasePackage?.product.pricePerMonthString;
   return monthlyEquivalent
     ? `${monthlyEquivalent} per month`
-    : "About $4.17 per month";
+    : "$1.67 per month";
 }
 
 function buildPlan(
@@ -352,10 +354,10 @@ function buildPlan(
   const plan = PLAN_DETAILS[planId];
 
   return {
-    badge: planId === "yearly" ? "Best value" : undefined,
+    badge: planId === "yearly" ? "Save 44%" : undefined,
     detail: getPackageDetail(planId, purchasePackage),
     id: planId,
-    isAvailable: Boolean(purchasePackage),
+    isAvailable: true,
     packageId: purchasePackage?.identifier ?? getPackageId(planId),
     periodLabel: plan.periodLabel,
     price: purchasePackage?.product.priceString ?? plan.fallbackPrice,
@@ -383,7 +385,11 @@ async function getCurrentOffering() {
   }
 
   const offerings = await purchases.getOfferings();
-  return offerings.current;
+  const offeringId =
+    getExtraString("revenueCatOfferingId", "rescuetime_offering") ||
+    "rescuetime_offering";
+
+  return offerings.all[offeringId] ?? offerings.all["rescuetime_offering"] ?? offerings.current ?? null;
 }
 
 export function getRevenueCatDebugInfo(): RevenueCatDebugInfo {
