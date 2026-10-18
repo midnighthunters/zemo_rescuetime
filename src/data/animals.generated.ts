@@ -10,469 +10,469 @@ export const generatedAnimals: Animal[] = [
   {
     id: "animal_002",
     name: "Cat",
-    sadRemoteAssetId: "animal-animal-002-cat-sad",
-    happyRemoteAssetId: "animal-animal-002-cat-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_002_cat.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_002_cat.webp")
   },
   {
     id: "animal_003",
     name: "Panda",
-    sadRemoteAssetId: "animal-animal-003-panda-sad",
-    happyRemoteAssetId: "animal-animal-003-panda-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_003_panda.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_003_panda.webp")
   },
   {
     id: "animal_004",
     name: "Dolphin",
-    sadRemoteAssetId: "animal-animal-004-dolphin-sad",
-    happyRemoteAssetId: "animal-animal-004-dolphin-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_004_dolphin.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_004_dolphin.webp")
   },
   {
     id: "animal_005",
     name: "Rabbit",
-    sadRemoteAssetId: "animal-animal-005-rabbit-sad",
-    happyRemoteAssetId: "animal-animal-005-rabbit-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_005_rabbit.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_005_rabbit.webp")
   },
   {
     id: "animal_006",
     name: "Penguin",
-    sadRemoteAssetId: "animal-animal-006-penguin-sad",
-    happyRemoteAssetId: "animal-animal-006-penguin-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_006_penguin.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_006_penguin.webp")
   },
   {
     id: "animal_007",
     name: "Shiba Inu",
-    sadRemoteAssetId: "animal-animal-007-shiba-inu-sad",
-    happyRemoteAssetId: "animal-animal-007-shiba-inu-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_007_shiba_inu.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_007_shiba_inu.webp")
   },
   {
     id: "animal_008",
     name: "Red Panda",
-    sadRemoteAssetId: "animal-animal-008-red-panda-sad",
-    happyRemoteAssetId: "animal-animal-008-red-panda-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_008_red_panda.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_008_red_panda.webp")
   },
   {
     id: "animal_009",
     name: "Koala",
-    sadRemoteAssetId: "animal-animal-009-koala-sad",
-    happyRemoteAssetId: "animal-animal-009-koala-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_009_koala.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_009_koala.webp")
   },
   {
     id: "animal_010",
     name: "Clownfish",
-    sadRemoteAssetId: "animal-animal-010-clownfish-sad",
-    happyRemoteAssetId: "animal-animal-010-clownfish-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_010_clownfish.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_010_clownfish.webp")
   },
   {
     id: "animal_011",
     name: "Elephant",
-    sadRemoteAssetId: "animal-animal-011-elephant-sad",
-    happyRemoteAssetId: "animal-animal-011-elephant-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_011_elephant.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_011_elephant.webp")
   },
   {
     id: "animal_012",
     name: "Pomeranian",
-    sadRemoteAssetId: "animal-animal-012-pomeranian-sad",
-    happyRemoteAssetId: "animal-animal-012-pomeranian-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_012_pomeranian.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_012_pomeranian.webp")
   },
   {
     id: "animal_013",
     name: "Otter",
-    sadRemoteAssetId: "animal-animal-013-otter-sad",
-    happyRemoteAssetId: "animal-animal-013-otter-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_013_otter.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_013_otter.webp")
   },
   {
     id: "animal_014",
     name: "Parrot",
-    sadRemoteAssetId: "animal-animal-014-parrot-sad",
-    happyRemoteAssetId: "animal-animal-014-parrot-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_014_parrot.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_014_parrot.webp")
   },
   {
     id: "animal_015",
     name: "Sea Turtle",
-    sadRemoteAssetId: "animal-animal-015-sea-turtle-sad",
-    happyRemoteAssetId: "animal-animal-015-sea-turtle-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_015_sea_turtle.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_015_sea_turtle.webp")
   },
   {
     id: "animal_016",
     name: "Husky",
-    sadRemoteAssetId: "animal-animal-016-husky-sad",
-    happyRemoteAssetId: "animal-animal-016-husky-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_016_husky.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_016_husky.webp")
   },
   {
     id: "animal_017",
     name: "Hamster",
-    sadRemoteAssetId: "animal-animal-017-hamster-sad",
-    happyRemoteAssetId: "animal-animal-017-hamster-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_017_hamster.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_017_hamster.webp")
   },
   {
     id: "animal_018",
     name: "Seahorse",
-    sadRemoteAssetId: "animal-animal-018-seahorse-sad",
-    happyRemoteAssetId: "animal-animal-018-seahorse-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_018_seahorse.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_018_seahorse.webp")
   },
   {
     id: "animal_019",
     name: "Fox",
-    sadRemoteAssetId: "animal-animal-019-fox-sad",
-    happyRemoteAssetId: "animal-animal-019-fox-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_019_fox.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_019_fox.webp")
   },
   {
     id: "animal_020",
     name: "Owl",
-    sadRemoteAssetId: "animal-animal-020-owl-sad",
-    happyRemoteAssetId: "animal-animal-020-owl-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_020_owl.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_020_owl.webp")
   },
   {
     id: "animal_021",
     name: "Giraffe",
-    sadRemoteAssetId: "animal-animal-021-giraffe-sad",
-    happyRemoteAssetId: "animal-animal-021-giraffe-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_021_giraffe.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_021_giraffe.webp")
   },
   {
     id: "animal_022",
     name: "Goldfish",
-    sadRemoteAssetId: "animal-animal-022-goldfish-sad",
-    happyRemoteAssetId: "animal-animal-022-goldfish-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_022_goldfish.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_022_goldfish.webp")
   },
   {
     id: "animal_023",
     name: "Seal",
-    sadRemoteAssetId: "animal-animal-023-seal-sad",
-    happyRemoteAssetId: "animal-animal-023-seal-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_023_seal.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_023_seal.webp")
   },
   {
     id: "animal_024",
     name: "Flamingo",
-    sadRemoteAssetId: "animal-animal-024-flamingo-sad",
-    happyRemoteAssetId: "animal-animal-024-flamingo-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_024_flamingo.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_024_flamingo.webp")
   },
   {
     id: "animal_025",
     name: "Squirrel",
-    sadRemoteAssetId: "animal-animal-025-squirrel-sad",
-    happyRemoteAssetId: "animal-animal-025-squirrel-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_025_squirrel.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_025_squirrel.webp")
   },
   {
     id: "animal_026",
     name: "Hedgehog",
-    sadRemoteAssetId: "animal-animal-026-hedgehog-sad",
-    happyRemoteAssetId: "animal-animal-026-hedgehog-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_026_hedgehog.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_026_hedgehog.webp")
   },
   {
     id: "animal_027",
     name: "Tiger",
-    sadRemoteAssetId: "animal-animal-027-tiger-sad",
-    happyRemoteAssetId: "animal-animal-027-tiger-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_027_tiger.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_027_tiger.webp")
   },
   {
     id: "animal_028",
     name: "Toucan",
-    sadRemoteAssetId: "animal-animal-028-toucan-sad",
-    happyRemoteAssetId: "animal-animal-028-toucan-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_028_toucan.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_028_toucan.webp")
   },
   {
     id: "animal_029",
     name: "Alpaca",
-    sadRemoteAssetId: "animal-animal-029-alpaca-sad",
-    happyRemoteAssetId: "animal-animal-029-alpaca-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_029_alpaca.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_029_alpaca.webp")
   },
   {
     id: "animal_030",
     name: "Monkey",
-    sadRemoteAssetId: "animal-animal-030-monkey-sad",
-    happyRemoteAssetId: "animal-animal-030-monkey-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_030_monkey.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_030_monkey.webp")
   },
   {
     id: "animal_031",
     name: "Deer",
-    sadRemoteAssetId: "animal-animal-031-deer-sad",
-    happyRemoteAssetId: "animal-animal-031-deer-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_031_deer.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_031_deer.webp")
   },
   {
     id: "animal_032",
     name: "Swan",
-    sadRemoteAssetId: "animal-animal-032-swan-sad",
-    happyRemoteAssetId: "animal-animal-032-swan-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_032_swan.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_032_swan.webp")
   },
   {
     id: "animal_033",
     name: "Horse",
-    sadRemoteAssetId: "animal-animal-033-horse-sad",
-    happyRemoteAssetId: "animal-animal-033-horse-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_033_horse.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_033_horse.webp")
   },
   {
     id: "animal_034",
     name: "Lion",
-    sadRemoteAssetId: "animal-animal-034-lion-sad",
-    happyRemoteAssetId: "animal-animal-034-lion-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_034_lion.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_034_lion.webp")
   },
   {
     id: "animal_035",
     name: "Pig",
-    sadRemoteAssetId: "animal-animal-035-pig-sad",
-    happyRemoteAssetId: "animal-animal-035-pig-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_035_pig.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_035_pig.webp")
   },
   {
     id: "animal_036",
     name: "Peacock",
-    sadRemoteAssetId: "animal-animal-036-peacock-sad",
-    happyRemoteAssetId: "animal-animal-036-peacock-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_036_peacock.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_036_peacock.webp")
   },
   {
     id: "animal_037",
     name: "Blue Tang",
-    sadRemoteAssetId: "animal-animal-037-blue-tang-sad",
-    happyRemoteAssetId: "animal-animal-037-blue-tang-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_037_blue_tang.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_037_blue_tang.webp")
   },
   {
     id: "animal_038",
     name: "Kangaroo",
-    sadRemoteAssetId: "animal-animal-038-kangaroo-sad",
-    happyRemoteAssetId: "animal-animal-038-kangaroo-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_038_kangaroo.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_038_kangaroo.webp")
   },
   {
     id: "animal_039",
     name: "Sloth",
-    sadRemoteAssetId: "animal-animal-039-sloth-sad",
-    happyRemoteAssetId: "animal-animal-039-sloth-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_039_sloth.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_039_sloth.webp")
   },
   {
     id: "animal_040",
     name: "Raccoon",
-    sadRemoteAssetId: "animal-animal-040-raccoon-sad",
-    happyRemoteAssetId: "animal-animal-040-raccoon-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_040_raccoon.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_040_raccoon.webp")
   },
   {
     id: "animal_041",
     name: "Cow",
-    sadRemoteAssetId: "animal-animal-041-cow-sad",
-    happyRemoteAssetId: "animal-animal-041-cow-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_041_cow.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_041_cow.webp")
   },
   {
     id: "animal_042",
     name: "Polar Bear",
-    sadRemoteAssetId: "animal-animal-042-polar-bear-sad",
-    happyRemoteAssetId: "animal-animal-042-polar-bear-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_042_polar_bear.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_042_polar_bear.webp")
   },
   {
     id: "animal_043",
     name: "Wolf",
-    sadRemoteAssetId: "animal-animal-043-wolf-sad",
-    happyRemoteAssetId: "animal-animal-043-wolf-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_043_wolf.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_043_wolf.webp")
   },
   {
     id: "animal_044",
     name: "Macaw",
-    sadRemoteAssetId: "animal-animal-044-macaw-sad",
-    happyRemoteAssetId: "animal-animal-044-macaw-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_044_macaw.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_044_macaw.webp")
   },
   {
     id: "animal_045",
     name: "Zebra",
-    sadRemoteAssetId: "animal-animal-045-zebra-sad",
-    happyRemoteAssetId: "animal-animal-045-zebra-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_045_zebra.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_045_zebra.webp")
   },
   {
     id: "animal_046",
     name: "Donkey",
-    sadRemoteAssetId: "animal-animal-046-donkey-sad",
-    happyRemoteAssetId: "animal-animal-046-donkey-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_046_donkey.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_046_donkey.webp")
   },
   {
     id: "animal_047",
     name: "Platypus",
-    sadRemoteAssetId: "animal-animal-047-platypus-sad",
-    happyRemoteAssetId: "animal-animal-047-platypus-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_047_platypus.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_047_platypus.webp")
   },
   {
     id: "animal_048",
     name: "Cheetah",
-    sadRemoteAssetId: "animal-animal-048-cheetah-sad",
-    happyRemoteAssetId: "animal-animal-048-cheetah-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_048_cheetah.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_048_cheetah.webp")
   },
   {
     id: "animal_049",
     name: "Snow Leopard",
-    sadRemoteAssetId: "animal-animal-049-snow-leopard-sad",
-    happyRemoteAssetId: "animal-animal-049-snow-leopard-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_049_snow_leopard.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_049_snow_leopard.webp")
   },
   {
     id: "animal_050",
     name: "Orangutan",
-    sadRemoteAssetId: "animal-animal-050-orangutan-sad",
-    happyRemoteAssetId: "animal-animal-050-orangutan-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_050_orangutan.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_050_orangutan.webp")
   },
   {
     id: "animal_051",
     name: "Armadillo",
-    sadRemoteAssetId: "animal-animal-051-armadillo-sad",
-    happyRemoteAssetId: "animal-animal-051-armadillo-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_051_armadillo.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_051_armadillo.webp")
   },
   {
     id: "animal_052",
     name: "Gorilla",
-    sadRemoteAssetId: "animal-animal-052-gorilla-sad",
-    happyRemoteAssetId: "animal-animal-052-gorilla-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_052_gorilla.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_052_gorilla.webp")
   },
   {
     id: "animal_053",
     name: "Eagle",
-    sadRemoteAssetId: "animal-animal-053-eagle-sad",
-    happyRemoteAssetId: "animal-animal-053-eagle-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_053_eagle.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_053_eagle.webp")
   },
   {
     id: "animal_054",
     name: "Starfish",
-    sadRemoteAssetId: "animal-animal-054-starfish-sad",
-    happyRemoteAssetId: "animal-animal-054-starfish-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_054_starfish.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_054_starfish.webp")
   },
   {
     id: "animal_055",
     name: "Beluga Whale",
-    sadRemoteAssetId: "animal-animal-055-beluga-whale-sad",
-    happyRemoteAssetId: "animal-animal-055-beluga-whale-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_055_beluga_whale.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_055_beluga_whale.webp")
   },
   {
     id: "animal_056",
     name: "White Tiger",
-    sadRemoteAssetId: "animal-animal-056-white-tiger-sad",
-    happyRemoteAssetId: "animal-animal-056-white-tiger-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_056_white_tiger.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_056_white_tiger.webp")
   },
   {
     id: "animal_057",
     name: "Camel",
-    sadRemoteAssetId: "animal-animal-057-camel-sad",
-    happyRemoteAssetId: "animal-animal-057-camel-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_057_camel.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_057_camel.webp")
   },
   {
     id: "animal_058",
     name: "Rhino",
-    sadRemoteAssetId: "animal-animal-058-rhino-sad",
-    happyRemoteAssetId: "animal-animal-058-rhino-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_058_rhino.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_058_rhino.webp")
   },
   {
     id: "animal_059",
     name: "Hippo",
-    sadRemoteAssetId: "animal-animal-059-hippo-sad",
-    happyRemoteAssetId: "animal-animal-059-hippo-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_059_hippo.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_059_hippo.webp")
   },
   {
     id: "animal_060",
     name: "Ostrich",
-    sadRemoteAssetId: "animal-animal-060-ostrich-sad",
-    happyRemoteAssetId: "animal-animal-060-ostrich-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_060_ostrich.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_060_ostrich.webp")
   },
   {
     id: "animal_061",
     name: "Mandarin Duck",
-    sadRemoteAssetId: "animal-animal-061-mandarin-duck-sad",
-    happyRemoteAssetId: "animal-animal-061-mandarin-duck-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_061_mandarin_duck.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_061_mandarin_duck.webp")
   },
   {
     id: "animal_062",
     name: "Glasswing Butterfly",
-    sadRemoteAssetId: "animal-animal-062-glasswing-butterfly-sad",
-    happyRemoteAssetId: "animal-animal-062-glasswing-butterfly-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_062_glasswing_butterfly.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_062_glasswing_butterfly.webp")
   },
   {
     id: "animal_063",
     name: "Leafy Sea Dragon",
-    sadRemoteAssetId: "animal-animal-063-leafy-sea-dragon-sad",
-    happyRemoteAssetId: "animal-animal-063-leafy-sea-dragon-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_063_leafy_sea_dragon.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_063_leafy_sea_dragon.webp")
   },
   {
     id: "animal_064",
     name: "Orca",
-    sadRemoteAssetId: "animal-animal-064-orca-sad",
-    happyRemoteAssetId: "animal-animal-064-orca-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_064_orca.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_064_orca.webp")
   },
   {
     id: "animal_065",
     name: "Axolotl",
-    sadRemoteAssetId: "animal-animal-065-axolotl-sad",
-    happyRemoteAssetId: "animal-animal-065-axolotl-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_065_axolotl.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_065_axolotl.webp")
   },
   {
     id: "animal_066",
     name: "Sunda Pangolin",
-    sadRemoteAssetId: "animal-animal-066-sunda-pangolin-sad",
-    happyRemoteAssetId: "animal-animal-066-sunda-pangolin-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_066_sunda_pangolin.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_066_sunda_pangolin.webp")
   },
   {
     id: "animal_067",
     name: "Frog",
-    sadRemoteAssetId: "animal-animal-067-frog-sad",
-    happyRemoteAssetId: "animal-animal-067-frog-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_067_frog.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_067_frog.webp")
   },
   {
     id: "animal_068",
     name: "Black Panther",
-    sadRemoteAssetId: "animal-animal-068-black-panther-sad",
-    happyRemoteAssetId: "animal-animal-068-black-panther-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_068_black_panther.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_068_black_panther.webp")
   },
   {
     id: "animal_069",
     name: "Octopus",
-    sadRemoteAssetId: "animal-animal-069-octopus-sad",
-    happyRemoteAssetId: "animal-animal-069-octopus-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_069_octopus.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_069_octopus.webp")
   },
   {
     id: "animal_070",
     name: "Buffalo",
-    sadRemoteAssetId: "animal-animal-070-buffalo-sad",
-    happyRemoteAssetId: "animal-animal-070-buffalo-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_070_buffalo.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_070_buffalo.webp")
   },
   {
     id: "animal_071",
     name: "Komodo Dragon",
-    sadRemoteAssetId: "animal-animal-071-komodo-dragon-sad",
-    happyRemoteAssetId: "animal-animal-071-komodo-dragon-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_071_komodo_dragon.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_071_komodo_dragon.webp")
   },
   {
     id: "animal_072",
     name: "Crocodile",
-    sadRemoteAssetId: "animal-animal-072-crocodile-sad",
-    happyRemoteAssetId: "animal-animal-072-crocodile-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_072_crocodile.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_072_crocodile.webp")
   },
   {
     id: "animal_073",
     name: "Reindeer",
-    sadRemoteAssetId: "animal-animal-073-reindeer-sad",
-    happyRemoteAssetId: "animal-animal-073-reindeer-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_073_reindeer.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_073_reindeer.webp")
   },
   {
     id: "animal_074",
     name: "Brown Bear",
-    sadRemoteAssetId: "animal-animal-074-brown-bear-sad",
-    happyRemoteAssetId: "animal-animal-074-brown-bear-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_074_brown_bear.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_074_brown_bear.webp")
   },
   {
     id: "animal_075",
     name: "Crab",
-    sadRemoteAssetId: "animal-animal-075-crab-sad",
-    happyRemoteAssetId: "animal-animal-075-crab-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_075_crab.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_075_crab.webp")
   },
   {
     id: "animal_076",
     name: "Baboon",
-    sadRemoteAssetId: "animal-animal-076-baboon-sad",
-    happyRemoteAssetId: "animal-animal-076-baboon-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_076_baboon.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_076_baboon.webp")
   },
   {
     id: "animal_077",
     name: "Shark",
-    sadRemoteAssetId: "animal-animal-077-shark-sad",
-    happyRemoteAssetId: "animal-animal-077-shark-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_077_shark.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_077_shark.webp")
   },
   {
     id: "animal_078",
     name: "Ladybug",
-    sadRemoteAssetId: "animal-animal-078-ladybug-sad",
-    happyRemoteAssetId: "animal-animal-078-ladybug-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_078_ladybug.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_078_ladybug.webp")
   },
   {
     id: "animal_079",
     name: "Mantis",
-    sadRemoteAssetId: "animal-animal-079-mantis-sad",
-    happyRemoteAssetId: "animal-animal-079-mantis-happy"
+    sadImage: require("../../public/data/generated-free/animals/sad/animal_079_mantis.webp"),
+    happyImage: require("../../public/data/generated-free/animals/happy/animal_079_mantis.webp")
   }
 ];

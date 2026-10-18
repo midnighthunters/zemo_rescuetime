@@ -32,15 +32,13 @@ export default function PaywallScreen() {
   const { t } = useLanguage();
   const [selectedPlanId, setSelectedPlanId] = useState<RevenueCatPlanId>("yearly");
   const {
-    devProEnabled,
     error,
     isLoading,
     isPro,
     isRevenueCatConfigured,
     plans,
     purchasePro,
-    restorePurchases,
-    setDevProEnabled
+    restorePurchases
   } = useEntitlements();
 
   const selectedPlan = useMemo(
@@ -147,11 +145,6 @@ export default function PaywallScreen() {
         </MotionView>
       )}
 
-      {!isRevenueCatConfigured ? (
-        <AppText align="center" role="caption" tone="tertiary">
-          {t("paywall.revenueCatMissing")}
-        </AppText>
-      ) : null}
       {error ? (
         <AppText align="center" role="caption" selectable tone="danger">
           {error}
@@ -188,19 +181,6 @@ export default function PaywallScreen() {
           title={t("common.notNow")}
           variant="ghost"
         />
-        {__DEV__ ? (
-          <AppButton
-            icon={devProEnabled ? "lock-open" : "lock-closed"}
-            onPress={() => setDevProEnabled(!devProEnabled)}
-            size="compact"
-            title={
-              devProEnabled
-                ? t("settings.disableMockPro")
-                : t("settings.enableMockPro")
-            }
-            variant="ghost"
-          />
-        ) : null}
       </View>
 
       <AppText align="center" role="caption" tone="tertiary">

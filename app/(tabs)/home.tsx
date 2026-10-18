@@ -27,23 +27,17 @@ import { useRescue } from "../../src/state/RescueProvider";
 import { type AppColors, useAppTheme } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 
-function getGreetingKey() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "greeting.morning" as const;
-  if (hour < 18) return "greeting.afternoon" as const;
-  return "greeting.evening" as const;
-}
-
 export default function HomeScreen() {
   const theme = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme.colors),
     [theme.colors]
   );
-  const { formatDate, language, t } = useLanguage();
+  const { language, t } = useLanguage();
   const { isPro } = useEntitlements();
   const {
     animals,
+    careEvents,
     currentAnimal,
     dismissCareEvent,
     dismissRescueEvent,
@@ -80,16 +74,44 @@ export default function HomeScreen() {
           (target) => target.rewardId === lastCareEvent.rewardId
         )
       : undefined;
-  const careNextRewardTarget =
-    lastCareEvent && careMilestone
-      ? careMilestone.rewardTargets[lastCareEvent.rewardIndex + 1]
-      : undefined;
+  const maxCareRewardIndex =
+    careEvents.length > 0
+      ? Math.max(...careEvents.map((e) => e.rewardIndex))
+      : (lastCareEvent?.rewardIndex ?? 0);
+  const careNextRewardTarget = careMilestone
+    ? careMilestone.rewardTargets[maxCareRewardIndex + 1]
+    : undefined;
   const careNextTarget = careMilestone
     ? careNextRewardTarget?.stepTarget ?? careMilestone.unlockSteps
     : undefined;
   const careNextLabel = careMilestone
     ? careNextRewardTarget?.title ?? t("common.rescue")
     : undefined;
+
+  const careModalItems = useMemo(
+    () =>
+      careEvents.map((event) => {
+        const milestone = milestones.find((m) => m.animalId === event.animalId);
+        const target = milestone?.rewardTargets.find(
+          (t) => t.rewardId === event.rewardId
+        );
+        return {
+          id: event.id,
+          image: target
+            ? getRewardTargetImageSource(target)
+            : getRewardImageSource({
+                image: event.image,
+                remoteAssetId: event.remoteAssetId
+              } as RewardImage),
+          label: event.label,
+          remoteAssetId: event.remoteAssetId,
+          rewardIndex: event.rewardIndex,
+          title: event.title
+        };
+      }),
+    [careEvents, milestones]
+  );
+
   const visibleUnlockEventId = lastCareEvent?.id ?? lastRescueEvent?.id;
 
   const hasPermissionIssue =
@@ -127,29 +149,18 @@ export default function HomeScreen() {
     }
   };
 
-  const today = useMemo(
-    () => formatDate(new Date(), { day: "numeric", month: "long", weekday: "long" }),
-    [formatDate]
-  );
-
   return (
     <ScreenScaffold>
-      {/* ── Greeting and date ── */}
+      {/* ── Title ── */}
       <MotionView style={styles.header}>
         <View style={styles.headerCopy}>
-          <AppText role="label" tone="secondary">
-            {t("home.greeting", { period: t(getGreetingKey()) })}
-          </AppText>
           <AppText accessibilityRole="header" role="screenTitle">
-            {t("home.title")}
-          </AppText>
-          <AppText role="caption" tone="tertiary">
-            {today}
+            Rescue Time
           </AppText>
         </View>
       </MotionView>
 
-      {/* ── Step source status or a single, calm warning card ── */}
+      {/* ── Step source warning if permission issue ── */}
       {hasPermissionIssue ? (
         <MotionView delay={60}>
           <PremiumCard gap={spacing.s12} variant="warning">
@@ -222,15 +233,7 @@ export default function HomeScreen() {
             ) : null}
           </PremiumCard>
         </MotionView>
-      ) : (
-        <MotionView delay={60} style={styles.trackingRow}>
-          <StatusChip
-            icon="pulse"
-            label={t("home.tracking", { source: steps.sourceLabel })}
-            tone="steps"
-          />
-        </MotionView>
-      )}
+      ) : null}
 
       {/* ── The rescue in progress ── */}
       <StepHeroCard
@@ -252,7 +255,8 @@ export default function HomeScreen() {
       {lastCareEvent ? (
         <CareEventModal
           animalName={lastCareEvent.animalName}
-          key={lastCareEvent.id}
+          items={careModalItems}
+          key={careEvents.map((e) => e.id).join("-")}
           label={lastCareEvent.label}
           nextTargetImage={
             careNextRewardTarget

@@ -100,7 +100,7 @@ export async function requestStartupNotificationPermission() {
 export async function presentUnlockNotification(
   payload: UnlockNotificationPayload
 ) {
-  if (Platform.OS === "web") {
+  if (Platform.OS === "web" || payload.eventType !== "rescue") {
     return;
   }
 
@@ -156,7 +156,12 @@ export function getUnlockEventIdFromNotificationResponse(
 
 export function clearLastUnlockNotificationResponse() {
   try {
-    Notifications.clearLastNotificationResponse();
+    if (typeof (Notifications as any).clearLastNotificationResponseAsync === "function") {
+      void (Notifications as any).clearLastNotificationResponseAsync().catch(() => {});
+    }
+    if (typeof Notifications.clearLastNotificationResponse === "function") {
+      Notifications.clearLastNotificationResponse();
+    }
   } catch {
     // Some environments do not expose notification response clearing.
   }

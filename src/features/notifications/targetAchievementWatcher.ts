@@ -16,6 +16,7 @@ export type TargetAchievementPlan = {
   activeStepsToday: number;
   stepsToday: number;
   pendingEventIds: string[];
+  seenEventIds?: string[];
   claimedTargetSteps: number[];
   currentAnimal?: {
     id: string;

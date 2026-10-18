@@ -25,13 +25,23 @@ import { AppButton } from "./AppButton";
 import { AppText } from "./AppText";
 import { StatusChip } from "./StatusChip";
 
+export type CareEventModalItem = {
+  id: string;
+  title: string;
+  label: string;
+  image?: ImageSourcePropType;
+  remoteAssetId?: string;
+  rewardIndex: number;
+};
+
 type CareEventModalProps = {
   visible: boolean;
   animalName: string;
-  label: string;
-  title: string;
-  rewardImage: ImageSourcePropType;
-  rewardIndex: number;
+  items?: CareEventModalItem[];
+  label?: string;
+  title?: string;
+  rewardImage?: ImageSourcePropType;
+  rewardIndex?: number;
   nextTargetLabel?: string;
   nextTargetSteps?: number;
   nextTargetImage?: ImageSourcePropType;
@@ -44,13 +54,14 @@ type CareEventModalProps = {
  */
 export function CareEventModal({
   animalName,
+  items,
   label,
   nextTargetImage,
   nextTargetLabel,
   nextTargetSteps,
   onDismiss,
   rewardImage,
-  rewardIndex,
+  rewardIndex = 0,
   title,
   visible
 }: CareEventModalProps) {
@@ -73,6 +84,7 @@ export function CareEventModal({
 
   /* Presented as a bottom sheet on short devices, a centered card otherwise. */
   const asSheet = height < 720;
+  const isMulti = Boolean(items && items.length > 1);
 
   const backdrop = useRef(new Animated.Value(0)).current;
   const cardEntry = useRef(new Animated.Value(0)).current;
@@ -143,10 +155,20 @@ export function CareEventModal({
         return;
       }
 
-      Speech.speak(
-        t("speech.careUnlocked", { animal: animalName, reward: title }),
-        { language: speechLocale, pitch: 1.02, rate: 0.92, volume: 0.84 }
-      );
+      const isMulti = Boolean(items && items.length > 1);
+      const spoken = isMulti
+        ? t("careEvent.earnedMultiple", {
+            animal: animalName,
+            count: items?.length ?? 1
+          })
+        : t("speech.careUnlocked", { animal: animalName, reward: title ?? "" });
+
+      Speech.speak(spoken, {
+        language: speechLocale,
+        pitch: 1.02,
+        rate: 0.92,
+        volume: 0.84
+      });
     }, 620);
 
     async function playRewardChime() {
@@ -173,7 +195,7 @@ export function CareEventModal({
       unlockSoundRef.current?.unloadAsync().catch(() => undefined);
       unlockSoundRef.current = null;
     };
-  }, [animalName, shouldPlayUnlockAudio, speechLocale, t, title, visible]);
+  }, [animalName, items, shouldPlayUnlockAudio, speechLocale, t, title, visible]);
 
   const handleDismiss = () => {
     if (!isSettled) {
@@ -237,26 +259,76 @@ export function CareEventModal({
             { opacity: reduceMotion ? 1 : cardEntry, transform: cardTransform }
           ]}
         >
-          <Animated.View style={[styles.rewardStage, { transform: rewardTransform }]}>
-            <Image
-              contentFit="contain"
-              source={rewardImage}
-              style={styles.rewardImage}
-            />
-          </Animated.View>
+          {isMulti ? (
+            <Animated.View
+              style={[styles.multiRewardsStage, { transform: rewardTransform }]}
+            >
+              <View style={styles.multiRewardsGrid}>
+                {items!.map((it) => (
+                  <View key={it.id} style={styles.multiRewardCard}>
+                    <View style={styles.multiRewardThumb}>
+                      {it.image ? (
+                        <Image
+                          contentFit="contain"
+                          source={it.image}
+                          style={styles.multiRewardImage}
+                        />
+                      ) : null}
+                    </View>
+                    <AppText
+                      align="center"
+                      numberOfLines={1}
+                      role="caption"
+                    >
+                      {it.title || it.label}
+                    </AppText>
+                  </View>
+                ))}
+              </View>
+            </Animated.View>
+          ) : (
+            <Animated.View style={[styles.rewardStage, { transform: rewardTransform }]}>
+              <Image
+                contentFit="contain"
+                source={rewardImage}
+                style={styles.rewardImage}
+              />
+            </Animated.View>
+          )}
 
           <View style={styles.copy}>
-            <StatusChip
-              icon="checkmark-circle"
-              label={t("careEvent.rewardUnlocked", { number: rewardIndex + 1 })}
-              tone="safe"
-            />
-            <AppText align="center" role="sectionTitle">
-              {title}
-            </AppText>
-            <AppText align="center" role="supportive" tone="secondary">
-              {t("careEvent.earned", { animal: animalName, reward: label })}
-            </AppText>
+            {isMulti ? (
+              <>
+                <StatusChip
+                  icon="checkmark-circle"
+                  label={t("careEvent.rewardsUnlocked")}
+                  tone="safe"
+                />
+                <AppText align="center" role="sectionTitle">
+                  {t("careEvent.rewardsUnlocked")}
+                </AppText>
+                <AppText align="center" role="supportive" tone="secondary">
+                  {t("careEvent.earnedMultiple", {
+                    animal: animalName,
+                    count: items!.length
+                  })}
+                </AppText>
+              </>
+            ) : (
+              <>
+                <StatusChip
+                  icon="checkmark-circle"
+                  label={t("careEvent.rewardUnlocked", { number: rewardIndex + 1 })}
+                  tone="safe"
+                />
+                <AppText align="center" role="sectionTitle">
+                  {title}
+                </AppText>
+                <AppText align="center" role="supportive" tone="secondary">
+                  {t("careEvent.earned", { animal: animalName, reward: label })}
+                </AppText>
+              </>
+            )}
           </View>
 
           {nextTargetLabel && nextTargetSteps !== undefined ? (
@@ -335,6 +407,37 @@ function createStyles(colors: AppColors, isDark: boolean) {
     copy: {
       alignItems: "center",
       gap: spacing.s8
+    },
+    multiRewardCard: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceAmber,
+      borderRadius: radius.control,
+      gap: spacing.s8,
+      maxWidth: 104,
+      padding: spacing.s12,
+      width: 96
+    },
+    multiRewardImage: {
+      height: 52,
+      width: 52
+    },
+    multiRewardThumb: {
+      alignItems: "center",
+      height: 56,
+      justifyContent: "center",
+      width: 56
+    },
+    multiRewardsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.s12,
+      justifyContent: "center",
+      maxWidth: 320
+    },
+    multiRewardsStage: {
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%"
     },
     nextCopy: {
       flex: 1,

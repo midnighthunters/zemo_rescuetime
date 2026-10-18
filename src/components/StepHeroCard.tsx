@@ -31,9 +31,9 @@ type StepHeroCardProps = {
   onViewAnimal: () => void;
 };
 
-function getStatusCopy(metrics: AnimalMetrics, t: TranslateFn) {
+function getStatusCopy(metrics: AnimalMetrics, t: TranslateFn): string | undefined {
   if (metrics.status === "pro_locked") return t("stepHero.unlockProToRescue");
-  if (metrics.progress <= 0.25) return t("stepHero.waitingForYou");
+  if (metrics.progress <= 0.25) return undefined;
   if (metrics.progress <= 0.5) return t("stepHero.needsCare");
   if (metrics.progress <= 0.75) return t("stepHero.almostSafe");
   if (metrics.progress < 1) return t("stepHero.gateNearlyOpen");
@@ -110,6 +110,7 @@ export function StepHeroCard({
   );
   const nextRewardTarget = metrics.nextRewardTarget;
   const isReady = metrics.remainingSteps === 0;
+  const statusCopy = getStatusCopy(metrics, t);
 
   return (
     <MotionView>
@@ -124,9 +125,11 @@ export function StepHeroCard({
             <AppText numberOfLines={1} role="sectionTitle">
               {metrics.animal.name}
             </AppText>
-            <AppText numberOfLines={2} role="supportive" tone="secondary">
-              {getStatusCopy(metrics, t)}
-            </AppText>
+            {statusCopy ? (
+              <AppText numberOfLines={2} role="supportive" tone="secondary">
+                {statusCopy}
+              </AppText>
+            ) : null}
           </View>
           <IconButton
             accessibilityLabel={t("stepHero.refreshSteps")}

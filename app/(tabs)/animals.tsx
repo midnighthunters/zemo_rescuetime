@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 
 import { AnimalCard } from "../../src/components/AnimalCard";
+import { AppButton } from "../../src/components/AppButton";
 import { AppText } from "../../src/components/AppText";
 import { EmptyState } from "../../src/components/EmptyState";
 import { MotionView } from "../../src/components/Motion";
@@ -96,9 +97,16 @@ export default function AnimalsScreen() {
   return (
     <ScreenScaffold scroll={false}>
       <ScreenHeader
-        eyebrow={t("animals.collection")}
-        subtitle={t("animals.subtitle")}
         title={t("animals.rescueAlbum")}
+        trailing={
+          <AppButton
+            icon="stats-chart"
+            onPress={() => router.push("/progress")}
+            size="compact"
+            title={t("tabs.progress")}
+            variant="secondary"
+          />
+        }
       />
 
       <MotionView delay={60}>

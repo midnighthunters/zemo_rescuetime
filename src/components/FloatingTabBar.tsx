@@ -24,7 +24,6 @@ type IoniconName = ComponentProps<typeof Ionicons>["name"];
 const ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
   animals: { active: "paw", inactive: "paw-outline" },
   home: { active: "home", inactive: "home-outline" },
-  progress: { active: "stats-chart", inactive: "stats-chart-outline" },
   settings: { active: "settings", inactive: "settings-outline" }
 };
 

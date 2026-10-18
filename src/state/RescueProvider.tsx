@@ -123,6 +123,7 @@ type RescueContextValue = {
   weeklySteps: number;
   lastRescueEvent?: RescueEvent;
   lastCareEvent?: CareEvent;
+  careEvents: CareEvent[];
   canAccessAnimal: (animalId: string) => boolean;
   getAnimalStatus: (animalId: string) => AnimalCardStatus;
   getMilestone: (animalId: string) => RescueMilestone | undefined;
@@ -146,6 +147,7 @@ function createDefaultProgress(animals: Animal[]): RescueProgress {
     stepBaselineToday: 0,
     claimedMiniMilestones: {},
     pendingUnlockEvents: [],
+    seenUnlockEventIds: [],
     rescuedDates: {},
     lastKnownDate: getLocalDateKey(),
     activeJourneyStepsToday: 0,
@@ -164,9 +166,13 @@ function mergeProgress(saved: RescueProgress | null, animals: Animal[]) {
         animals.some((animal) => animal.id === id)
       )
     : [];
+  const seenUnlockEventIds = Array.isArray(saved.seenUnlockEventIds)
+    ? saved.seenUnlockEventIds
+    : [];
   const pendingUnlockEvents = Array.isArray(saved.pendingUnlockEvents)
     ? saved.pendingUnlockEvents.filter((event) =>
-        animals.some((animal) => animal.id === event.animalId)
+        animals.some((animal) => animal.id === event.animalId) &&
+        !seenUnlockEventIds.includes(event.id)
       )
     : [];
   const currentAnimalId =
@@ -194,6 +200,7 @@ function mergeProgress(saved: RescueProgress | null, animals: Animal[]) {
     stepBaselineToday: Math.max(0, saved.stepBaselineToday ?? 0),
     claimedMiniMilestones: saved.claimedMiniMilestones ?? {},
     pendingUnlockEvents,
+    seenUnlockEventIds,
     rescuedDates: saved.rescuedDates ?? {},
     lastKnownDate: saved.lastKnownDate ?? getLocalDateKey(),
     activeJourneyStepsToday: Math.max(0, savedActiveJourneySteps),
@@ -207,11 +214,13 @@ function nextUnrescuedAnimalId(animals: Animal[], rescuedAnimalIds: string[]) {
 
 function appendPendingUnlockEvents(
   existingEvents: PendingUnlockEvent[],
-  nextEvents: PendingUnlockEvent[]
+  nextEvents: PendingUnlockEvent[],
+  seenEventIds?: string[]
 ) {
+  const seenSet = new Set(seenEventIds ?? []);
   const existingIds = new Set(existingEvents.map((event) => event.id));
   const uniqueNextEvents = nextEvents.filter((event) => {
-    if (existingIds.has(event.id)) {
+    if (seenSet.has(event.id) || existingIds.has(event.id)) {
       return false;
     }
 
@@ -323,7 +332,9 @@ function mergeNativeUnlockEvents(
   animals: Animal[],
   milestones: RescueMilestone[]
 ) {
+  const seenSet = new Set(progress.seenUnlockEventIds ?? []);
   const validEvents = events.filter((event) =>
+    !seenSet.has(event.id) &&
     isValidPendingUnlockEvent(event, animals, milestones)
   );
 
@@ -358,7 +369,8 @@ function mergeNativeUnlockEvents(
           : current.currentAnimalId,
       pendingUnlockEvents: appendPendingUnlockEvents(
         current.pendingUnlockEvents,
-        [event]
+        [event],
+        current.seenUnlockEventIds
       ),
       rescuedAnimalIds,
       rescuedDates:
@@ -611,65 +623,74 @@ export function RescueProvider({ children }: PropsWithChildren) {
     [animals, rescueProgress]
   );
 
-  const focusedUnlockEvent = rescueProgress.focusedUnlockEventId
-    ? rescueProgress.pendingUnlockEvents.find(
-        (event) =>
-          event.id === rescueProgress.focusedUnlockEventId &&
-          isValidPendingUnlockEvent(event, animals, milestones)
-      )
-    : undefined;
-  const activeUnlockEvent =
-    focusedUnlockEvent ??
-    rescueProgress.pendingUnlockEvents.find((event) =>
-      isValidPendingUnlockEvent(event, animals, milestones)
+  const pendingCareEvents = useMemo<CareEvent[]>(() => {
+    const rewardEvents = rescueProgress.pendingUnlockEvents.filter(
+      (event): event is Extract<PendingUnlockEvent, { type: "reward" }> =>
+        event.type === "reward" &&
+        isValidPendingUnlockEvent(event, animals, milestones)
     );
+
+    const careEventsList: CareEvent[] = [];
+    for (const event of rewardEvents) {
+      const animal = animals.find((item) => item.id === event.animalId);
+      const milestone = milestones.find(
+        (item) => item.animalId === event.animalId
+      );
+      const target = milestone?.rewardTargets.find(
+        (item) => item.rewardId === event.rewardId
+      );
+
+      if (animal && target) {
+        careEventsList.push({
+          id: event.id,
+          animalId: animal.id,
+          animalName: animal.name,
+          stepTarget: event.stepTarget,
+          label: target.label,
+          title: target.title,
+          rewardId: target.rewardId,
+          rewardIndex: target.rewardIndex,
+          image: target.image,
+          remoteAssetId: target.remoteAssetId
+        });
+      }
+    }
+
+    return careEventsList;
+  }, [animals, milestones, rescueProgress.pendingUnlockEvents]);
+
   const lastCareEvent = useMemo<CareEvent | undefined>(() => {
-    if (!activeUnlockEvent || activeUnlockEvent.type !== "reward") {
-      return undefined;
-    }
+    return pendingCareEvents[0];
+  }, [pendingCareEvents]);
 
-    const animal = animals.find((item) => item.id === activeUnlockEvent.animalId);
-    const milestone = milestones.find(
-      (item) => item.animalId === activeUnlockEvent.animalId
-    );
-    const target = milestone?.rewardTargets.find(
-      (item) => item.rewardId === activeUnlockEvent.rewardId
-    );
-
-    if (!animal || !target) {
-      return undefined;
-    }
-
-    return {
-      id: activeUnlockEvent.id,
-      animalId: animal.id,
-      animalName: animal.name,
-      stepTarget: activeUnlockEvent.stepTarget,
-      label: target.label,
-      title: target.title,
-      rewardId: target.rewardId,
-      rewardIndex: target.rewardIndex,
-      image: target.image,
-      remoteAssetId: target.remoteAssetId
-    };
-  }, [activeUnlockEvent, animals, milestones]);
   const lastRescueEvent = useMemo<RescueEvent | undefined>(() => {
-    if (!activeUnlockEvent || activeUnlockEvent.type !== "rescue") {
+    // Unlocked items are shown together in a single card first.
+    // Animal unlock is shown as a separate card after items are dismissed.
+    if (pendingCareEvents.length > 0) {
       return undefined;
     }
 
-    const animal = animals.find((item) => item.id === activeUnlockEvent.animalId);
+    const rescueEvent = rescueProgress.pendingUnlockEvents.find(
+      (event) =>
+        event.type === "rescue" &&
+        isValidPendingUnlockEvent(event, animals, milestones)
+    );
+    if (!rescueEvent) {
+      return undefined;
+    }
+
+    const animal = animals.find((item) => item.id === rescueEvent.animalId);
     if (!animal) {
       return undefined;
     }
 
     return {
-      id: activeUnlockEvent.id,
+      id: rescueEvent.id,
       animalId: animal.id,
       animalName: animal.name,
-      stepTarget: activeUnlockEvent.stepTarget
+      stepTarget: rescueEvent.stepTarget
     };
-  }, [activeUnlockEvent, animals]);
+  }, [animals, milestones, pendingCareEvents.length, rescueProgress.pendingUnlockEvents]);
 
   useEffect(() => {
     if (isLoading) {
@@ -691,6 +712,10 @@ export function RescueProvider({ children }: PropsWithChildren) {
     knownPendingUnlockEventIdsRef.current = currentIds;
 
     newlyAddedEvents.forEach((event) => {
+      if (event.type !== "rescue") {
+        return;
+      }
+
       const payload = createUnlockNotificationPayload(
         event,
         animals,
@@ -853,7 +878,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
           : undefined,
       dateKey: getLocalDateKey(),
       enabled: canTrack,
-      pendingEventIds: rescueProgress.pendingUnlockEvents.map((event) => event.id)
+      pendingEventIds: rescueProgress.pendingUnlockEvents.map((event) => event.id),
+      seenEventIds: rescueProgress.seenUnlockEventIds ?? []
     }).catch(() => {});
   }, [
     canAccessAnimal,
@@ -975,7 +1001,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
         },
         pendingUnlockEvents: appendPendingUnlockEvents(
           rescueProgress.pendingUnlockEvents,
-          [createRewardUnlockEvent(animalId, target, new Date().toISOString())]
+          [createRewardUnlockEvent(animalId, target, new Date().toISOString())],
+          rescueProgress.seenUnlockEventIds
         )
       };
 
@@ -1043,7 +1070,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
               milestone.unlockSteps,
               new Date().toISOString()
             )
-          ]
+          ],
+          rescueProgress.seenUnlockEventIds
         )
       };
 
@@ -1157,7 +1185,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
           : current.currentAnimalId,
         pendingUnlockEvents: appendPendingUnlockEvents(
           current.pendingUnlockEvents,
-          pendingEvents
+          pendingEvents,
+          current.seenUnlockEventIds
         )
       };
     });
@@ -1271,17 +1300,54 @@ export function RescueProvider({ children }: PropsWithChildren) {
     [animals, milestones, persistProgress]
   );
 
-  const dismissUnlockEvent = useCallback(async () => {
-    if (!activeUnlockEvent) {
+  const dismissCareEvent = useCallback(async () => {
+    if (pendingCareEvents.length === 0) {
       return;
     }
 
-    const dismissedEventId = activeUnlockEvent.id;
+    const dismissedIds = pendingCareEvents.map((event) => event.id);
+    await Promise.all(
+      dismissedIds.map((id) => dismissUnlockNotification(id).catch(() => {}))
+    );
+    await persistProgress((current) => {
+      const dismissedSet = new Set(dismissedIds);
+      const pendingUnlockEvents = current.pendingUnlockEvents.filter(
+        (event) => !dismissedSet.has(event.id)
+      );
+      const currentSeen = current.seenUnlockEventIds ?? [];
+      const seenUnlockEventIds = [
+        ...currentSeen,
+        ...dismissedIds.filter((id) => !currentSeen.includes(id))
+      ];
+
+      return {
+        ...current,
+        focusedUnlockEventId:
+          current.focusedUnlockEventId &&
+          dismissedSet.has(current.focusedUnlockEventId)
+            ? undefined
+            : current.focusedUnlockEventId,
+        pendingUnlockEvents,
+        seenUnlockEventIds
+      };
+    });
+  }, [pendingCareEvents, persistProgress]);
+
+  const dismissRescueEvent = useCallback(async () => {
+    if (!lastRescueEvent) {
+      return;
+    }
+
+    const dismissedEventId = lastRescueEvent.id;
     await dismissUnlockNotification(dismissedEventId).catch(() => {});
     await persistProgress((current) => {
       const pendingUnlockEvents = current.pendingUnlockEvents.filter(
         (event) => event.id !== dismissedEventId
       );
+      const currentSeen = current.seenUnlockEventIds ?? [];
+      const seenUnlockEventIds = currentSeen.includes(dismissedEventId)
+        ? currentSeen
+        : [...currentSeen, dismissedEventId];
 
       return {
         ...current,
@@ -1289,10 +1355,11 @@ export function RescueProvider({ children }: PropsWithChildren) {
           current.focusedUnlockEventId === dismissedEventId
             ? undefined
             : current.focusedUnlockEventId,
-        pendingUnlockEvents
+        pendingUnlockEvents,
+        seenUnlockEventIds
       };
     });
-  }, [activeUnlockEvent, persistProgress]);
+  }, [lastRescueEvent, persistProgress]);
 
   const weeklySteps = useMemo(() => {
     const keys = getCurrentWeekDateKeys();
@@ -1319,6 +1386,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
       weeklySteps,
       lastRescueEvent,
       lastCareEvent,
+      careEvents: pendingCareEvents,
       canAccessAnimal,
       getAnimalStatus,
       getMilestone,
@@ -1327,8 +1395,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
       rescueAnimal,
       resetProgress,
       focusUnlockEvent,
-      dismissRescueEvent: dismissUnlockEvent,
-      dismissCareEvent: dismissUnlockEvent
+      dismissRescueEvent,
+      dismissCareEvent
     }),
     [
       animals,
@@ -1337,7 +1405,8 @@ export function RescueProvider({ children }: PropsWithChildren) {
       currentAnimal,
       currentAnimalIndex,
       currentMilestone,
-      dismissUnlockEvent,
+      dismissCareEvent,
+      dismissRescueEvent,
       focusUnlockEvent,
       getAnimalMetrics,
       getAnimalStatus,

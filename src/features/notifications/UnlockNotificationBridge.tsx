@@ -12,11 +12,15 @@ import {
 } from "./unlockNotifications";
 
 export function UnlockNotificationBridge() {
-  const { focusUnlockEvent, isLoading } = useRescue();
+  const { focusUnlockEvent, isLoading, rescueProgress } = useRescue();
   const queuedEventIdRef = useRef<string | undefined>(undefined);
 
   const openUnlockCard = useCallback(
     (eventId: string) => {
+      if (rescueProgress.seenUnlockEventIds?.includes(eventId)) {
+        clearLastUnlockNotificationResponse();
+        return;
+      }
       queuedEventIdRef.current = eventId;
       router.replace("/(tabs)/home");
 
@@ -29,7 +33,7 @@ export function UnlockNotificationBridge() {
       clearLastUnlockNotificationResponse();
       queuedEventIdRef.current = undefined;
     },
-    [focusUnlockEvent, isLoading]
+    [focusUnlockEvent, isLoading, rescueProgress.seenUnlockEventIds]
   );
 
   useEffect(() => {
@@ -42,20 +46,28 @@ export function UnlockNotificationBridge() {
     const lastResponse = Notifications.getLastNotificationResponse();
     const lastEventId = getUnlockEventIdFromNotificationResponse(lastResponse);
     if (lastEventId) {
-      openUnlockCard(lastEventId);
+      if (rescueProgress.seenUnlockEventIds?.includes(lastEventId)) {
+        clearLastUnlockNotificationResponse();
+      } else {
+        openUnlockCard(lastEventId);
+      }
     }
 
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const eventId = getUnlockEventIdFromNotificationResponse(response);
         if (eventId) {
-          openUnlockCard(eventId);
+          if (rescueProgress.seenUnlockEventIds?.includes(eventId)) {
+            clearLastUnlockNotificationResponse();
+          } else {
+            openUnlockCard(eventId);
+          }
         }
       }
     );
 
     return () => subscription.remove();
-  }, [openUnlockCard]);
+  }, [openUnlockCard, rescueProgress.seenUnlockEventIds]);
 
   useEffect(() => {
     const queuedEventId = queuedEventIdRef.current;

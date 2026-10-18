@@ -21,7 +21,6 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="home" options={{ title: t("tabs.home") }} />
       <Tabs.Screen name="animals" options={{ title: t("tabs.animals") }} />
-      <Tabs.Screen name="progress" options={{ title: t("tabs.progress") }} />
       <Tabs.Screen name="settings" options={{ title: t("tabs.settings") }} />
     </Tabs>
   );

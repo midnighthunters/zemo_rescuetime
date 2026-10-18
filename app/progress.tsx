@@ -1,27 +1,29 @@
+import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { AppText } from "../../src/components/AppText";
-import { CareMilestoneRow } from "../../src/components/CareMilestoneRow";
-import { EmptyState } from "../../src/components/EmptyState";
-import { MetricCard } from "../../src/components/MetricCard";
-import { MotionView } from "../../src/components/Motion";
-import { PremiumCard } from "../../src/components/PremiumCard";
-import { ProgressBar } from "../../src/components/ProgressBar";
-import { ScreenHeader } from "../../src/components/ScreenHeader";
-import { ScreenScaffold } from "../../src/components/ScreenScaffold";
-import { SectionHeader } from "../../src/components/SectionHeader";
-import { StatusChip } from "../../src/components/StatusChip";
-import { useLanguage } from "../../src/i18n/LanguageProvider";
-import { useRescue } from "../../src/state/RescueProvider";
-import { type AppColors, useAppTheme } from "../../src/theme/colors";
-import { useResponsiveLayout } from "../../src/theme/layout";
-import { radius, spacing } from "../../src/theme/spacing";
-import { getCurrentWeekDateKeys, getLocalDateKey } from "../../src/utils/date";
+import { AppText } from "../src/components/AppText";
+import { CareMilestoneRow } from "../src/components/CareMilestoneRow";
+import { EmptyState } from "../src/components/EmptyState";
+import { MetricCard } from "../src/components/MetricCard";
+import { MotionView } from "../src/components/Motion";
+import { PremiumCard } from "../src/components/PremiumCard";
+import { ProgressBar } from "../src/components/ProgressBar";
+import { ScreenHeader } from "../src/components/ScreenHeader";
+import { ScreenScaffold } from "../src/components/ScreenScaffold";
+import { SectionHeader } from "../src/components/SectionHeader";
+import { StatusChip } from "../src/components/StatusChip";
+import { useLanguage } from "../src/i18n/LanguageProvider";
+import { useRescue } from "../src/state/RescueProvider";
+import { type AppColors, useAppTheme } from "../src/theme/colors";
+import { useResponsiveLayout } from "../src/theme/layout";
+import { radius, spacing } from "../src/theme/spacing";
+import { getCurrentWeekDateKeys, getLocalDateKey } from "../src/utils/date";
 
 const CHART_HEIGHT = 120;
 
 export default function ProgressScreen() {
+  const router = useRouter();
   const theme = useAppTheme();
   const layout = useResponsiveLayout();
   const styles = useMemo(
@@ -69,9 +71,10 @@ export default function ProgressScreen() {
   });
 
   return (
-    <ScreenScaffold>
+    <ScreenScaffold withTabBar={false}>
       <ScreenHeader
         eyebrow={t("progress.kicker")}
+        onBack={() => router.back()}
         subtitle={
           metrics
             ? t("progress.stepsLeftForAnimal", {

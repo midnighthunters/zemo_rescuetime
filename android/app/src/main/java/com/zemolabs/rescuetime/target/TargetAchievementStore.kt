@@ -51,11 +51,13 @@ object TargetAchievementStore {
               readIntSet(prefs.getString(KEY_CLAIMED_TARGETS, null))
         }
     val pendingEventIds = readStringSet(plan.optJSONArray("pendingEventIds"))
+    val seenEventIds = readStringSet(plan.optJSONArray("seenEventIds"))
     val rescueEventId = if (currentAnimalId.isBlank()) "" else "rescue:$currentAnimalId"
     val rescueNotified =
         !animalChanged &&
             (prefs.getBoolean(KEY_RESCUE_NOTIFIED, false) ||
                 pendingEventIds.contains(rescueEventId) ||
+                seenEventIds.contains(rescueEventId) ||
                 (currentAnimal?.optBoolean("rescued", false) ?: false))
     val lastSensorTotal = getNullableFloat(prefs.getString(KEY_LAST_SENSOR_TOTAL, null))
     val editor =
@@ -202,6 +204,7 @@ object TargetAchievementStore {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val animalId = currentAnimal.optString("id")
     val animalName = currentAnimal.optString("name")
+    val seenEventIds = readStringSet(plan.optJSONArray("seenEventIds"))
     var claimedTargets = readIntSet(prefs.getString(KEY_CLAIMED_TARGETS, null)).toMutableSet()
     val rewardTargets = currentAnimal.optJSONArray("rewardTargets") ?: JSONArray()
     var changed = false
@@ -215,6 +218,12 @@ object TargetAchievementStore {
 
       val rewardId = target.optString("rewardId")
       val eventId = "reward:$animalId:$rewardId"
+      if (seenEventIds.contains(eventId)) {
+        claimedTargets.add(stepTarget)
+        changed = true
+        continue
+      }
+
       val notificationTitle =
           target.optString("notificationTitle").ifBlank { "${target.optString("title")} unlocked" }
       val notificationBody =
@@ -236,12 +245,6 @@ object TargetAchievementStore {
               .put("createdAt", isoNow())
 
       appendNativeEvent(prefs, event)
-      TargetAchievementNotifier.showTargetNotification(
-          context = context,
-          eventId = eventId,
-          title = notificationTitle,
-          body = notificationBody
-      )
       claimedTargets.add(stepTarget)
       changed = true
     }
@@ -250,6 +253,7 @@ object TargetAchievementStore {
     val rescueEventId = "rescue:$animalId"
     val rescueNotified =
         prefs.getBoolean(KEY_RESCUE_NOTIFIED, false) ||
+            seenEventIds.contains(rescueEventId) ||
             readStringSet(plan.optJSONArray("pendingEventIds")).contains(rescueEventId) ||
             currentAnimal.optBoolean("rescued", false)
 

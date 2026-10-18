@@ -42,7 +42,7 @@ export default function AnimalDetailScreen() {
     t
   } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeStepsToday, animals, getAnimalMetrics, rescueProgress } =
+  const { activeStepsToday, animals, getAnimalMetrics, lockedAnimals, rescueProgress } =
     useRescue();
   const animal = animals.find((item) => item.id === id);
   const metrics = animal ? getAnimalMetrics(animal.id) : undefined;
@@ -59,6 +59,25 @@ export default function AnimalDetailScreen() {
           message={t("animals.emptyWaitingMessage")}
           spriteKey="emptyLostPathSign"
           title={t("animalDetail.notFound")}
+        />
+      </ScreenScaffold>
+    );
+  }
+
+  const lockedIndex = lockedAnimals.findIndex((item) => item.id === animal.id);
+  const isMystery = lockedIndex >= 2;
+  if (isMystery) {
+    return (
+      <ScreenScaffold withTabBar={false}>
+        <ScreenHeader
+          backAccessibilityLabel={t("common.back")}
+          onBack={() => router.back()}
+          title={t("animalCard.mysteryRescue")}
+        />
+        <EmptyState
+          message={t("animalCard.completeEarlier")}
+          spriteKey="emptyLostPathSign"
+          title={t("animalCard.mysteryRescue")}
         />
       </ScreenScaffold>
     );

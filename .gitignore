@@ -43,3 +43,12 @@ rescueTime_profile.mobileprovision
 *.txt
 RestaurantStepCounter.txt
 progress-*.png
+
+# Android binaries
+*.apk
+*.aab
+
+# Local scratch / backup copies
+*- Copy/
+* - Copy/
+generation_tracker.json

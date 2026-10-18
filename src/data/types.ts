@@ -75,6 +75,7 @@ export type RescueProgress = {
   lastKnownDate: string;
   activeJourneyStepsToday: number;
   dailyStepHistory: Record<string, number>;
+  seenUnlockEventIds?: string[];
 };
 
 export type PendingUnlockEvent =

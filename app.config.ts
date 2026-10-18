@@ -4,9 +4,9 @@ const boolFromEnv = (value: string | undefined) => value === "true";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "Rescue Animals Steps",
+  name: "Rescue Time",
   slug: "rescue-animals-step-counter",
-  version: "1.0.0",
+  version: "1.0.3",
   orientation: "portrait",
   icon: "./assets/logo.png",
   scheme: "rescueanimals",
@@ -24,9 +24,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSHealthShareUsageDescription:
-        "Rescue Animals Steps reads your step count so your walks can unlock animal care and rescue progress.",
+        "Rescue Time reads your step count so your walks can unlock animal care and rescue progress.",
       NSHealthUpdateUsageDescription:
-        "Rescue Animals Steps does not write any data to Health.",
+        "Rescue Time does not write any data to Health.",
       UIRequiresFullScreen: false,
       CFBundleIconName: "AppIcon"
     },
@@ -38,7 +38,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: "com.zemolabs.rescuetime",
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#FFF8EA"
+      backgroundColor: "#000000"
     },
     permissions: [
       "ACTIVITY_RECOGNITION",

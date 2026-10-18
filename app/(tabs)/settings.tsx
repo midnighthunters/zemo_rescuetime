@@ -1,10 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Linking, StyleSheet, Switch, View } from "react-native";
+import { Linking, StyleSheet, Switch, View } from "react-native";
 
 import { AppButton } from "../../src/components/AppButton";
 import { AppText } from "../../src/components/AppText";
+import { IconButton } from "../../src/components/IconButton";
 import { MotionView } from "../../src/components/Motion";
 import { PremiumCard } from "../../src/components/PremiumCard";
 import { ScreenHeader } from "../../src/components/ScreenHeader";
@@ -15,50 +17,43 @@ import { SettingGroup, SettingRow } from "../../src/components/SettingRow";
 import { StatusChip } from "../../src/components/StatusChip";
 import { ProAssetDownloadModal } from "../../src/features/assets/components/ProAssetDownloadModal";
 import { useUnlockAudioSettings } from "../../src/features/audio/useUnlockAudioSettings";
-import { useOnboarding } from "../../src/features/onboarding/useOnboarding";
 import { useEntitlements } from "../../src/features/purchases/useEntitlements";
 import { useLanguage } from "../../src/i18n/LanguageProvider";
 import { useRemoteAssetDownloadStore } from "../../src/services/assets/remoteAssetDownloadStore";
 import { useRescue } from "../../src/state/RescueProvider";
 import {
+  type AppColors,
   type ThemePreference,
   useAppTheme
 } from "../../src/theme/colors";
-import { spacing } from "../../src/theme/spacing";
+import { radius, spacing } from "../../src/theme/spacing";
 
 export default function SettingsScreen() {
   const theme = useAppTheme();
   const router = useRouter();
-  const styles = useMemo(() => createStyles(), []);
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const {
-    formatNumber: formatLocalizedNumber,
     language,
     languageLabel,
     setLanguage,
-    speechLocale,
     supportedLanguages,
     t
   } = useLanguage();
   const {
-    devProEnabled,
     error,
     isLoading,
     isPro,
-    isRevenueCatConfigured,
     managementURL,
-    restorePurchases,
-    revenueCatDebugInfo,
-    setDevProEnabled
+    restorePurchases
   } = useEntitlements();
-  const { resetOnboarding } = useOnboarding();
   const {
     isLoading: isUnlockAudioLoading,
     setUnlockAudioEnabled,
     unlockAudioEnabled
   } = useUnlockAudioSettings();
-  const { resetProgress, steps, stepsToday } = useRescue();
+  const { steps } = useRescue();
   const [downloadModalVisible, setDownloadModalVisible] = useState(false);
-  const [showStepDiagnostics, setShowStepDiagnostics] = useState(false);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const {
     clearDownloadedProAssets,
     getFormattedProgress,
@@ -80,6 +75,11 @@ export default function SettingsScreen() {
       ? t("settings.themeDark")
       : t("settings.themeLight");
 
+  const currentLanguage = useMemo(
+    () => supportedLanguages.find((option) => option.code === language),
+    [language, supportedLanguages]
+  );
+
   const stepStatusTone = steps.error
     ? "warning"
     : steps.permissionStatus === "granted" && steps.isAvailable
@@ -98,289 +98,14 @@ export default function SettingsScreen() {
         ? t("settings.proPackRetry")
         : t("settings.proPackDownload");
 
-  const confirmReset = () => {
-    Alert.alert(
-      t("settings.resetProgressTitle"),
-      t("settings.resetProgressMessage"),
-      [
-        { style: "cancel", text: t("common.cancel") },
-        { onPress: resetProgress, style: "destructive", text: t("common.reset") }
-      ]
-    );
-  };
-
   return (
     <ScreenScaffold>
-      <ScreenHeader
-        eyebrow={t("settings.device")}
-        subtitle={t("settings.subtitle")}
-        title={t("settings.title")}
-      />
+      {/* ── Settings Title only (no extra text) ── */}
+      <ScreenHeader title={t("settings.title")} />
 
-      {/* ── Pro ── */}
-      <SectionHeader title={t("settings.pro")} />
-      <MotionView delay={40}>
-        <SettingGroup>
-          <SettingRow
-            icon="star"
-            iconTone="amber"
-            title={t("settings.status")}
-            trailing={
-              <StatusChip
-                icon={isPro ? "shield-checkmark" : "lock-closed"}
-                label={isPro ? t("common.proActive") : t("common.free")}
-                tone={isPro ? "safe" : "locked"}
-              />
-            }
-          />
-          <SettingRow
-            icon="refresh"
-            onPress={restorePurchases}
-            subtitle={
-              isLoading ? t("settings.working") : t("settings.restoreSubtitle")
-            }
-            title={t("settings.restorePurchases")}
-          />
-          {managementURL ? (
-            <SettingRow
-              icon="open-outline"
-              onPress={() => Linking.openURL(managementURL)}
-              title={t("settings.manageSubscription")}
-            />
-          ) : null}
-          <SettingRow
-            icon="sparkles"
-            iconTone="amber"
-            isLast
-            onPress={isPro ? undefined : () => router.push("/paywall")}
-            subtitle={
-              isRevenueCatConfigured
-                ? undefined
-                : t("paywall.revenueCatMissing")
-            }
-            title={isPro ? t("common.proActive") : t("settings.unlockPro")}
-          />
-        </SettingGroup>
-      </MotionView>
-      {error ? (
-        <AppText role="caption" selectable tone="danger">
-          {error}
-        </AppText>
-      ) : null}
-
-      {/* ── Pro rescue pack ── */}
-      {isPro ? (
-        <>
-          <SectionHeader title={t("settings.proPack")} />
-          <MotionView delay={70}>
-            <PremiumCard gap={spacing.s12} variant="standard">
-              <View style={styles.packHeader}>
-                <StatusChip
-                  icon={
-                    proPackStatus === "downloaded"
-                      ? "shield-checkmark"
-                      : proPackStatus === "failed"
-                        ? "alert-circle"
-                        : "cloud-download-outline"
-                  }
-                  label={
-                    proPackStatus === "downloaded"
-                      ? t("settings.proPackReady")
-                      : proPackStatus === "failed"
-                        ? t("settings.proPackFailed")
-                        : t("settings.proPackPending")
-                  }
-                  tone={
-                    proPackStatus === "downloaded"
-                      ? "safe"
-                      : proPackStatus === "failed"
-                        ? "warning"
-                        : "waiting"
-                  }
-                />
-                <AppText role="caption" tone="secondary">
-                  {downloaded} / {total} · {label}
-                </AppText>
-              </View>
-              {proPackStatus !== "downloaded" ? (
-                <AppButton
-                  icon="cloud-download-outline"
-                  onPress={() => setDownloadModalVisible(true)}
-                  title={proPackActionTitle}
-                  variant="pro"
-                />
-              ) : (
-                <AppButton
-                  icon="trash-outline"
-                  onPress={clearDownloadedProAssets}
-                  title={t("settings.proPackClear")}
-                  variant="destructive"
-                />
-              )}
-              <ProAssetDownloadModal
-                onClose={() => setDownloadModalVisible(false)}
-                visible={downloadModalVisible}
-              />
-            </PremiumCard>
-          </MotionView>
-        </>
-      ) : null}
-
-      {/* ── Step tracking ── */}
-      <SectionHeader title={t("settings.steps")} />
-      <MotionView delay={100}>
-        <SettingGroup>
-          <SettingRow
-            icon="footsteps"
-            iconTone="blue"
-            title={t("settings.today")}
-            value={formatLocalizedNumber(stepsToday)}
-          />
-          <SettingRow
-            icon="pulse"
-            iconTone="blue"
-            title={t("settings.source")}
-            value={steps.sourceLabel}
-          />
-          <SettingRow
-            icon="shield-checkmark"
-            iconTone={stepStatusTone === "safe" ? "green" : "coral"}
-            title={t("settings.permission")}
-            trailing={
-              <StatusChip label={stepStatusLabel} tone={stepStatusTone} />
-            }
-          />
-          <SettingRow
-            icon="information-circle-outline"
-            isLast={!showStepDiagnostics}
-            onPress={() => setShowStepDiagnostics((value) => !value)}
-            selected={showStepDiagnostics}
-            title={t("home.showDetails")}
-          />
-          {showStepDiagnostics ? (
-            <>
-              <SettingRow
-                title={t("settings.pedometer")}
-                value={
-                  steps.isAvailable
-                    ? t("settings.available")
-                    : t("settings.unavailable")
-                }
-              />
-              <SettingRow
-                title={t("settings.mode")}
-                value={
-                  steps.countingMode === "full-day"
-                    ? t("settings.modeFullDay")
-                    : t("settings.modeLiveSession")
-                }
-              />
-              {steps.countingMode === "full-day" ? (
-                <SettingRow
-                  title={t("settings.storedToday")}
-                  value={formatLocalizedNumber(steps.historicalStepsToday)}
-                />
-              ) : (
-                <SettingRow
-                  subtitle={t("settings.liveSessionNote")}
-                  title={t("settings.liveSession")}
-                  value={formatLocalizedNumber(steps.liveSteps)}
-                />
-              )}
-              <SettingRow
-                isLast
-                subtitle={steps.error ?? undefined}
-                title={t("settings.diagnosticDetail")}
-              />
-            </>
-          ) : null}
-        </SettingGroup>
-      </MotionView>
-      <View style={styles.stepActions}>
-        <AppButton
-          icon={steps.permissionStatus !== "granted" ? "heart" : "refresh"}
-          loading={steps.isLoading}
-          onPress={
-            steps.permissionStatus !== "granted"
-              ? steps.requestPermission
-              : steps.refreshSteps
-          }
-          style={styles.stepAction}
-          title={
-            steps.permissionStatus !== "granted"
-              ? t("onboarding.enableSteps")
-              : t("settings.refreshPedometer")
-          }
-          variant="secondary"
-        />
-        <AppButton
-          onPress={() => Linking.openSettings()}
-          style={styles.stepAction}
-          title={t("settings.openSettings")}
-          variant="ghost"
-        />
-      </View>
-
-      {/* ── Sound ── */}
-      <SectionHeader title={t("settings.sound")} />
-      <MotionView delay={130}>
-        <SettingGroup>
-          <SettingRow
-            icon="volume-medium-outline"
-            isLast
-            subtitle={t("settings.unlockAudioNote")}
-            title={t("settings.unlockAudio")}
-            trailing={
-              <Switch
-                accessibilityLabel={t("settings.unlockAudioA11y")}
-                disabled={isUnlockAudioLoading}
-                onValueChange={setUnlockAudioEnabled}
-                thumbColor={undefined}
-                trackColor={{
-                  false: theme.colors.trackNeutral,
-                  true: theme.colors.brandGreen
-                }}
-                value={unlockAudioEnabled}
-              />
-            }
-          />
-        </SettingGroup>
-      </MotionView>
-
-      {/* ── Language ── */}
-      <SectionHeader title={t("language.panelTitle")} />
-      <MotionView delay={160}>
-        <SettingGroup>
-          {supportedLanguages.map((option, index) => {
-            const selected = language === option.code;
-
-            return (
-              <SettingRow
-                icon={selected ? "checkmark-circle" : undefined}
-                iconTone="green"
-                isLast={index === supportedLanguages.length - 1}
-                key={option.code}
-                onPress={() => {
-                  void setLanguage(option.code);
-                }}
-                selected={selected}
-                subtitle={option.label}
-                title={option.nativeLabel}
-              />
-            );
-          })}
-        </SettingGroup>
-      </MotionView>
-      <AppText role="caption" tone="tertiary">
-        {t("language.currentSpeech", {
-          language: languageLabel,
-          locale: speechLocale
-        })}
-      </AppText>
-
-      {/* ── Appearance ── */}
+      {/* ── 1. Appearance / Theme at top ── */}
       <SectionHeader title={t("settings.appearance")} />
-      <MotionView delay={190}>
+      <MotionView delay={30}>
         <PremiumCard gap={spacing.s8} variant="standard">
           <SegmentedControl
             onChange={(value) => {
@@ -395,87 +120,231 @@ export default function SettingsScreen() {
         </PremiumCard>
       </MotionView>
 
-      {/* ── Data ── */}
-      <SectionHeader title={t("settings.localData")} />
-      <MotionView delay={220}>
+      {/* ── 2. Language below Theme ── */}
+      <SectionHeader title={t("language.panelTitle")} />
+      <MotionView delay={60}>
         <SettingGroup>
           <SettingRow
-            icon="refresh-circle-outline"
-            onPress={async () => {
-              await resetOnboarding();
-              router.replace("/onboarding");
-            }}
-            title={t("settings.resetOnboarding")}
+            icon="globe-outline"
+            iconTone="blue"
+            isLast={!isLanguageDropdownOpen}
+            onPress={() => setIsLanguageDropdownOpen((prev) => !prev)}
+            subtitle={currentLanguage?.label ?? languageLabel}
+            title={currentLanguage?.nativeLabel ?? languageLabel}
+            trailing={
+              <Ionicons
+                color={theme.colors.textSecondary}
+                name={isLanguageDropdownOpen ? "chevron-up" : "chevron-down"}
+                size={20}
+              />
+            }
+          />
+          {isLanguageDropdownOpen
+            ? supportedLanguages.map((option, index) => {
+                const selected = language === option.code;
+
+                return (
+                  <SettingRow
+                    icon={selected ? "checkmark-circle" : undefined}
+                    iconTone="green"
+                    isLast={index === supportedLanguages.length - 1}
+                    key={option.code}
+                    onPress={() => {
+                      void setLanguage(option.code);
+                      setIsLanguageDropdownOpen(false);
+                    }}
+                    selected={selected}
+                    subtitle={option.label}
+                    title={option.nativeLabel}
+                  />
+                );
+              })
+            : null}
+        </SettingGroup>
+      </MotionView>
+
+      {/* ── 3. Steps with Audio inside ── */}
+      <SectionHeader title={t("settings.steps")} />
+      <MotionView delay={90}>
+        <SettingGroup>
+          <SettingRow
+            icon="footsteps"
+            iconTone="blue"
+            title={t("settings.pedometer")}
+            trailing={
+              <View style={styles.statusWithSettings}>
+                <StatusChip label={stepStatusLabel} tone={stepStatusTone} />
+                <IconButton
+                  accessibilityLabel={t("settings.openSettings")}
+                  icon="settings-outline"
+                  onPress={() => Linking.openSettings()}
+                  size={20}
+                  variant="plain"
+                />
+              </View>
+            }
           />
           <SettingRow
-            destructive
-            icon="trash-outline"
+            icon="volume-medium-outline"
             isLast
-            onPress={confirmReset}
-            subtitle={t("settings.resetProgressMessage")}
-            title={t("settings.resetLocalProgress")}
+            title={t("settings.unlockAudio")}
+            trailing={
+              <Switch
+                accessibilityLabel={t("settings.unlockAudioA11y")}
+                disabled={isUnlockAudioLoading}
+                onValueChange={setUnlockAudioEnabled}
+                trackColor={{
+                  false: theme.colors.trackNeutral,
+                  true: theme.colors.brandGreen
+                }}
+                value={unlockAudioEnabled}
+              />
+            }
           />
         </SettingGroup>
       </MotionView>
 
-      {/* ── Development only ── */}
-      {__DEV__ ? (
-        <>
-          <SectionHeader title={t("settings.testing")} />
-          <MotionView delay={250}>
-            <PremiumCard gap={spacing.s8} variant="inset">
-              <AppText role="caption" tone="secondary">
-                {t("settings.revenueCatEntitlement")}{" "}
-                {t("settings.configured", {
-                  configured: isRevenueCatConfigured
-                    ? t("common.yes")
-                    : t("common.notYet")
-                })}
-              </AppText>
-              <AppText role="caption" selectable tone="tertiary">
-                {revenueCatDebugInfo.apiKeySource} ·{" "}
-                {revenueCatDebugInfo.packageIds.monthly} /{" "}
-                {revenueCatDebugInfo.packageIds.yearly}
-              </AppText>
+      {/* ── 4. Redesigned Unlock Pro Panel: simple & premium ── */}
+      <SectionHeader title={t("settings.pro")} />
+      <MotionView delay={120}>
+        {isPro ? (
+          <PremiumCard gap={spacing.s12} variant="standard">
+            <View style={styles.proCardHeader}>
+              <View style={styles.proIconBadgeActive}>
+                <Ionicons
+                  color={theme.colors.brandGreenText}
+                  name="shield-checkmark"
+                  size={24}
+                />
+              </View>
+              <View style={styles.proCopy}>
+                <View style={styles.proTitleRow}>
+                  <AppText role="cardTitle">Rescue Time Pro</AppText>
+                  <StatusChip
+                    icon="shield-checkmark"
+                    label={t("common.proActive")}
+                    tone="safe"
+                  />
+                </View>
+                <AppText role="caption" tone="secondary">
+                  {downloaded} / {total} · {label}
+                </AppText>
+              </View>
+            </View>
+            {proPackStatus !== "downloaded" ? (
               <AppButton
-                icon={devProEnabled ? "lock-open" : "lock-closed"}
-                onPress={() => setDevProEnabled(!devProEnabled)}
+                icon="cloud-download-outline"
+                onPress={() => setDownloadModalVisible(true)}
+                title={proPackActionTitle}
+                variant="pro"
+              />
+            ) : (
+              <AppButton
+                icon="trash-outline"
+                onPress={clearDownloadedProAssets}
                 size="compact"
-                title={
-                  devProEnabled
-                    ? t("settings.disableMockPro")
-                    : t("settings.enableMockPro")
-                }
+                title={t("settings.proPackClear")}
                 variant="ghost"
               />
-            </PremiumCard>
-          </MotionView>
-        </>
+            )}
+            {managementURL ? (
+              <AppButton
+                onPress={() => Linking.openURL(managementURL)}
+                size="compact"
+                title={t("settings.manageSubscription")}
+                variant="ghost"
+              />
+            ) : null}
+          </PremiumCard>
+        ) : (
+          <PremiumCard gap={spacing.s16} variant="hero">
+            <View style={styles.proCardHeader}>
+              <View style={styles.proIconBadge}>
+                <Ionicons
+                  color={theme.colors.rewardAmberText}
+                  name="sparkles"
+                  size={24}
+                />
+              </View>
+              <View style={styles.proCopy}>
+                <AppText role="sectionTitle">Rescue Time Pro</AppText>
+                <AppText role="supportive" tone="secondary">
+                  {t("paywall.title")}
+                </AppText>
+              </View>
+            </View>
+            <AppButton
+              icon="sparkles"
+              onPress={() => router.push("/paywall")}
+              title={t("settings.unlockPro")}
+              variant="pro"
+            />
+            <AppButton
+              loading={isLoading}
+              onPress={restorePurchases}
+              size="compact"
+              title={t("settings.restorePurchases")}
+              variant="ghost"
+            />
+          </PremiumCard>
+        )}
+      </MotionView>
+      {error ? (
+        <AppText role="caption" selectable tone="danger">
+          {error}
+        </AppText>
       ) : null}
+
+      <ProAssetDownloadModal
+        onClose={() => setDownloadModalVisible(false)}
+        visible={downloadModalVisible}
+      />
 
       <AppText align="center" role="caption" tone="tertiary">
         {t("settings.version", {
-          version: Constants.expoConfig?.version ?? "1.0.0"
+          version: Constants.expoConfig?.version ?? "1.0.3"
         })}
       </AppText>
     </ScreenScaffold>
   );
 }
 
-function createStyles() {
+function createStyles(colors: AppColors) {
   return StyleSheet.create({
-    packHeader: {
+    proCardHeader: {
       alignItems: "center",
       flexDirection: "row",
-      gap: spacing.s8,
+      gap: spacing.s12
+    },
+    proCopy: {
+      flex: 1,
+      gap: spacing.s4
+    },
+    proIconBadge: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceAmber,
+      borderRadius: radius.control,
+      height: 48,
+      justifyContent: "center",
+      width: 48
+    },
+    proIconBadgeActive: {
+      alignItems: "center",
+      backgroundColor: colors.brandGreenFill,
+      borderRadius: radius.control,
+      height: 48,
+      justifyContent: "center",
+      width: 48
+    },
+    proTitleRow: {
+      alignItems: "center",
+      flexDirection: "row",
       justifyContent: "space-between"
     },
-    stepAction: {
-      flex: 1
-    },
-    stepActions: {
+    statusWithSettings: {
+      alignItems: "center",
       flexDirection: "row",
-      gap: spacing.s8
+      gap: spacing.s4
     }
   });
 }

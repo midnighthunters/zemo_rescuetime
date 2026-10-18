@@ -112,6 +112,7 @@ function RootLayoutShell() {
               <Stack.Screen name="index" />
               <Stack.Screen name="onboarding" />
               <Stack.Screen name="paywall" />
+              <Stack.Screen name="progress" />
               <Stack.Screen name="animal/[id]" />
               <Stack.Screen name="(tabs)" />
             </Stack>
