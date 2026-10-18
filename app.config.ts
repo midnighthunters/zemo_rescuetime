@@ -69,11 +69,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE
     ),
     revenueCatTestApiKey:
-      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ?? "",
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ??
+      "test_iFdJveHwEYHCpbIcnZKkOyKCvrc",
     revenueCatTestIosApiKey:
       process.env.EXPO_PUBLIC_REVENUECAT_TEST_IOS_API_KEY ?? "",
     revenueCatTestAndroidApiKey:
-      process.env.EXPO_PUBLIC_REVENUECAT_TEST_ANDROID_API_KEY ?? "",
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_ANDROID_API_KEY ??
+      "test_iFdJveHwEYHCpbIcnZKkOyKCvrc",
     revenueCatTestAppUserId:
       process.env.EXPO_PUBLIC_REVENUECAT_TEST_APP_USER_ID ??
       "rescue-animals-test-user",
