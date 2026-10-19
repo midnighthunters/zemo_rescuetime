@@ -33,6 +33,13 @@ class TargetAchievementService : Service(), SensorEventListener {
       return START_NOT_STICKY
     }
 
+    if (sensorManager == null) {
+      sensorManager = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    }
+    if (stepCounter == null) {
+      stepCounter = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    }
+
     val sensor = stepCounter
     val manager = sensorManager
     if (sensor == null || manager == null) {
@@ -45,6 +52,22 @@ class TargetAchievementService : Service(), SensorEventListener {
     }
 
     return START_STICKY
+  }
+
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    super.onTaskRemoved(rootIntent)
+    if (TargetAchievementStore.isEnabled(this)) {
+      val intent = Intent(applicationContext, TargetAchievementService::class.java)
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          applicationContext.startForegroundService(intent)
+        } else {
+          applicationContext.startService(intent)
+        }
+      } catch (e: Exception) {
+        android.util.Log.e("TargetAchievementService", "Failed to restart onTaskRemoved", e)
+      }
+    }
   }
 
   override fun onDestroy() {
@@ -77,7 +100,8 @@ class TargetAchievementService : Service(), SensorEventListener {
         startForeground(WATCHER_NOTIFICATION_ID, notification)
       }
       true
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+      android.util.Log.e("TargetAchievementService", "Failed to startForeground", e)
       false
     }
   }
@@ -86,7 +110,25 @@ class TargetAchievementService : Service(), SensorEventListener {
     private const val WATCHER_NOTIFICATION_ID = 58027
 
     fun applyEnabledState(context: Context, enabled: Boolean) {
-      // Foreground service disabled for Play Store compliance
+      val intent = Intent(context, TargetAchievementService::class.java)
+      if (!enabled) {
+        try {
+          context.stopService(intent)
+        } catch (e: Exception) {
+          android.util.Log.e("TargetAchievementService", "Failed to stop service", e)
+        }
+        return
+      }
+
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          context.startForegroundService(intent)
+        } else {
+          context.startService(intent)
+        }
+      } catch (e: Exception) {
+        android.util.Log.e("TargetAchievementService", "Failed to start service", e)
+      }
     }
   }
 }

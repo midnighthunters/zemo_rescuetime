@@ -877,7 +877,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
             }
           : undefined,
       dateKey: getLocalDateKey(),
-      enabled: canTrack,
+      enabled: steps.permissionStatus === "granted",
       pendingEventIds: rescueProgress.pendingUnlockEvents.map((event) => event.id),
       seenEventIds: rescueProgress.seenUnlockEventIds ?? []
     }).catch(() => {});
@@ -891,6 +891,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
     rescueProgress.claimedMiniMilestones,
     rescueProgress.pendingUnlockEvents,
     rescueProgress.rescuedAnimalIds,
+    steps.permissionStatus,
     t,
     totalStepsToday
   ]);

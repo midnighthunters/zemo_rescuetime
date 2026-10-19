@@ -29,7 +29,7 @@ object TargetAchievementStore {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val plan = JSONObject(planJson)
     val currentAnimal = plan.optJSONObject("currentAnimal")
-    val enabled = plan.optBoolean("enabled", false) && currentAnimal != null
+    val enabled = plan.optBoolean("enabled", false)
     val dateKey = plan.optString("dateKey", todayKey()).ifBlank { todayKey() }
     val currentAnimalId = currentAnimal?.optString("id").orEmpty()
     val previousAnimalId = prefs.getString(KEY_CURRENT_ANIMAL_ID, null)
@@ -91,13 +91,10 @@ object TargetAchievementStore {
       return false
     }
 
-    val planJson = prefs.getString(KEY_PLAN_JSON, null) ?: return false
-    val plan = JSONObject(planJson)
-    val currentAnimal = plan.optJSONObject("currentAnimal") ?: return false
-    val currentAnimalId = currentAnimal.optString("id")
-    if (currentAnimalId.isBlank()) {
-      return false
-    }
+    val planJson = prefs.getString(KEY_PLAN_JSON, null)
+    val plan = if (planJson != null) JSONObject(planJson) else JSONObject()
+    val currentAnimal = plan.optJSONObject("currentAnimal")
+    val currentAnimalId = currentAnimal?.optString("id").orEmpty()
 
     val dateKey = todayKey()
     val previousDate = prefs.getString(KEY_DATE, null)
@@ -124,15 +121,18 @@ object TargetAchievementStore {
       }
     }
 
-    val resolvedBaseline = baseline ?: rawSensorTotal - activeSteps
-    val resolvedDailyBaseline = dailyBaseline ?: rawSensorTotal - dailySteps
+    val resolvedBaseline = baseline ?: (rawSensorTotal - activeSteps)
+    val resolvedDailyBaseline = dailyBaseline ?: (rawSensorTotal - dailySteps)
     baseline = resolvedBaseline
     dailyBaseline = resolvedDailyBaseline
 
-    val computedActiveSteps = max(0, (rawSensorTotal - resolvedBaseline).roundToInt())
-    activeSteps = max(activeSteps, computedActiveSteps)
     val computedDailySteps = max(0, (rawSensorTotal - resolvedDailyBaseline).roundToInt())
     dailySteps = max(dailySteps, computedDailySteps)
+
+    if (currentAnimal != null && currentAnimalId.isNotBlank()) {
+      val computedActiveSteps = max(0, (rawSensorTotal - resolvedBaseline).roundToInt())
+      activeSteps = max(activeSteps, computedActiveSteps)
+    }
 
     val editor =
         prefs
@@ -145,7 +145,9 @@ object TargetAchievementStore {
             .putString(KEY_LAST_SENSOR_TOTAL, rawSensorTotal.toString())
     editor.apply()
 
-    evaluateTargets(context, plan, currentAnimal, activeSteps)
+    if (currentAnimal != null && currentAnimalId.isNotBlank()) {
+      evaluateTargets(context, plan, currentAnimal, activeSteps)
+    }
     return true
   }
 

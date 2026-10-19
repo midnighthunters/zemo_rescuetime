@@ -43,6 +43,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: [
       "ACTIVITY_RECOGNITION",
       "POST_NOTIFICATIONS",
+      "FOREGROUND_SERVICE",
+      "FOREGROUND_SERVICE_HEALTH",
+      "RECEIVE_BOOT_COMPLETED",
       "com.android.vending.BILLING"
     ]
   },

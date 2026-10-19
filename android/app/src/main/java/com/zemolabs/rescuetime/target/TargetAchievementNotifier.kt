@@ -23,8 +23,8 @@ object TargetAchievementNotifier {
     )
 
     return notificationBuilder(context, WATCHER_CHANNEL_ID)
-        .setContentTitle("Rescue Animals is watching your step targets")
-        .setContentText("You will be notified as soon as a target is reached.")
+        .setContentTitle("Rescue Time is tracking your steps")
+        .setContentText("Keeping your step progress up to date.")
         .setOngoing(true)
         .setShowWhen(false)
         .setContentIntent(createLaunchPendingIntent(context, "watcher"))
