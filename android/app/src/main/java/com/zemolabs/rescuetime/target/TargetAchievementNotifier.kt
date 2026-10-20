@@ -63,6 +63,25 @@ object TargetAchievementNotifier {
     notificationManager(context).cancel(notificationId(eventId))
   }
 
+  private fun getSmallIconRes(context: Context): Int {
+    val res = context.resources
+    val pkg = context.packageName
+
+    var id = res.getIdentifier("ic_notification", "drawable", pkg)
+    if (id != 0) return id
+
+    id = res.getIdentifier("splashscreen_logo", "drawable", pkg)
+    if (id != 0) return id
+
+    id = res.getIdentifier("ic_launcher_round", "mipmap", pkg)
+    if (id != 0) return id
+
+    id = res.getIdentifier("ic_launcher_foreground", "mipmap", pkg)
+    if (id != 0) return id
+
+    return android.R.drawable.ic_dialog_info
+  }
+
   private fun notificationBuilder(context: Context, channelId: String): Notification.Builder {
     val builder =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -72,7 +91,7 @@ object TargetAchievementNotifier {
         }
 
     return builder
-        .setSmallIcon(context.applicationInfo.icon)
+        .setSmallIcon(getSmallIconRes(context))
         .setColor(0xFF58C27D.toInt())
         .setContentIntent(createLaunchPendingIntent(context, channelId))
   }

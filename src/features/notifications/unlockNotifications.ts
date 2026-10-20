@@ -53,6 +53,7 @@ export async function configureUnlockNotifications() {
 
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
+      shouldShowAlert: true,
       priority: Notifications.AndroidNotificationPriority.HIGH,
       shouldPlaySound: true,
       shouldSetBadge: false,
@@ -134,7 +135,10 @@ export async function presentUnlockNotification(
       title: payload.title
     },
     identifier,
-    trigger: Platform.OS === "android" ? { channelId: UNLOCK_CHANNEL_ID } : null
+    trigger:
+      Platform.OS === "android"
+        ? ({ type: "channel", channelId: UNLOCK_CHANNEL_ID } as any)
+        : null
   });
 
   await saveNotificationRecords({

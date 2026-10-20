@@ -1,6 +1,12 @@
 package com.zemolabs.rescuetime.target
 
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Handler
+import android.os.Looper
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -37,10 +43,11 @@ object TargetAchievementStore {
     val animalChanged = currentAnimalId != previousAnimalId
     val dayChanged = dateKey != previousDate
     val planActiveSteps = max(0, plan.optInt("activeStepsToday", 0))
+    // Active steps towards the animal persist across days, only reset if the animal changed
     val storedActiveSteps =
-        if (!animalChanged && !dayChanged) prefs.getInt(KEY_ACTIVE_STEPS, 0) else 0
+        if (!animalChanged) prefs.getInt(KEY_ACTIVE_STEPS, 0) else 0
     val activeSteps = max(storedActiveSteps, planActiveSteps)
-    val planDailySteps = max(0, plan.optInt("stepsToday", activeSteps))
+    val planDailySteps = max(0, plan.optInt("stepsToday", 0))
     val storedDailySteps = if (!dayChanged) prefs.getInt(KEY_DAILY_STEPS, 0) else 0
     val dailySteps = max(storedDailySteps, planDailySteps)
     val claimedTargets =
@@ -105,11 +112,12 @@ object TargetAchievementStore {
     val lastSensorTotal = getNullableFloat(prefs.getString(KEY_LAST_SENSOR_TOTAL, null))
 
     if (previousDate != dateKey) {
-      activeSteps = 0
+      // Day changed: daily steps reset for the new day, but animal active steps persist!
       dailySteps = 0
-      baseline = rawSensorTotal
       dailyBaseline = rawSensorTotal
+      baseline = rawSensorTotal - activeSteps
     } else if (lastSensorTotal != null && rawSensorTotal < lastSensorTotal) {
+      // Device rebooted: re-baseline both counters against the new sensor value
       baseline = rawSensorTotal - activeSteps
       dailyBaseline = rawSensorTotal - dailySteps
     } else {
@@ -151,11 +159,61 @@ object TargetAchievementStore {
     return true
   }
 
+  fun updateFromHardwareSensor(context: Context, onComplete: () -> Unit) {
+    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    val stepCounter = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    if (sensorManager == null || stepCounter == null) {
+      onComplete()
+      return
+    }
+
+    var completed = false
+    val handler = Handler(Looper.getMainLooper())
+
+    val listener = object : SensorEventListener {
+      override fun onSensorChanged(event: SensorEvent) {
+        if (!completed) {
+          completed = true
+          val total = event.values.firstOrNull()
+          if (total != null) {
+            evaluateStepTotal(context, total)
+          }
+          try {
+            sensorManager.unregisterListener(this)
+          } catch (_: Exception) {}
+          onComplete()
+        }
+      }
+
+      override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    }
+
+    val registered = try {
+      sensorManager.registerListener(listener, stepCounter, SensorManager.SENSOR_DELAY_FASTEST)
+    } catch (_: Exception) {
+      false
+    }
+
+    if (!registered) {
+      onComplete()
+    } else {
+      handler.postDelayed({
+        if (!completed) {
+          completed = true
+          try {
+            sensorManager.unregisterListener(listener)
+          } catch (_: Exception) {}
+          onComplete()
+        }
+      }, 350)
+    }
+  }
+
   @Synchronized
   fun getStepSnapshotJson(context: Context): String {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val activeSteps = max(0, prefs.getInt(KEY_ACTIVE_STEPS, 0))
-    val dailySteps = max(activeSteps, prefs.getInt(KEY_DAILY_STEPS, activeSteps))
+    val dailySteps = max(0, prefs.getInt(KEY_DAILY_STEPS, 0))
 
     return JSONObject()
         .put("dateKey", prefs.getString(KEY_DATE, todayKey()) ?: todayKey())
@@ -226,17 +284,6 @@ object TargetAchievementStore {
         continue
       }
 
-      val notificationTitle =
-          target.optString("notificationTitle").ifBlank { "${target.optString("title")} unlocked" }
-      val notificationBody =
-          target.optString("notificationBody").ifBlank {
-            String.format(
-                Locale.US,
-                "%s reached %,d steps. Tap to view the unlock card.",
-                animalName,
-                stepTarget
-            )
-          }
       val event =
           JSONObject()
               .put("id", eventId)

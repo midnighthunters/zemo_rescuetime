@@ -503,7 +503,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
                 ...merged,
                 lastKnownDate: today,
                 stepBaselineToday: 0,
-                activeJourneyStepsToday: 0
+                activeJourneyStepsToday: merged.activeJourneyStepsToday ?? 0
               };
 
         const [nativeEvents, nativeStepSnapshot] = await Promise.all([
@@ -592,23 +592,25 @@ export function RescueProvider({ children }: PropsWithChildren) {
       ? liveSessionTotalStepsToday
       : rawStepsToday;
   const totalStepsToday = Math.max(measuredStepsToday, recordedStepsToday);
-  const rawActiveStepsToday = Math.max(
+  // Active rescue steps towards the current animal persist across days until rescued
+  const restoredActiveSteps = Math.max(
     0,
-    rawStepsToday - rescueProgress.stepBaselineToday
+    rescueProgress.activeJourneyStepsToday ?? 0
   );
+  const rawActiveStepsToday =
+    restoredActiveSteps +
+    Math.max(
+      0,
+      rawStepsToday - (progressIsForToday ? rescueProgress.stepBaselineToday : 0)
+    );
   const liveSessionActiveStepsToday =
-    progressIsForToday
-      ? liveSessionOffsetRef.current +
-        Math.max(0, rawStepsToday - liveSessionBaselineRef.current)
-      : 0;
-  const restoredActiveStepsToday = progressIsForToday
-    ? rescueProgress.activeJourneyStepsToday
-    : 0;
+    liveSessionOffsetRef.current +
+    Math.max(0, rawStepsToday - liveSessionBaselineRef.current);
 
   const effectiveStepsToday =
     steps.countingMode === "live-session"
-      ? Math.max(liveSessionActiveStepsToday, restoredActiveStepsToday)
-      : Math.max(rawActiveStepsToday, restoredActiveStepsToday);
+      ? Math.max(liveSessionActiveStepsToday, restoredActiveSteps)
+      : Math.max(rawActiveStepsToday, restoredActiveSteps);
 
   useEffect(() => {
     rawStepsTodayRef.current = rawStepsToday;
@@ -704,6 +706,21 @@ export function RescueProvider({ children }: PropsWithChildren) {
 
     if (!knownPendingUnlockEventIdsRef.current) {
       knownPendingUnlockEventIdsRef.current = currentIds;
+      const seenSet = new Set(rescueProgress.seenUnlockEventIds ?? []);
+      validEvents.forEach((event) => {
+        if (event.type === "rescue" && !seenSet.has(event.id)) {
+          const payload = createUnlockNotificationPayload(
+            event,
+            animals,
+            milestones,
+            t,
+            formatLocalizedNumber
+          );
+          if (payload) {
+            void presentUnlockNotification(payload).catch(() => {});
+          }
+        }
+      });
       return;
     }
 
@@ -797,8 +814,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
       const today = getLocalDateKey();
       const rawSteps = rawStepsTodayRef.current;
       liveSessionBaselineRef.current = rawSteps;
-      liveSessionOffsetRef.current =
-        next.lastKnownDate === today ? next.activeJourneyStepsToday : 0;
+      liveSessionOffsetRef.current = next.activeJourneyStepsToday;
       liveDailyBaselineRef.current = rawSteps;
       liveDailyOffsetRef.current =
         next.lastKnownDate === today ? next.dailyStepHistory[today] ?? 0 : 0;
@@ -1233,13 +1249,13 @@ export function RescueProvider({ children }: PropsWithChildren) {
       const isSameRecordedDay = current.lastKnownDate === today;
       if (!isSameRecordedDay) {
         liveSessionBaselineRef.current = rawStepsToday;
-        liveSessionOffsetRef.current = 0;
+        liveSessionOffsetRef.current = effectiveStepsToday;
       }
 
       const nextStepBaseline = isSameRecordedDay ? current.stepBaselineToday : 0;
       const nextDailySteps = isSameRecordedDay
         ? totalStepsToday
-        : rawStepsToday;
+        : (steps.countingMode === "live-session" ? 0 : rawStepsToday);
       const currentRecordedToday = current.dailyStepHistory[today] ?? 0;
       const nextRecordedToday = Math.max(currentRecordedToday, nextDailySteps);
 
@@ -1252,9 +1268,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
         ...current,
         lastKnownDate: today,
         stepBaselineToday: nextStepBaseline,
-        activeJourneyStepsToday: isSameRecordedDay
-          ? Math.max(current.activeJourneyStepsToday ?? 0, effectiveStepsToday)
-          : 0,
+        activeJourneyStepsToday: effectiveStepsToday,
         dailyStepHistory: {
           ...current.dailyStepHistory,
           [today]: nextRecordedToday

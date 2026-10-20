@@ -56,18 +56,8 @@ class TargetAchievementService : Service(), SensorEventListener {
 
   override fun onTaskRemoved(rootIntent: Intent?) {
     super.onTaskRemoved(rootIntent)
-    if (TargetAchievementStore.isEnabled(this)) {
-      val intent = Intent(applicationContext, TargetAchievementService::class.java)
-      try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          applicationContext.startForegroundService(intent)
-        } else {
-          applicationContext.startService(intent)
-        }
-      } catch (e: Exception) {
-        android.util.Log.e("TargetAchievementService", "Failed to restart onTaskRemoved", e)
-      }
-    }
+    // Foreground service runs with android:stopWithTask="false" and START_STICKY.
+    // Do not call startForegroundService from background context on Android 12+.
   }
 
   override fun onDestroy() {

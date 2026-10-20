@@ -24,7 +24,13 @@ class TargetAchievementModule(
   @ReactMethod
   fun getNativeEvents(promise: Promise) {
     try {
-      promise.resolve(TargetAchievementStore.getNativeEventsJson(reactContext))
+      TargetAchievementStore.updateFromHardwareSensor(reactContext) {
+        try {
+          promise.resolve(TargetAchievementStore.getNativeEventsJson(reactContext))
+        } catch (error: Exception) {
+          promise.reject("TARGET_ACHIEVEMENT_EVENTS_FAILED", error)
+        }
+      }
     } catch (error: Exception) {
       promise.reject("TARGET_ACHIEVEMENT_EVENTS_FAILED", error)
     }
@@ -33,7 +39,13 @@ class TargetAchievementModule(
   @ReactMethod
   fun getStepSnapshot(promise: Promise) {
     try {
-      promise.resolve(TargetAchievementStore.getStepSnapshotJson(reactContext))
+      TargetAchievementStore.updateFromHardwareSensor(reactContext) {
+        try {
+          promise.resolve(TargetAchievementStore.getStepSnapshotJson(reactContext))
+        } catch (error: Exception) {
+          promise.reject("TARGET_ACHIEVEMENT_STEP_SNAPSHOT_FAILED", error)
+        }
+      }
     } catch (error: Exception) {
       promise.reject("TARGET_ACHIEVEMENT_STEP_SNAPSHOT_FAILED", error)
     }

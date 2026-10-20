@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
 
 import { AppButton } from "../../src/components/AppButton";
@@ -15,7 +15,6 @@ import { StepHeroCard } from "../../src/components/StepHeroCard";
 import type { RewardImage } from "../../src/data/types";
 import { FREE_ANIMAL_COUNT } from "../../src/features/animals/animalAccess";
 import { shareAnimalUnlock } from "../../src/features/animals/shareAnimal";
-import { dismissUnlockNotification } from "../../src/features/notifications/unlockNotifications";
 import { useLanguage } from "../../src/i18n/LanguageProvider";
 import {
   getAnimalImageSource,
@@ -112,27 +111,12 @@ export default function HomeScreen() {
     [careEvents, milestones]
   );
 
-  const visibleUnlockEventId = lastCareEvent?.id ?? lastRescueEvent?.id;
-
   const hasPermissionIssue =
     !steps.isLoading &&
     Boolean(
       steps.error || !steps.isAvailable || steps.permissionStatus !== "granted"
     );
   const needsPermissionRequest = steps.permissionStatus !== "granted";
-
-  useEffect(() => {
-    if (!visibleUnlockEventId) {
-      return undefined;
-    }
-
-    void dismissUnlockNotification(visibleUnlockEventId).catch(() => {});
-    const retryTimer = setTimeout(() => {
-      void dismissUnlockNotification(visibleUnlockEventId).catch(() => {});
-    }, 750);
-
-    return () => clearTimeout(retryTimer);
-  }, [visibleUnlockEventId]);
 
   // After all free animals are rescued, non-Pro users see the paywall — but only once the
   // rescue celebration has finished closing.
