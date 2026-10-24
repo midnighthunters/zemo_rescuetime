@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import { Modal, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useRemoteAssetDownloadStore } from "../../../services/assets/remoteAssetDownloadStore";

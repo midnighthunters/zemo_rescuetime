@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo, type ComponentProps, type ReactNode } from "react";
 import {
   Pressable,

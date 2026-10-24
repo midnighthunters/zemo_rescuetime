@@ -1,6 +1,6 @@
 import { Audio } from "expo-av";
 
-const unlockChime = require("../../../assets/audio/unlock-chime.wav");
+const unlockChime = require("../../../assets/audio/unlock-chime.mp3");
 
 export type UnlockChimeSound = Audio.Sound;
 

@@ -55,3 +55,4 @@ generation_tracker.json
 
 dist-*/
 android/.kotlin/
+data_backup/

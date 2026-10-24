@@ -2,6 +2,11 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Only bundle Ionicons.ttf from react-native-vector-icons / @expo/vector-icons
+project.ext.vectoricons = [
+    iconFontNames: [ 'Ionicons.ttf' ]
+]
+
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 /**
@@ -140,6 +145,16 @@ android {
             useLegacyPackaging enableLegacyPackaging.toBoolean()
         }
     }
+    def enableSeparateBuildPerCPUArchitecture = (findProperty('android.enableSeparateBuildPerCPUArchitecture') ?: 'false').toBoolean()
+    splits {
+        abi {
+            reset()
+            enable enableSeparateBuildPerCPUArchitecture
+            universalApk false
+            include (*(findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a').split(','))
+        }
+    }
+
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
