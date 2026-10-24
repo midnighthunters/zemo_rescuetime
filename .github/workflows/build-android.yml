@@ -73,47 +73,51 @@ jobs:
         shell: bash
         run: chmod +x android/gradlew
 
-      - name: Build Android APK (${{ env.BUILD_VARIANT }})
+      - name: Build Android Artifacts (${{ env.BUILD_VARIANT }})
         shell: bash
         run: |
           set -euo pipefail
           if [ "${BUILD_VARIANT}" = "standaloneDebug" ]; then
             GRADLE_TASK=":app:assembleStandaloneDebug"
           else
-            GRADLE_TASK=":app:assembleRelease"
+            GRADLE_TASK=":app:assembleRelease :app:bundleRelease"
           fi
           echo "Starting Gradle task: ${GRADLE_TASK}"
           cd android
           ./gradlew ${GRADLE_TASK} --no-daemon --stacktrace
 
-      - name: Prepare APK artifact for download
+      - name: Prepare build artifacts for download
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist-apk
-          APK_FILE=$(find android/app/build/outputs/apk -type f -name "*.apk" | head -n 1)
-          if [ -z "${APK_FILE}" ]; then
-            echo "::error::No APK file found in android/app/build/outputs/apk!"
-            exit 1
+          APK_FILE=$(find android/app/build/outputs/apk -type f -name "*.apk" | head -n 1 || true)
+          if [ -n "${APK_FILE}" ]; then
+            OUTPUT_APK="dist-apk/RescueAnimalsSteps-${BUILD_VARIANT}.apk"
+            cp "${APK_FILE}" "${OUTPUT_APK}"
+            FILE_SIZE=$(ls -lh "${OUTPUT_APK}" | awk '{print $5}')
+            SHA256=$(sha256sum "${OUTPUT_APK}" | awk '{print $1}')
+            echo "APK successfully built: ${OUTPUT_APK} (${FILE_SIZE})"
+            echo "SHA256 checksum: ${SHA256}"
+            echo "OUTPUT_APK_NAME=RescueAnimalsSteps-${BUILD_VARIANT}.apk" >> $GITHUB_ENV
+            echo "APK_SIZE=${FILE_SIZE}" >> $GITHUB_ENV
+            echo "APK_SHA256=${SHA256}" >> $GITHUB_ENV
           fi
-          OUTPUT_APK="dist-apk/RescueAnimalsSteps-${BUILD_VARIANT}.apk"
-          cp "${APK_FILE}" "${OUTPUT_APK}"
-          
-          FILE_SIZE=$(ls -lh "${OUTPUT_APK}" | awk '{print $5}')
-          SHA256=$(sha256sum "${OUTPUT_APK}" | awk '{print $1}')
-          
-          echo "APK successfully built: ${OUTPUT_APK} (${FILE_SIZE})"
-          echo "SHA256 checksum: ${SHA256}"
-          
-          echo "OUTPUT_APK_NAME=RescueAnimalsSteps-${BUILD_VARIANT}.apk" >> $GITHUB_ENV
-          echo "APK_SIZE=${FILE_SIZE}" >> $GITHUB_ENV
-          echo "APK_SHA256=${SHA256}" >> $GITHUB_ENV
+          AAB_FILE=$(find android/app/build/outputs/bundle -type f -name "*.aab" | head -n 1 || true)
+          if [ -n "${AAB_FILE}" ]; then
+            OUTPUT_AAB="dist-apk/RescueAnimalsSteps-${BUILD_VARIANT}.aab"
+            cp "${AAB_FILE}" "${OUTPUT_AAB}"
+            AAB_SIZE=$(ls -lh "${OUTPUT_AAB}" | awk '{print $5}')
+            echo "AAB successfully built: ${OUTPUT_AAB} (${AAB_SIZE})"
+            echo "OUTPUT_AAB_NAME=RescueAnimalsSteps-${BUILD_VARIANT}.aab" >> $GITHUB_ENV
+            echo "AAB_SIZE=${AAB_SIZE}" >> $GITHUB_ENV
+          fi
 
-      - name: Upload APK artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: RescueAnimalsSteps-${{ env.BUILD_VARIANT }}-APK
-          path: dist-apk/*.apk
+          name: RescueAnimalsSteps-${{ env.BUILD_VARIANT }}-Artifacts
+          path: dist-apk/*
           if-no-files-found: error
           retention-days: 30
 
