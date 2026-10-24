@@ -61,8 +61,16 @@ export default function PaywallScreen() {
   ];
 
   const handlePurchase = async () => {
+    if (!selectedPlan?.isAvailable) {
+      Alert.alert(
+        "Subscription Connecting",
+        "Google Play Store is currently connecting or verifying subscription details. Please check your internet connection, confirm you are signed into Google Play, and try again."
+      );
+      return;
+    }
+
     try {
-      const purchased = await purchasePro(selectedPlan?.id ?? "yearly");
+      const purchased = await purchasePro(selectedPlan.id);
       if (purchased) {
         Alert.alert(
           "Welcome to Pro!",
@@ -153,20 +161,36 @@ export default function PaywallScreen() {
           <AppText role="cardTitle">{t("paywall.success")}</AppText>
         </PremiumCard>
       ) : (
-        <MotionView delay={110} style={styles.planGrid}>
-          {plans.map((plan) => (
-            <PlanOption
-              isLoading={isLoading}
-              isSelected={plan.id === selectedPlan?.id}
-              key={plan.id}
-              onSelect={() => setSelectedPlanId(plan.id)}
-              plan={plan}
-            />
-          ))}
-        </MotionView>
+        <>
+          <MotionView delay={110} style={styles.planGrid}>
+            {plans.map((plan) => (
+              <PlanOption
+                isLoading={isLoading}
+                isSelected={plan.id === selectedPlan?.id}
+                key={plan.id}
+                onSelect={() => setSelectedPlanId(plan.id)}
+                plan={plan}
+              />
+            ))}
+          </MotionView>
+          {!isLoading && plans.every((plan) => !plan.isAvailable) ? (
+            <PremiumCard gap={spacing.s8} variant="warning">
+              <StatusChip
+                icon="alert-circle"
+                label={t("paywall.plansUnavailableTitle") || "Store Connecting"}
+                tone="warning"
+              />
+              <AppText role="supportive" tone="secondary">
+                {error ||
+                  t("paywall.plansUnavailableBody") ||
+                  "Plans can't be loaded right now. Please try again later."}
+              </AppText>
+            </PremiumCard>
+          ) : null}
+        </>
       )}
 
-      {error ? (
+      {error && plans.some((p) => p.isAvailable) ? (
         <AppText align="center" role="caption" selectable tone="danger">
           {error}
         </AppText>
@@ -175,16 +199,18 @@ export default function PaywallScreen() {
       {/* ── Actions ── */}
       <View style={styles.actions}>
         <AppButton
-          disabled={isPro}
+          disabled={isPro || (selectedPlan ? !selectedPlan.isAvailable : false)}
           icon="sparkles"
           loading={isLoading}
           onPress={handlePurchase}
           title={
             isPro
               ? t("common.proActive")
-              : selectedPlan?.id === "monthly"
-                ? `Start Monthly — ${selectedPlan.price} / mo`
-                : `Start Yearly — ${selectedPlan?.price ?? "$20"} / yr (Save 44%)`
+              : !selectedPlan?.isAvailable
+                ? t("paywall.planUnavailable") || "Currently unavailable"
+                : selectedPlan?.id === "monthly"
+                  ? `Start Monthly — ${selectedPlan.price} / mo`
+                  : `Start Yearly — ${selectedPlan?.price ?? "$20"} / yr (Save 44%)`
           }
           variant="pro"
         />

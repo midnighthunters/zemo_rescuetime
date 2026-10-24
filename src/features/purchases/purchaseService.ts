@@ -102,21 +102,70 @@ let configured = false;
 let configuredApiKey: string | null = null;
 let lastConfigurationError: string | undefined;
 
+const DEFAULT_CONFIG: Record<string, string> = {
+  revenueCatEntitlementId: "premium_rescuetime",
+  revenueCatOfferingId: "rescuetime_offering",
+  revenueCatIosApiKey: "appl_KauOSwVliypKkwsJQglgEnzvstg",
+  revenueCatAndroidApiKey: "goog_khTLNFYCVMZWcUjZGRBduZPJmnF",
+  revenueCatTestApiKey: "test_iFdJveHwEYHCpbIcnZKkOyKCvrc",
+  revenueCatTestIosApiKey: "",
+  revenueCatTestAndroidApiKey: "test_iFdJveHwEYHCpbIcnZKkOyKCvrc",
+  revenueCatTestAppUserId: "rescue-animals-test-user",
+  revenueCatMonthlyPackageId: "$rc_monthly",
+  revenueCatYearlyPackageId: "$rc_annual",
+  revenueCatIosMonthlyProductId: "monthly_subscription_rescuetime",
+  revenueCatIosYearlyProductId: "annual_rescuetime_sub",
+  revenueCatAndroidMonthlyProductId: "rescue_animals_pro_monthly",
+  revenueCatAndroidYearlyProductId: "rescue_animals_pro_yearly"
+};
+
+const ENV_KEY_MAP: Record<string, string | undefined> = {
+  revenueCatEntitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID,
+  revenueCatOfferingId: process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID,
+  revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+  revenueCatAndroidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
+  revenueCatUseTestStore: process.env.EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE,
+  revenueCatTestApiKey: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
+  revenueCatTestIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_TEST_IOS_API_KEY,
+  revenueCatTestAndroidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_TEST_ANDROID_API_KEY,
+  revenueCatTestAppUserId: process.env.EXPO_PUBLIC_REVENUECAT_TEST_APP_USER_ID,
+  revenueCatMonthlyPackageId: process.env.EXPO_PUBLIC_REVENUECAT_MONTHLY_PACKAGE_ID,
+  revenueCatYearlyPackageId: process.env.EXPO_PUBLIC_REVENUECAT_YEARLY_PACKAGE_ID,
+  revenueCatIosMonthlyProductId: process.env.EXPO_PUBLIC_REVENUECAT_IOS_MONTHLY_PRODUCT_ID,
+  revenueCatIosYearlyProductId: process.env.EXPO_PUBLIC_REVENUECAT_IOS_YEARLY_PRODUCT_ID,
+  revenueCatAndroidMonthlyProductId: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_MONTHLY_PRODUCT_ID,
+  revenueCatAndroidYearlyProductId: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_YEARLY_PRODUCT_ID
+};
+
 function getExtra() {
   return (Constants.expoConfig?.extra ?? {}) as ExtraConfig;
 }
 
 function getExtraString(key: string, fallback = "") {
+  const envVal = ENV_KEY_MAP[key];
+  if (typeof envVal === "string" && envVal.trim()) {
+    return envVal.trim();
+  }
+
   const value = getExtra()[key];
 
-  if (typeof value === "string") {
+  if (typeof value === "string" && value.trim()) {
     return value.trim();
+  }
+
+  if (DEFAULT_CONFIG[key]) {
+    return DEFAULT_CONFIG[key];
   }
 
   return fallback;
 }
 
 function getExtraBoolean(key: string) {
+  const envVal = ENV_KEY_MAP[key];
+  if (typeof envVal === "string") {
+    return envVal.toLowerCase() === "true";
+  }
+
   const value = getExtra()[key];
 
   if (typeof value === "boolean") {
@@ -245,7 +294,11 @@ function loadPurchasesModule() {
 }
 
 function hasProEntitlement(customerInfo: CustomerInfo) {
-  return Boolean(customerInfo.entitlements.active[ENTITLEMENT_PRO]);
+  return Boolean(
+    customerInfo.entitlements.active[ENTITLEMENT_PRO] ||
+    customerInfo.entitlements.active["premium_rescuetime"] ||
+    customerInfo.entitlements.active["pro"]
+  );
 }
 
 function getPlanIdFromProductId(productId?: string | null) {
@@ -314,6 +367,10 @@ function findPackageForPlan(
   }
 
   const packages = offering.availablePackages ?? [];
+  if (packages.length === 0) {
+    return null;
+  }
+
   const packageId = getPackageId(planId);
   const productIds = getProductIdsForPlan(planId);
 
@@ -324,11 +381,25 @@ function findPackageForPlan(
         (id) =>
           candidate.product.identifier === id ||
           candidate.product.identifier.startsWith(id + ":") ||
+          id.startsWith(candidate.product.identifier + ":") ||
           candidate.identifier === id
       )
     ) ??
     getPlanShortcut(offering, planId) ??
     packages.find((candidate) => candidate.packageType === getPackageType(planId)) ??
+    packages.find((candidate) => {
+      const lowerId = candidate.identifier.toLowerCase();
+      const lowerProd = candidate.product.identifier.toLowerCase();
+      if (planId === "yearly") {
+        return (
+          lowerId.includes("annual") ||
+          lowerId.includes("year") ||
+          lowerProd.includes("annual") ||
+          lowerProd.includes("year")
+        );
+      }
+      return lowerId.includes("month") || lowerProd.includes("month");
+    }) ??
     null
   );
 }
@@ -352,12 +423,13 @@ function buildPlan(
   purchasePackage: PurchasesPackage | null
 ): RevenueCatPlan {
   const plan = PLAN_DETAILS[planId];
+  const isAvailable = Boolean(purchasePackage);
 
   return {
     badge: planId === "yearly" ? "Save 44%" : undefined,
     detail: getPackageDetail(planId, purchasePackage),
     id: planId,
-    isAvailable: true,
+    isAvailable,
     packageId: purchasePackage?.identifier ?? getPackageId(planId),
     periodLabel: plan.periodLabel,
     price: purchasePackage?.product.priceString ?? plan.fallbackPrice,
@@ -389,7 +461,38 @@ async function getCurrentOffering() {
     getExtraString("revenueCatOfferingId", "rescuetime_offering") ||
     "rescuetime_offering";
 
-  return offerings.all[offeringId] ?? offerings.all["rescuetime_offering"] ?? offerings.current ?? null;
+  // 1. Direct match with available packages
+  const targetOffering = offerings.all[offeringId] ?? offerings.all["rescuetime_offering"];
+  if (targetOffering && (targetOffering.availablePackages?.length ?? 0) > 0) {
+    return targetOffering;
+  }
+
+  // 2. Case-insensitive / substring match in offerings.all with packages
+  const matchedOffering = Object.values(offerings.all ?? {}).find(
+    (o) =>
+      (o.identifier.toLowerCase() === offeringId.toLowerCase() ||
+        o.identifier.toLowerCase().includes("rescuetime")) &&
+      (o.availablePackages?.length ?? 0) > 0
+  );
+  if (matchedOffering) {
+    return matchedOffering;
+  }
+
+  // 3. Current offering if it has available packages
+  if (offerings.current && (offerings.current.availablePackages?.length ?? 0) > 0) {
+    return offerings.current;
+  }
+
+  // 4. Any offering in offerings.all with available packages
+  const anyOffering = Object.values(offerings.all ?? {}).find(
+    (o) => (o.availablePackages?.length ?? 0) > 0
+  );
+  if (anyOffering) {
+    return anyOffering;
+  }
+
+  // 5. Fallback to target offering or current even if packages are empty
+  return targetOffering ?? offerings.current ?? null;
 }
 
 export function getRevenueCatDebugInfo(): RevenueCatDebugInfo {
