@@ -52,3 +52,6 @@ progress-*.png
 *- Copy/
 * - Copy/
 generation_tracker.json
+
+dist-*/
+android/.kotlin/
