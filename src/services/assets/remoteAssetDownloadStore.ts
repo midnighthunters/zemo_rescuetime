@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import * as FileSystem from "expo-file-system/legacy";
 import { documentDirectory } from "expo-file-system/legacy";
-import { REMOTE_ASSET_CACHE_DIR } from "../../config/remoteAssets";
+import { REMOTE_ASSET_CACHE_DIR, isRemoteAssetHostConfigured } from "../../config/remoteAssets";
 import { PRO_UNLOCK_REMOTE_ASSETS } from "./remoteAssetManifest";
 import { getRemoteAssetUrlForAsset, getRemoteAssetFileUri } from "./remoteAssetResolver";
 import { hasInternetConnection } from "./remoteAssetNetwork";
@@ -123,6 +123,7 @@ export const useRemoteAssetDownloadStore = create<RemoteAssetDownloadState>((set
     },
 
     markProPackAvailable: () => {
+      if (!isRemoteAssetHostConfigured()) return;
       const currentStatus = get().proPackStatus;
       if (currentStatus === "not_available") {
         set({ proPackStatus: "available" });
@@ -206,6 +207,15 @@ export const useRemoteAssetDownloadStore = create<RemoteAssetDownloadState>((set
     downloadProAssets: async () => {
       if (!useSubscriptionStore.getState().isPro) {
         set({ lastError: "Pro is required to download these assets." });
+        return;
+      }
+
+      if (!isRemoteAssetHostConfigured()) {
+        set({
+          proPackStatus: "failed",
+          isDownloading: false,
+          lastError: "Remote asset server is not configured.",
+        });
         return;
       }
 

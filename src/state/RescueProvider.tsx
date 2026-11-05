@@ -145,6 +145,7 @@ function createDefaultProgress(animals: Animal[]): RescueProgress {
     rescuedAnimalIds: [],
     currentAnimalId: animals[0]?.id ?? "",
     stepBaselineToday: 0,
+    activeJourneyCarriedOverSteps: 0,
     claimedMiniMilestones: {},
     pendingUnlockEvents: [],
     seenUnlockEventIds: [],
@@ -186,10 +187,18 @@ function mergeProgress(saved: RescueProgress | null, animals: Animal[]) {
     : undefined;
 
   const today = getLocalDateKey();
+  const isSameDay = saved.lastKnownDate === today;
   const savedActiveJourneySteps =
     typeof saved.activeJourneyStepsToday === "number"
       ? saved.activeJourneyStepsToday
       : saved.dailyStepHistory?.[today] ?? 0;
+
+  const carriedOverSteps =
+    typeof saved.activeJourneyCarriedOverSteps === "number"
+      ? saved.activeJourneyCarriedOverSteps
+      : !isSameDay
+        ? savedActiveJourneySteps
+        : 0;
 
   return {
     ...fallback,
@@ -197,12 +206,13 @@ function mergeProgress(saved: RescueProgress | null, animals: Animal[]) {
     rescuedAnimalIds,
     currentAnimalId,
     focusedUnlockEventId,
-    stepBaselineToday: Math.max(0, saved.stepBaselineToday ?? 0),
+    stepBaselineToday: Math.max(0, isSameDay ? (saved.stepBaselineToday ?? 0) : 0),
+    activeJourneyCarriedOverSteps: Math.max(0, carriedOverSteps),
     claimedMiniMilestones: saved.claimedMiniMilestones ?? {},
     pendingUnlockEvents,
     seenUnlockEventIds,
     rescuedDates: saved.rescuedDates ?? {},
-    lastKnownDate: saved.lastKnownDate ?? getLocalDateKey(),
+    lastKnownDate: isSameDay ? (saved.lastKnownDate ?? today) : today,
     activeJourneyStepsToday: Math.max(0, savedActiveJourneySteps),
     dailyStepHistory: saved.dailyStepHistory ?? {}
   };
@@ -360,6 +370,8 @@ function mergeNativeUnlockEvents(
 
     return {
       ...current,
+      activeJourneyCarriedOverSteps:
+        event.type === "rescue" ? 0 : (current.activeJourneyCarriedOverSteps ?? 0),
       activeJourneyStepsToday:
         event.type === "rescue" ? 0 : current.activeJourneyStepsToday,
       claimedMiniMilestones: nextClaimed,
@@ -503,6 +515,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
                 ...merged,
                 lastKnownDate: today,
                 stepBaselineToday: 0,
+                activeJourneyCarriedOverSteps: merged.activeJourneyStepsToday ?? 0,
                 activeJourneyStepsToday: merged.activeJourneyStepsToday ?? 0
               };
 
@@ -593,24 +606,22 @@ export function RescueProvider({ children }: PropsWithChildren) {
       : rawStepsToday;
   const totalStepsToday = Math.max(measuredStepsToday, recordedStepsToday);
   // Active rescue steps towards the current animal persist across days until rescued
-  const restoredActiveSteps = Math.max(
+  const carriedOverSteps = progressIsForToday
+    ? Math.max(0, rescueProgress.activeJourneyCarriedOverSteps ?? 0)
+    : Math.max(0, rescueProgress.activeJourneyStepsToday ?? 0);
+  const stepsTodayTowardsAnimal = Math.max(
     0,
-    rescueProgress.activeJourneyStepsToday ?? 0
+    rawStepsToday - (progressIsForToday ? rescueProgress.stepBaselineToday : 0)
   );
-  const rawActiveStepsToday =
-    restoredActiveSteps +
-    Math.max(
-      0,
-      rawStepsToday - (progressIsForToday ? rescueProgress.stepBaselineToday : 0)
-    );
+  const rawActiveStepsToday = carriedOverSteps + stepsTodayTowardsAnimal;
   const liveSessionActiveStepsToday =
     liveSessionOffsetRef.current +
     Math.max(0, rawStepsToday - liveSessionBaselineRef.current);
 
   const effectiveStepsToday =
     steps.countingMode === "live-session"
-      ? Math.max(liveSessionActiveStepsToday, restoredActiveSteps)
-      : Math.max(rawActiveStepsToday, restoredActiveSteps);
+      ? Math.max(liveSessionActiveStepsToday, carriedOverSteps)
+      : rawActiveStepsToday;
 
   useEffect(() => {
     rawStepsTodayRef.current = rawStepsToday;
@@ -841,11 +852,30 @@ export function RescueProvider({ children }: PropsWithChildren) {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         void importNativeProgress();
+      } else if (state === "background" || state === "inactive") {
+        const current = rescueProgressRef.current;
+        const today = getLocalDateKey();
+        const currentRecordedToday = current.dailyStepHistory[today] ?? 0;
+        const flushTotal = Math.max(currentRecordedToday, totalStepsToday);
+        if (
+          flushTotal !== currentRecordedToday ||
+          effectiveStepsToday !== (current.activeJourneyStepsToday ?? 0)
+        ) {
+          void persistProgress((latest) => ({
+            ...latest,
+            lastKnownDate: today,
+            activeJourneyStepsToday: effectiveStepsToday,
+            dailyStepHistory: {
+              ...latest.dailyStepHistory,
+              [today]: flushTotal
+            }
+          }));
+        }
       }
     });
 
     return () => subscription.remove();
-  }, [importNativeProgress, isLoading]);
+  }, [effectiveStepsToday, importNativeProgress, isLoading, persistProgress, totalStepsToday]);
 
   useEffect(() => {
     if (isLoading) {
@@ -1069,6 +1099,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
         rescuedAnimalIds,
         stepBaselineToday:
           rawStepsToday,
+        activeJourneyCarriedOverSteps: 0,
         activeJourneyStepsToday: 0,
         dailyStepHistory: {
           ...rescueProgress.dailyStepHistory,
@@ -1168,12 +1199,21 @@ export function RescueProvider({ children }: PropsWithChildren) {
         liveDailyOffsetRef.current = storedStepsToday;
       }
 
+      const nextRescuedIds = shouldRescue
+        ? (current.rescuedAnimalIds.includes(currentAnimal.id)
+            ? current.rescuedAnimalIds
+            : [...current.rescuedAnimalIds, currentAnimal.id])
+        : current.rescuedAnimalIds;
+
       return {
         ...current,
         stepBaselineToday:
           shouldRescue
             ? rawStepsToday
             : current.stepBaselineToday,
+        activeJourneyCarriedOverSteps: shouldRescue
+          ? 0
+          : (current.activeJourneyCarriedOverSteps ?? 0),
         activeJourneyStepsToday: shouldRescue
           ? 0
           : Math.max(current.activeJourneyStepsToday ?? 0, effectiveStepsToday),
@@ -1190,7 +1230,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
             ...newlyCompletedTargets.map((target) => target.stepTarget)
           ].sort((a, b) => a - b)
         },
-        rescuedAnimalIds,
+        rescuedAnimalIds: nextRescuedIds,
         rescuedDates: shouldRescue
           ? {
               ...current.rescuedDates,
@@ -1198,7 +1238,7 @@ export function RescueProvider({ children }: PropsWithChildren) {
             }
           : current.rescuedDates,
         currentAnimalId: shouldRescue
-          ? nextUnrescuedAnimalId(animals, rescuedAnimalIds)
+          ? nextUnrescuedAnimalId(animals, nextRescuedIds)
           : current.currentAnimalId,
         pendingUnlockEvents: appendPendingUnlockEvents(
           current.pendingUnlockEvents,
@@ -1264,10 +1304,15 @@ export function RescueProvider({ children }: PropsWithChildren) {
         liveDailyOffsetRef.current = nextRecordedToday;
       }
 
+      const nextCarriedOver = isSameRecordedDay
+        ? (current.activeJourneyCarriedOverSteps ?? 0)
+        : (current.activeJourneyStepsToday ?? 0);
+
       return {
         ...current,
         lastKnownDate: today,
         stepBaselineToday: nextStepBaseline,
+        activeJourneyCarriedOverSteps: nextCarriedOver,
         activeJourneyStepsToday: effectiveStepsToday,
         dailyStepHistory: {
           ...current.dailyStepHistory,

@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import { Modal, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useRemoteAssetDownloadStore } from "../../../services/assets/remoteAssetDownloadStore";
+import { isRemoteAssetHostConfigured } from "../../../config/remoteAssets";
 import { useSubscriptionStore } from "../../../store/subscriptionStore";
 import { useAppTheme } from "../../../theme/colors";
 import { AppButton } from "../../../components/AppButton";
@@ -36,7 +37,8 @@ export const ProAssetDownloadModal: React.FC<ProAssetDownloadModalProps> = ({
   const isModalVisible =
     visible !== undefined
       ? visible
-      : isPro &&
+      : isRemoteAssetHostConfigured() &&
+        isPro &&
         proPackStatus !== "downloaded" &&
         proPackStatus !== "not_available" &&
         (!hasPromptedForDownload || isDownloading);

@@ -41,6 +41,7 @@ export function generateMilestones(animals: Animal[]): RescueMilestone[] {
         label: reward.label,
         title: reward.title,
         image: reward.image,
+        remoteAssetId: reward.remoteAssetId,
         stepTarget,
         rewardIndex
       };

@@ -42,7 +42,15 @@ function getImageUri(image?: ImageSourcePropType) {
     return undefined;
   }
 
-  return RNImage.resolveAssetSource(image)?.uri;
+  if (typeof image === "object" && image !== null && "uri" in image && typeof (image as any).uri === "string") {
+    return (image as any).uri;
+  }
+
+  try {
+    return RNImage.resolveAssetSource(image)?.uri;
+  } catch {
+    return undefined;
+  }
 }
 
 async function sharePlainAnimal(options: {

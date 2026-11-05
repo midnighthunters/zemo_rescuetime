@@ -68,6 +68,7 @@ export type RescueProgress = {
   rescuedAnimalIds: string[];
   currentAnimalId: string;
   stepBaselineToday: number;
+  activeJourneyCarriedOverSteps?: number;
   claimedMiniMilestones: Record<string, number[]>;
   focusedUnlockEventId?: string;
   pendingUnlockEvents: PendingUnlockEvent[];
