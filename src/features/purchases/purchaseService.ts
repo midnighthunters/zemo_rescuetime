@@ -67,9 +67,7 @@ export type RevenueCatDebugInfo = {
   usesTestStore: boolean;
 };
 
-export const ENTITLEMENT_PRO =
-  getExtraString("revenueCatEntitlementId", "premium_rescuetime") ||
-  "premium_rescuetime";
+export const ENTITLEMENT_PRO = "premium_rescuetime";
 
 const PLAN_DETAILS: Record<
   RevenueCatPlanId,
@@ -138,7 +136,11 @@ const ENV_KEY_MAP: Record<string, string | undefined> = {
 };
 
 function getExtra() {
-  return (Constants.expoConfig?.extra ?? {}) as ExtraConfig;
+  try {
+    return (Constants.expoConfig?.extra ?? {}) as ExtraConfig;
+  } catch {
+    return {} as ExtraConfig;
+  }
 }
 
 function getExtraString(key: string, fallback = "") {

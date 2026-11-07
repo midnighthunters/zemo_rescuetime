@@ -14,7 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import { UnlockNotificationBridge } from "../src/features/notifications/UnlockNotificationBridge";
 import { requestStartupNotificationPermission } from "../src/features/notifications/unlockNotifications";

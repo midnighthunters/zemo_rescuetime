@@ -330,7 +330,13 @@ export default function SettingsScreen() {
 
       <AppText align="center" role="caption" tone="tertiary">
         {t("settings.version", {
-          version: Constants.expoConfig?.version ?? "1.0.7"
+          version: (() => {
+            try {
+              return Constants.expoConfig?.version ?? "1.0.7";
+            } catch {
+              return "1.0.7";
+            }
+          })()
         })}
       </AppText>
     </ScreenScaffold>
