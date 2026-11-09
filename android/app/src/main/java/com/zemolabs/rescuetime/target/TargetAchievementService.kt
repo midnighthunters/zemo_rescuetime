@@ -100,25 +100,7 @@ class TargetAchievementService : Service(), SensorEventListener {
     private const val WATCHER_NOTIFICATION_ID = 58027
 
     fun applyEnabledState(context: Context, enabled: Boolean) {
-      val intent = Intent(context, TargetAchievementService::class.java)
-      if (!enabled) {
-        try {
-          context.stopService(intent)
-        } catch (e: Exception) {
-          android.util.Log.e("TargetAchievementService", "Failed to stop service", e)
-        }
-        return
-      }
-
-      try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          context.startForegroundService(intent)
-        } else {
-          context.startService(intent)
-        }
-      } catch (e: Exception) {
-        android.util.Log.e("TargetAchievementService", "Failed to start service", e)
-      }
+      // Foreground service disabled for Play Store compliance
     }
   }
 }

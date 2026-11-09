@@ -332,9 +332,9 @@ export default function SettingsScreen() {
         {t("settings.version", {
           version: (() => {
             try {
-              return Constants.expoConfig?.version ?? "1.0.7";
+              return Constants.expoConfig?.version ?? "1.0.8";
             } catch {
-              return "1.0.7";
+              return "1.0.8";
             }
           })()
         })}
