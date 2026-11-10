@@ -6,7 +6,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Rescue Time",
   slug: "rescue-animals-step-counter",
-  version: "1.0.8",
+  version: "1.0.9",
   orientation: "portrait",
   icon: "./assets/logo.png",
   scheme: "rescueanimals",
@@ -36,7 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: "com.zemolabs.rescuetime",
-    versionCode: 10,
+    versionCode: 11,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#000000"
